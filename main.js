@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification, desktopCapturer, session, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification, desktopCapturer, session, screen, shell } = require('electron');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const fs = require('fs/promises');
@@ -690,6 +690,42 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'assets', 'html', 'index.html'));
 }
 
+// ---- Updates: the chat window finds a newer GitHub release (nekochat.js) and asks here to
+// install it. The Windows installer and the AppImage update themselves with electron-updater
+// from that release's latest*.yml; the portable exe and the .deb package open the download.
+const UPDATE_RELEASES = 'https://github.com/xKaMikax/nekochat_reloaded/releases';
+const updateMode = () => process.platform === 'win32' ? (process.env.PORTABLE_EXECUTABLE_FILE ? 'download' : 'install')
+  : process.platform === 'linux' ? (process.env.APPIMAGE ? 'install' : 'download') : 'download';
+const updateAsset = () => process.platform === 'win32' ? (process.env.PORTABLE_EXECUTABLE_FILE ? /-portable\.exe$/i : /Setup-[^/]*\.exe$/i)
+  : process.platform === 'linux' ? (process.env.APPIMAGE ? /\.AppImage$/i : /\.deb$/i) : null;
+function sendUpdateStatus(status) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', status); }
+let updater;
+async function installUpdate(release = {}) {
+  const tag = String(release.tag || '');
+  if (!/^[\w.-]+$/.test(tag)) throw new Error('Invalid release.');
+  const assets = Array.isArray(release.assets) ? release.assets : [];
+  const pattern = updateAsset();
+  const asset = pattern && assets.find(item => pattern.test(String(item?.name || '')));
+  if (updateMode() !== 'install' || !app.isPackaged) {
+    // Only GitHub links of this repository are opened.
+    const url = asset && String(asset.url || '').startsWith(`${UPDATE_RELEASES}/download/`) ? asset.url : `${UPDATE_RELEASES}/tag/${encodeURIComponent(tag)}`;
+    await shell.openExternal(url);
+    return { mode: 'download' };
+  }
+  if (!updater) {
+    ({ autoUpdater: updater } = require('electron-updater'));
+    updater.autoDownload = false; updater.autoInstallOnAppQuit = false; updater.allowDowngrade = false; updater.allowPrerelease = true;
+    updater.on('download-progress', progress => sendUpdateStatus({ state: 'progress', percent: Math.round(progress.percent || 0) }));
+    updater.on('update-downloaded', info => sendUpdateStatus({ state: 'downloaded', version: info.version }));
+    updater.on('error', error => sendUpdateStatus({ state: 'error', message: error?.message || String(error) }));
+  }
+  updater.setFeedURL({ provider: 'generic', url: `${UPDATE_RELEASES}/download/${tag}` });
+  const result = await updater.checkForUpdates();
+  if (!result?.isUpdateAvailable) return { mode: 'none' };
+  sendUpdateStatus({ state: 'progress', percent: 0 });
+  updater.downloadUpdate().catch(error => sendUpdateStatus({ state: 'error', message: error?.message || String(error) }));
+  return { mode: 'install', version: result.updateInfo.version };
+}
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) { createWindow(); return; }
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -809,6 +845,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('backup:export-themes', () => exportUserThemes());
   ipcMain.handle('backup:restore-themes', (_, archive) => restoreUserThemes(archive));
   ipcMain.on('app:relaunch', () => { quitting = true; app.relaunch(); app.exit(0); });
+  ipcMain.handle('update:info', () => ({ mode: updateMode(), platform: process.platform, packaged: app.isPackaged }));
+  ipcMain.handle('update:install', (_, release) => installUpdate(release || {}));
+  ipcMain.on('update:restart', () => { if (!updater) return; quitting = true; updater.quitAndInstall(false, true); });
   ipcMain.on('balloon:click', () => { hideBalloon(); showMainWindow(); });
   ipcMain.on('balloon:close', hideBalloon);
   ipcMain.on('admin:open', (event, server) => openAdminPanel(BrowserWindow.fromWebContents(event.sender), server));

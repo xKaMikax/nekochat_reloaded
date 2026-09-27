@@ -1,7 +1,7 @@
 {
   "name": "nekochat-reloaded-pc",
   "productName": "Nekochat Reloaded",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "description": "Windows XP styled Nekochat desktop client built with Electron.",
   "author": "xKaMikax",
@@ -19,10 +19,54 @@
   "build": {
     "appId": "dev.komdu.nekochat",
     "productName": "Nekochat Reloaded",
-    "directories": { "output": "release" },
-    "files": ["**/*", "!node_modules/**", "!release/**", "!android_client/**", "!iphone_client/**", "!web_client/**", "!tools/__pycache__/**", "!PROJECT_MAP.md", "!index.md"],
-    "linux": { "target": ["AppImage", "deb"], "category": "Network;Chat" },
-    "win": { "target": ["nsis", "portable"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "**/*",
+      "!release/**",
+      "!android_client/**",
+      "!iphone_client/**",
+      "!web_client/**",
+      "!tools/__pycache__/**",
+      "!PROJECT_MAP.md",
+      "!index.md"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network;Chat",
+      "maintainer": "KaMika <xKaMikax@users.noreply.github.com>",
+      "synopsis": "Windows XP styled Nekochat client",
+      "artifactName": "Nekochat-Reloaded-${version}.${ext}"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Nekochat-Reloaded-Setup-${version}.${ext}"
+    },
+    "deb": {
+      "artifactName": "nekochat-reloaded_${version}_${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Nekochat-Reloaded-${version}-portable.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/xKaMikax/nekochat_reloaded/releases/latest/download"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
