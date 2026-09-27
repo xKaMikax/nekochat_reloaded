@@ -8,7 +8,7 @@
 
 ## Web version
 
-Open **https://xkamikax.github.io/nekochat_reloaded/** in a browser — no installation needed. The web version is the same client as on PC, Android and iPhone: XP windows, themes (including the online catalog and imported `.msstyles`, `.theme`, `theme.css` and `.zip` files), calls, screen sharing and notifications.
+Open **https://xkamikax.github.io/nekochat_reloaded/** in a browser — no installation needed. The web version is the same client as on PC, Android and iPhone: XP windows, themes (including the online catalog and imported themes files), calls, screen sharing and notifications.
 
 It can also be installed as an app (PWA): in Chrome or Edge click **Install** in the address bar; on Android choose **Add to Home screen**; on iPhone open it in Safari and choose **Share → Add to Home Screen**.
 
