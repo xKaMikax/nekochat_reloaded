@@ -1,0 +1,23 @@
+/* Browser adaptations of the desktop pages (loaded after the page's own styles). */
+/* Windows can be resized with a mouse; touch screens use the phone layout below. */
+@media (pointer: coarse) { html.web .resize-handle { display: none; } }
+html.web .xp-titlebar { touch-action: none; }
+html.web .web-back { display: none; }
+
+/* Phone width: the 260px sidebar and the chat do not fit side by side. */
+@media (max-width: 640px) {
+  html.web .chat-app .sidebar { width: 100%; min-width: 0; border-right: 0; }
+  html.web .chat-app .conversation { display: none; }
+  html.web.chat-open .chat-app .sidebar { display: none; }
+  html.web.chat-open .chat-app .conversation { display: flex; }
+  /* Same size as the refresh button next to the tabs. */
+  html.web .web-back { display: block; flex: none; width: 28px; height: 27px; padding: 4px; }
+  html.web .web-back svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+
+  html.web .xp-logon-main { flex-direction: column; gap: 16px; }
+  html.web .xp-logon-brand { width: 100%; min-height: 0; padding: 0 0 14px; border-right: 0; border-bottom: 1px solid rgba(213,229,255,.36); }
+  html.web .xp-logon-accounts { width: 100%; min-height: 0; padding-left: 0; display: flex; flex-direction: column; align-items: center; }
+  html.web .xp-logon-footer { flex-direction: column; align-items: flex-start; right: 16px; left: 16px; bottom: 12px; }
+  html.web .server-switch input { width: min(260px, 60vw); }
+  html.web dialog.xp-dialog { max-width: calc(100vw - 12px); max-height: calc(100vh - 12px); overflow: auto; }
+}

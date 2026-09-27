@@ -5,6 +5,15 @@
 *iPhone screenshot by [VASHYAN-CMD](https://github.com/VASHYAN-CMD).*
 
 > **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
+
+## Web version
+
+Open **https://xkamikax.github.io/nekochat_reloaded/** in a browser — no installation needed. The web version is the same client as on PC, Android and iPhone: XP windows, themes (including the online catalog and imported `.msstyles`, `.theme`, `theme.css` and `.zip` files), calls, screen sharing and notifications.
+
+It can also be installed as an app (PWA): in Chrome or Edge click **Install** in the address bar; on Android choose **Add to Home screen**; on iPhone open it in Safari and choose **Share → Add to Home Screen**.
+
+Browser limits: screen sharing and calls need Chrome or Edge (WebCodecs); the DNS choice and the tray are PC-only; notifications arrive while the page is open.
+
 ## What the client includes
 
 - Rooms and direct messages.
@@ -21,6 +30,7 @@ The source code lives in separate branches:
 | [`pc`](https://github.com/xKaMikax/nekochat_reloaded/tree/pc) | PC client for Linux and Windows (Electron) |
 | [`android`](https://github.com/xKaMikax/nekochat_reloaded/tree/android) | Android client |
 | [`iphone`](https://github.com/xKaMikax/nekochat_reloaded/tree/iphone) | iPhone client |
+| [`main`](https://github.com/xKaMikax/nekochat_reloaded/tree/main) | Web version (PWA), published with GitHub Pages |
 
 To get the PC client:
 
