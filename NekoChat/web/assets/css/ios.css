@@ -16,7 +16,7 @@ html.ios .ios-back { display: none; }
   html.ios .xp-logon-main { flex-direction: column; gap: 16px; }
   html.ios .xp-logon-brand { width: 100%; min-height: 0; padding: 0 0 14px; border-right: 0; border-bottom: 1px solid rgba(213,229,255,.36); }
   html.ios .xp-logon-accounts { width: 100%; min-height: 0; padding-left: 0; display: flex; flex-direction: column; align-items: center; }
-  html.ios .xp-logon-footer { flex-direction: column; align-items: flex-start; right: 16px; left: 16px; bottom: 12px; }
+  html.ios .xp-logon-footer { flex-direction: column; align-items: flex-start; right: 0; left: 0; bottom: 0; }
   html.ios .server-switch input { width: min(260px, 60vw); }
   html.ios dialog.xp-dialog { max-width: calc(100vw - 12px); max-height: calc(100vh - 12px); overflow: auto; }
 }
