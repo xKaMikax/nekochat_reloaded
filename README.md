@@ -2,7 +2,7 @@
 
 ![NekoChat Reloaded desktop client](https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded/pc/screenshots/nekochat-pc.png)
 
-NekoChat Reloaded is an unofficial desktop client for NekoChat. It is for people who want a Windows XP-style chat application instead of using NekoChat in a browser tab.
+> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
 
 ## What the client includes
 
