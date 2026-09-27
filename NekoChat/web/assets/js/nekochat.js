@@ -63,12 +63,14 @@ const translations = {
 };
 function t(key, values = {}) { return String((translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru)[key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? ''); }
 // Call states are keys, so the call window follows the chosen language.
-function callStatusText(status) { return ({ waiting: t('callWaiting'), ringing: t('callRinging'), connecting: t('callConnecting'), connected: t('callConnected') })[status] || status; }
+function callStatusText(status) { return ({ waiting: t('callWaiting'), ringing: t('callRinging'), connecting: t('callConnecting'), connected: t('callConnected'), invite: t('roomInviteStatus') })[status] || status; }
 let displaySettings = { language: 'ru', loginUi: 'xp' };
 Object.assign(translations.ru, { profileOnline: 'онлайн', online: 'В сети', offline: 'Не в сети', noBio: 'Пока ничего не написано.', userNoBio: 'Пользователь пока ничего не написал.', nothingFound: 'Ничего не найдено.' });
 Object.assign(translations.en, { profileOnline: 'online', online: 'Online', offline: 'Offline', noBio: 'Nothing has been written yet.', userNoBio: 'This user has not written anything yet.', nothingFound: 'Nothing found.' });
 Object.assign(translations.ru, { join: 'Присоединиться', roomJoin: 'Не удалось присоединиться к комнате' });
 Object.assign(translations.en, { join: 'Join', roomJoin: 'Could not join room' });
+Object.assign(translations.ru, { roomChannel: 'Голосовой канал: {room}', roomInvite: '{name} в голосовом канале {room}', roomInviteStatus: 'Войти в канал?', roomParticipants: 'В канале: {count}', noAnswer: 'Абонент не ответил.', callBusy: 'Абонент занят.', callDeclined: 'Звонок отклонён.', accountBanned: 'Ваша учётная запись заблокирована на этом сервере.', serverMessage: 'Сообщение сервера', screenCodecUnsupported: 'Этот Chromium не умеет кодировать экран ни в VP9, ни в VP8.', screenCodecDecode: 'Демонстрация экрана в кодеке {codec} не поддерживается на этом устройстве.' });
+Object.assign(translations.en, { roomChannel: 'Voice channel: {room}', roomInvite: '{name} is in voice channel {room}', roomInviteStatus: 'Join the channel?', roomParticipants: 'In the channel: {count}', noAnswer: 'No answer.', callBusy: 'The user is busy.', callDeclined: 'The call was declined.', accountBanned: 'Your account is banned on this server.', serverMessage: 'Server message', screenCodecUnsupported: 'This Chromium can encode the screen neither in VP9 nor in VP8.', screenCodecDecode: 'Screen sharing in the {codec} codec is not supported on this device.' });
 Object.assign(translations.ru, { dns: 'DNS', dns_system: 'Системный', dns_cloudflare: 'Cloudflare (1.1.1.1)', dns_google: 'Google (8.8.8.8)', dns_quad9: 'Quad9 (9.9.9.9)', dns_adguard: 'AdGuard DNS', dns_custom: 'Свой DNS-over-HTTPS…' });
 Object.assign(translations.en, { dns: 'DNS', dns_system: 'System default', dns_cloudflare: 'Cloudflare (1.1.1.1)', dns_google: 'Google (8.8.8.8)', dns_quad9: 'Quad9 (9.9.9.9)', dns_adguard: 'AdGuard DNS', dns_custom: 'Custom DNS-over-HTTPS…' });
 Object.assign(translations.ru, { refreshList: 'Обновить список', searchChats: 'Поиск чатов', createRoom: 'Создать комнату', close: 'Закрыть', closeButton: 'Закрыть', userAccounts: 'Учётные записи пользователей', back: '← Назад', home: 'Домой', relatedTasks: 'Связанные задачи', help: 'Справка', profileHelp: 'Настройте профиль NekoChat.', pickTask: 'Выберите задачу…', taskDetailsLong: 'Изменить статус и описание', status: 'Статус', about: 'О себе', profileColour: 'Цвет профиля', changeAvatar: 'Сменить аватар', save: 'Сохранить', xpAppearance: 'Оформление Windows XP', themeDialogHint: 'Выберите установленную тему рамки или добавьте файл', installedThemes: 'Установленные темы', apply: 'Применить', addTheme: 'Добавить тему…', roomMembers: 'Участники комнаты' });
@@ -125,7 +127,7 @@ function renderSavedUsers() {
   $('#auth-form').hidden = sessions.length > 0;
   $('#back-to-users').hidden = true;
 }
-function showAuthScreen() { $('#chat-app').hidden = true; $('#auth-screen').hidden = false; $('#welcome-screen').hidden = true; renderSavedUsers(); }
+function showAuthScreen() { $('#chat-app').hidden = true; $('#auth-screen').hidden = false; $('#welcome-screen').hidden = true; renderSavedUsers(); refreshServerInfo(); }
 function showLoginForm() { $('#auth-screen').classList.remove('account-selected'); $('#auth-form').hidden = false; $('#saved-users').hidden = true; $('#show-login-form').hidden = true; $('#back-to-users').hidden = savedSessions().length === 0; $('#auth-error').textContent = ''; $('#login-selected-avatar').innerHTML = '<img src="assets/images/nekochat_icon.png" alt="NekoChat">'; $('#login-selected-name').textContent = t('loginTitle'); $('#login-selected-hint').textContent = t('enterAccountDetails'); }
 function showWelcome() { $('#auth-screen').hidden = false; $('#welcome-screen').hidden = false; }
 async function useSavedSession(index) {
@@ -160,7 +162,23 @@ function setLoggedIn(user, announceLogin = false) {
   connectSocket(); connectEventStream();
   if (announceLogin) playSound('logon');
 }
-async function refresh() { [rooms, users] = await Promise.all([api('/rooms'), api('/users')]); renderList(); }
+let conversationOrder = new Map();
+async function refresh() {
+  const [roomList, userList, conversations] = await Promise.all([api('/rooms'), api('/users'), api('/users/conversations/me').catch(() => [])]);
+  rooms = roomList; users = userList;
+  // People you already talk to come first in Direct, newest conversation on top.
+  conversationOrder = new Map((Array.isArray(conversations) ? conversations : []).slice().sort((a, b) => Number(b.conversation_id) - Number(a.conversation_id)).map((item, index) => [Number(item.user?.id), index]));
+  renderList();
+}
+const byConversation = (a, b) => (conversationOrder.get(Number(a.id)) ?? Infinity) - (conversationOrder.get(Number(b.id)) ?? Infinity);
+// Server name and version under the logon form, from /api/server-info.
+async function refreshServerInfo() {
+  const server = API;
+  let text = '';
+  try { const response = await fetch(`${server}/api/server-info`); if (response.ok) { const info = await response.json(); text = [info.name, info.version && `v${info.version}`].filter(Boolean).join(' ') + (info.description ? ` — ${info.description}` : ''); } } catch {}
+  if (server !== API) return;
+  document.querySelectorAll('.server-info-text').forEach(node => { node.textContent = text; node.hidden = !text; });
+}
 function showRoomMembers(room) {
   const members = Array.isArray(room?.members) ? room.members : [];
   $('#room-members-title').textContent = t('membersTitle', { name: room?.name || '' });
@@ -169,7 +187,7 @@ function showRoomMembers(room) {
 }
 function renderList() {
   const query = $('#search').value.trim().toLowerCase(); const list = $('#chat-list');
-  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: user.is_online === true, kind: 'dm', frame: avatarFrameAttributes(user) }));
+  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: user.is_online === true, kind: 'dm', frame: avatarFrameAttributes(user) }));
   list.innerHTML = items.map(item => `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? 'online' : 'offline'}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}</b><small>${esc(item.sub)}</small></span></button>`).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
@@ -242,6 +260,13 @@ function websocketUrl() {
   url.search = ''; url.searchParams.set('token', token);
   return url.href;
 }
+// The server explains a rejected action in {type:'error', message}; repeats are shown once.
+let lastServerError = { text: '', time: 0 };
+function showServerError(text) {
+  if (text === lastServerError.text && Date.now() - lastServerError.time < 5000) return;
+  lastServerError = { text, time: Date.now() };
+  showSystemDialog(text, 'error', t('serverMessage'));
+}
 function socketMessage(payload) {
   const type = payload?.type;
   if (CALL_EVENT_TYPES.has(type) && isDuplicateCallEvent(payload)) return;
@@ -250,6 +275,7 @@ function socketMessage(payload) {
     if (user) { user.is_online = payload.is_online ?? payload.online ?? true; renderList(); }
     return;
   }
+  if (type === 'error' && payload.message) { showServerError(String(payload.message)); return; }
   if (type === 'error' || type === 'warning' || type === 'notification' || type === 'notice') {
     playServerSound(type);
     return;
@@ -295,12 +321,13 @@ function openWebSocketConnection() {
     function finish() {
       if (closed) return; closed = true;
       try { ws.close(); } catch {}
-      if (open) connection.onclose?.(); else reject(new Error('WebSocket closed.'));
+      if (open) connection.onclose?.(); else { const error = new Error('WebSocket closed.'); error.code = connection.closeCode; reject(error); }
     }
     ws.onopen = () => { open = true; resolve(connection); };
     ws.onmessage = event => { try { connection.onmessage?.(JSON.parse(event.data)); } catch {} };
-    ws.onclose = finish;
-    ws.onerror = finish;
+    // The server closes with 4401 (bad token) or 4403 (banned); 'error' is always followed by 'close'.
+    ws.onclose = event => { connection.closeCode = event.code; finish(); };
+    ws.onerror = () => {};
   });
 }
 function natsUrl(url) {
@@ -359,6 +386,18 @@ function flushPendingCallSignals() {
     try { socket.send(payload); } catch { pendingCallSignals.set(type, { payload, time }); }
   }
 }
+// Reconnecting cannot fix these: an expired token needs a new sign-in, a ban ends the session.
+function handleCloseCode(code) {
+  if (code === 4401) { expireSession(); return true; }
+  if (code === 4403) { accountBanned(); return true; }
+  return false;
+}
+function accountBanned() {
+  if (!token) return;
+  const username = me?.username || '';
+  leaveAccount(true); showLoginForm(); $('#auth-username').value = username;
+  showSystemDialog(t('accountBanned'), 'critical', t('sessionEnded'));
+}
 async function connectSocket() {
   if (!token || socket || socketConnecting) return;
   clearTimeout(socketRetry);
@@ -367,14 +406,16 @@ async function connectSocket() {
   let connection = null;
   try { connection = await openNatsConnection(); }
   catch (error) { console.warn('NATS unavailable, falling back to WebSocket:', error.message); }
-  if (!connection && token === session) { try { connection = await openWebSocketConnection(); } catch {} }
+  let closeCode;
+  if (!connection && token === session) { try { connection = await openWebSocketConnection(); } catch (error) { closeCode = error.code; } }
   socketConnecting = false;
+  if (token === session && handleCloseCode(closeCode)) return;
   if (token !== session) { connection?.close(); if (token) connectSocket(); return; }
   if (!connection) { scheduleReconnect(); return; }
   socket = connection; socketRetryDelay = 1000;
   connection.onmessage = payload => { if (payload?.type === 'pong') { missedPongs = 0; return; } socketMessage(payload); };
   connection.early?.splice(0).forEach(payload => connection.onmessage(payload));
-  connection.onclose = () => { if (socket !== connection) return; socket = null; stopHeartbeat(); scheduleReconnect(); };
+  connection.onclose = () => { if (socket !== connection) return; socket = null; stopHeartbeat(); if (!handleCloseCode(connection.closeCode)) scheduleReconnect(); };
   startHeartbeat(connection);
   try { connection.send({ type: 'ping' }); } catch {}
   flushPendingCallSignals();
@@ -465,24 +506,46 @@ function releaseCallAudio(state) {
   if (state.processor) { state.processor.onaudioprocess = null; if (state.processor.port) state.processor.port.onmessage = null; state.processor.disconnect(); state.processor = null; }
   state.source?.disconnect(); state.source = null; state.silence?.disconnect(); state.silence = null;
   state.stream?.getTracks().forEach(track => track.stop()); state.stream = null;
-  try { state.encoder?.close(); } catch {} try { state.decoder?.close(); } catch {} state.encoder = null; state.decoder = null;
+  try { state.encoder?.close(); } catch {} state.encoder = null;
+  state.peers?.forEach(peer => { try { peer.decoder.close(); } catch {} }); state.peers?.clear();
   state.denoiser?.destroy(); state.denoiser = null;
   if (state.context && state.context.state !== 'closed') state.context.close().catch(() => {});
 }
 function stopCallAudio() { const state = callAudio; if (!state) return; callAudio = null; releaseCallAudio(state); }
 function setCallSpeaking(side, value) { if (!activeCall || activeCall[`${side}Speaking`] === value) return; activeCall[`${side}Speaking`] = value; updateCallWindow(); }
-function playDecodedAudio(audioData) {
+// Each remote speaker has its own Opus decoder and playback clock; their buffers play into the
+// same AudioContext, which mixes them (N−1 in a room voice channel, one peer in a direct call).
+function peerMuted(key) { return activeCall?.room ? Boolean(activeCall.participants?.get(key)?.muted) : Boolean(activeCall?.remoteMuted); }
+function setPeerSpeaking(key, value) {
+  if (!activeCall?.room) { setCallSpeaking('remote', value); return; }
+  const participant = activeCall.participants?.get(key);
+  if (!participant || participant.speaking === value) return;
+  participant.speaking = value; updateCallWindow();
+}
+function playDecodedAudio(key, audioData) {
+  const peer = callAudio?.peers?.get(key);
   // A participant muted in the call window is not played (and not shown as speaking).
-  if (!callAudio?.context || activeCall?.remoteMuted) { audioData.close(); setCallSpeaking('remote', false); return; }
+  if (!callAudio?.context || !peer || peerMuted(key)) { audioData.close(); setPeerSpeaking(key, false); return; }
   const frames = audioData.numberOfFrames;
   const buffer = callAudio.context.createBuffer(audioData.numberOfChannels, frames, audioData.sampleRate);
   let energy = 0; for (let channel = 0; channel < audioData.numberOfChannels; channel += 1) { const samples = buffer.getChannelData(channel); audioData.copyTo(samples, { planeIndex: channel }); if (channel === 0) energy = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / Math.max(1, samples.length)); }
-  setCallSpeaking('remote', energy > .018);
+  setPeerSpeaking(key, energy > .018);
   audioData.close();
   const source = callAudio.context.createBufferSource(); source.buffer = buffer; source.connect(callAudio.context.destination);
-  callAudio.playAt = Math.max(callAudio.playAt || 0, callAudio.context.currentTime + .04);
-  source.start(callAudio.playAt); callAudio.playAt += buffer.duration;
+  peer.playAt = Math.max(peer.playAt || 0, callAudio.context.currentTime + .04);
+  source.start(peer.playAt); peer.playAt += buffer.duration;
 }
+function peerFor(key) {
+  if (!callAudio?.peers) return null;
+  let peer = callAudio.peers.get(key);
+  if (!peer) {
+    peer = { playAt: 0, decoder: new AudioDecoder({ output: data => playDecodedAudio(key, data), error: error => console.warn('Opus decode failed:', error) }) };
+    peer.decoder.configure(OPUS_CONFIG);
+    callAudio.peers.set(key, peer);
+  }
+  return peer;
+}
+const OPUS_CONFIG = { codec: 'opus', sampleRate: 48000, numberOfChannels: 1, bitrate: 32000 };
 // RNNoise (neural noise suppression), loaded only when chosen in Display Properties.
 async function createNoiseSuppressor() {
   if (!window.createRNNWasmModuleSync) {
@@ -509,26 +572,24 @@ async function createNoiseSuppressor() {
   };
 }
 async function startCallAudio() {
-  if (!activeCall?.target?.to_id || callAudio) return;
+  if (!activeCall?.target || callAudio) return;
   if (!globalThis.AudioEncoder || !globalThis.AudioDecoder || !navigator.mediaDevices?.getUserMedia) throw new Error(t('opusUnsupported'));
-  const opus = { codec: 'opus', sampleRate: 48000, numberOfChannels: 1, bitrate: 32000 };
+  const opus = OPUS_CONFIG;
   const support = await AudioEncoder.isConfigSupported(opus);
   if (!support.supported) throw new Error(t('opusConfigUnsupported'));
-  if (!activeCall?.target?.to_id || callAudio) return;
+  if (!activeCall?.target || callAudio) return;
   const context = new AudioContext({ sampleRate: 48000 });
-  const state = { context, sequence: 0, frameIndex: 0, lastVoice: -Infinity, playAt: context.currentTime, call: activeCall };
+  const state = { context, sequence: 0, frameIndex: 0, lastVoice: -Infinity, peers: new Map(), call: activeCall };
   // callAudio owns the state from the start: a hangup during any await below releases it, and
   // a failure (no microphone, access denied) must not leave the AudioContext open.
   callAudio = state;
   const cancelled = () => { if (callAudio === state) return false; releaseCallAudio(state); return true; };
   try {
     await context.resume(); if (cancelled()) return;
-    state.decoder = new AudioDecoder({ output: playDecodedAudio, error: error => console.warn('Opus decode failed:', error) });
-    state.decoder.configure(opus);
     state.encoder = new AudioEncoder({ output: chunk => {
       if (!activeCall || activeCall !== state.call || chunk.byteLength === 0) return;
       const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes);
-      sendCallMessage({ type: 'call_audio', to_id: activeCall.target.to_id, call_id: activeCall.callId, seq: state.sequence++, audio: bytesToBase64(bytes) }).catch(() => {});
+      sendCallMessage({ type: 'call_audio', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, audio: bytesToBase64(bytes) }).catch(() => {});
     }, error: error => console.warn('Opus encode failed:', error) });
     state.encoder.configure(opus);
     const display = await desktopControls?.getDisplaySettings?.(); if (cancelled()) return;
@@ -578,8 +639,13 @@ async function connectCallCapture(state) {
   state.source.connect(state.processor); state.processor.connect(state.silence);
 }
 function receiveCallAudio(payload) {
-  if (!callAudio || !activeCall || payload.call_id !== activeCall.callId || !payload.audio) return;
-  try { callAudio.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Number(payload.seq || 0) * 20000, data: base64ToBytes(payload.audio) })); } catch (error) { console.warn('Invalid Opus frame:', error); }
+  const senderId = senderOf(payload);
+  if (payload.room_id != null) noteRoomPresence(payload, senderId);
+  if (!callAudio || !activeCall || !payload.audio || !sameCall(payload) || (senderId && senderId === Number(me?.id))) return;
+  // A late participant is picked up by their first audio frame (from_id).
+  if (activeCall.room && senderId) addParticipant(senderId);
+  const peer = peerFor(senderId || 'remote'); if (!peer) return;
+  try { peer.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Number(payload.seq || 0) * 20000, data: base64ToBytes(payload.audio) })); } catch (error) { console.warn('Invalid Opus frame:', error); }
 }
 // Both sides can share at once: each keeps its own picture and the call window shows the one
 // chosen with the button under that person, so the two streams no longer overwrite each other.
@@ -606,58 +672,95 @@ function updateScreenPreview(frame, state, side) {
 function stopScreenShare(notify = true) {
   if (!screenShare) return;
   screenShare.reader?.cancel().catch(() => {}); screenShare.stream?.getTracks().forEach(track => track.stop()); try { screenShare.encoder?.close(); } catch {}
-  if (notify && activeCall?.target?.to_id) sendCallMessage({ type: 'screen_stop', to_id: activeCall.target.to_id, call_id: activeCall.callId }).catch(() => {});
+  if (notify && activeCall?.target) sendCallMessage({ type: 'screen_stop', ...activeCall.target, call_id: activeCall.callId }).catch(() => {});
   screenShare = null; refreshScreenView();
 }
 function stopRemoteScreen() { try { remoteScreen?.decoder?.close(); } catch {} remoteScreen = null; }
+// Screen sharing codec (Display Properties): VP9 by default, VP8 and AV1 on request; the first
+// one this Chromium can encode is used, and the receiver decodes whatever screen_start names.
+const SCREEN_CODECS = { vp8: 'vp8', vp9: 'vp09.00.41.08', av1: 'av01.0.08M.08' };
+async function screenEncoderConfig(width, height) {
+  let choice = 'auto'; try { choice = localStorage.getItem('nk_screen_codec') || 'auto'; } catch {}
+  const order = [...new Set([...(SCREEN_CODECS[choice] ? [choice] : []), 'vp9', 'vp8'])];
+  for (const name of order) {
+    const config = { codec: SCREEN_CODECS[name], width, height, bitrate: name === 'av1' ? 1_000_000 : 1_500_000, framerate: 12 };
+    try { if ((await VideoEncoder.isConfigSupported(config)).supported) return config; } catch {}
+  }
+  return null;
+}
 async function toggleScreenShare() {
-  if (!activeCall?.target?.to_id || activeCall.incoming || activeCall.status !== 'connected') return;
+  if (!activeCall?.target || activeCall.incoming || activeCall.status !== 'connected') return;
   if (screenShare) return stopScreenShare();
   if (!globalThis.VideoEncoder || !globalThis.MediaStreamTrackProcessor || !navigator.mediaDevices?.getDisplayMedia) throw new Error(t('screenUnsupported'));
   await desktopControls?.prepareDisplayCapture?.();
   const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 12, max: 15 } }, audio: false });
   const track = stream.getVideoTracks()[0]; const settings = track.getSettings(); const width = settings.width || 1280; const height = settings.height || 720;
-  const config = { codec: 'vp8', width, height, bitrate: 1_500_000, framerate: 12 };
-  if (!(await VideoEncoder.isConfigSupported(config)).supported) { stream.getTracks().forEach(item => item.stop()); throw new Error(t('vp8Unsupported')); }
+  const config = await screenEncoderConfig(width, height);
+  if (!config) { stream.getTracks().forEach(item => item.stop()); throw new Error(t('screenCodecUnsupported')); }
   const state = { stream, sequence: 0, lastPreview: 0 }; screenShare = state;
-  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); sendCallMessage({ type: 'screen_frame', to_id: activeCall.target.to_id, call_id: activeCall.callId, seq: state.sequence++, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('VP8 encode failed:', error) });
+  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); sendCallMessage({ type: 'screen_frame', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('Screen encode failed:', error) });
   state.encoder.configure(config); state.reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
   refreshScreenView('self');
-  try { await sendCallMessage({ type: 'screen_start', to_id: activeCall.target.to_id, call_id: activeCall.callId, codec: 'vp8', width, height }); }
+  try { await sendCallMessage({ type: 'screen_start', ...activeCall.target, call_id: activeCall.callId, codec: config.codec, width, height }); }
   catch (error) { if (screenShare === state) stopScreenShare(false); throw error; }
   track.onended = () => { if (screenShare === state) stopScreenShare(); };
   (async () => { while (screenShare === state) { const { value: frame, done } = await state.reader.read(); if (done || !frame) break; updateScreenPreview(frame, state, 'self'); state.encoder.encode(frame, { keyFrame: state.sequence % 72 === 0 }); frame.close(); } })().catch(error => console.warn('Screen capture failed:', error));
 }
 function handleScreenSignal(payload) {
-  if (!activeCall || activeCall.callId !== payload.call_id || !activeCall.target.to_id) return;
-  const senderId = Number(payload.from_id ?? payload.sender_id ?? payload.user_id); if (senderId && senderId === Number(me?.id)) return;
+  if (!activeCall || activeCall.incoming || !sameCall(payload)) return;
+  const senderId = senderOf(payload); if (senderId && senderId === Number(me?.id)) return;
   if (payload.type === 'screen_start') {
-    stopRemoteScreen(); const state = { lastPreview: 0 };
-    try {
-      state.decoder = new VideoDecoder({ output: frame => { if (remoteScreen === state) updateScreenPreview(frame, state, 'remote'); frame.close(); }, error: error => console.warn('VP8 decode failed:', error) });
-      state.decoder.configure({ codec: payload.codec || 'vp8', codedWidth: Number(payload.width) || 1280, codedHeight: Number(payload.height) || 720 }); remoteScreen = state;
-      refreshScreenView('remote');
-    } catch (error) { console.warn('Screen share unavailable:', error); }
+    // A room has one sharer: a new screen_start switches the screen to that person.
+    stopRemoteScreen(); const state = { lastPreview: 0, senderId };
+    const codec = payload.codec || 'vp8';
+    const config = { codec, codedWidth: Number(payload.width) || 1280, codedHeight: Number(payload.height) || 720 };
+    remoteScreen = state;
+    (globalThis.VideoDecoder ? VideoDecoder.isConfigSupported(config).catch(() => ({ supported: false })) : Promise.resolve({ supported: false })).then(support => {
+      if (remoteScreen !== state) return;
+      if (!support.supported) { remoteScreen = null; showSystemDialog(t('screenCodecDecode', { codec }), 'warning', t('screenShare')); return; }
+      try {
+        state.decoder = new VideoDecoder({ output: frame => { if (remoteScreen === state) updateScreenPreview(frame, state, 'remote'); frame.close(); }, error: error => console.warn('Screen decode failed:', error) });
+        state.decoder.configure(config);
+        if (activeCall?.room && senderId) addParticipant(senderId);
+        refreshScreenView('remote');
+      } catch (error) { remoteScreen = null; console.warn('Screen share unavailable:', error); }
+    });
     return;
   }
-  if (payload.type === 'screen_stop') { stopRemoteScreen(); refreshScreenView(); return; }
+  if (payload.type === 'screen_stop') {
+    // In a room only the current sharer's screen_stop turns the screen off.
+    if (activeCall.room && remoteScreen?.senderId && senderId && remoteScreen.senderId !== senderId) return;
+    stopRemoteScreen(); refreshScreenView(); return;
+  }
   if (!remoteScreen?.decoder || !payload.data) return;
-  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: payload.key ? 'key' : 'delta', timestamp: Number(payload.seq || 0) * 83333, data: base64ToBytes(payload.data) })); } catch (error) { console.warn('Invalid VP8 frame:', error); }
+  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: payload.key ? 'key' : 'delta', timestamp: Number(payload.seq || 0) * 83333, data: base64ToBytes(payload.data) })); } catch (error) { console.warn('Invalid screen frame:', error); }
 }
 function updateCallWindow() {
   if (!activeCall) return;
   const person = activeCall.person || { display_name: t('user') };
   const remoteName = displayName(person);
+  const room = Boolean(activeCall.room);
+  const participants = room ? [...activeCall.participants.values()] : [];
+  // In a room the screen belongs to whoever shares it; show that person on the screen stage.
+  const sharer = room && remoteScreen?.senderId ? (userFor(remoteScreen.senderId) || { display_name: t('user') }) : null;
+  const remote = sharer || person;
+  const title = !room ? (activeCall.incoming ? t('incomingCall', { name: remoteName }) : t('outgoingCall', { name: remoteName }))
+    : activeCall.incoming ? t('roomInvite', { name: displayName(userFor(activeCall.invitedBy) || { display_name: t('user') }), room: remoteName }) : t('roomChannel', { room: remoteName });
+  const status = room && activeCall.status === 'connected' ? t('roomParticipants', { count: participants.length + 1 }) : callStatusText(activeCall.status || 'connecting');
   desktopControls?.openCallWindow({
-    title: activeCall.incoming ? t('incomingCall', { name: remoteName }) : t('outgoingCall', { name: remoteName }),
-    status: callStatusText(activeCall.status || t('callConnecting')), avatar: activeCall.kind === 'room' ? '#' : avatar(person),
-    incoming: Boolean(activeCall.incoming), audioAvailable: false, muted: Boolean(activeCall.muted), direct: Boolean(activeCall.target.to_id), connected: activeCall.status === 'connected', self: { avatar: avatar(me || {}), name: me ? displayName(me) : t('you'), frame: avatarColour(me), speaking: Boolean(activeCall.selfSpeaking) }, remote: { avatar: activeCall.kind === 'room' ? '#' : avatar(person), name: remoteName, frame: avatarColour(person), speaking: Boolean(activeCall.remoteSpeaking) }, sharing: activeCall.screenView || null, screenPreview: activeCall.previews?.[activeCall.screenView] || '', selfSharing: Boolean(screenShare), remoteSharing: Boolean(remoteScreen), remoteMuted: Boolean(activeCall.remoteMuted), transport: callTransport,
+    title, status, avatar: room ? '#' : avatar(person), room,
+    incoming: Boolean(activeCall.incoming), audioAvailable: false, muted: Boolean(activeCall.muted), direct: Boolean(activeCall.target.to_id), connected: activeCall.status === 'connected', self: { avatar: avatar(me || {}), name: me ? displayName(me) : t('you'), frame: avatarColour(me), speaking: Boolean(activeCall.selfSpeaking) }, remote: { avatar: room && !sharer ? '#' : avatar(remote), name: sharer ? displayName(sharer) : remoteName, frame: avatarColour(remote), speaking: Boolean(activeCall.remoteSpeaking) }, sharing: activeCall.screenView || null, screenPreview: activeCall.previews?.[activeCall.screenView] || '', selfSharing: Boolean(screenShare), remoteSharing: Boolean(remoteScreen), remoteMuted: Boolean(activeCall.remoteMuted), transport: callTransport,
+    participants: participants.map(item => ({ id: item.id, avatar: avatar(item.user), name: displayName(item.user), frame: avatarColour(item.user), speaking: Boolean(item.speaking), muted: Boolean(item.muted) })),
   });
 }
 function endCall(reason, notify = true) {
+  // Dismissing a room invite is local: call_hangup in a room means leaving the channel.
+  if (activeCall?.room && activeCall.incoming) notify = false;
+  if (activeCall?.room) reason = 'leave';
   if (activeCall && notify) {
     sendCallMessage({ type: 'call_hangup', call_id: activeCall.callId, ...activeCall.target, ...(reason ? { reason } : {}) }).catch(() => {});
   }
+  clearTimeout(activeCall?.ringTimer); clearInterval(activeCall?.presenceTimer);
   stopRingtone();
   stopScreenShare(false);
   stopRemoteScreen();
@@ -665,21 +768,106 @@ function endCall(reason, notify = true) {
   activeCall = null;
   desktopControls?.closeCallWindow();
 }
+const RING_TIMEOUT = 45000;
 function startCall() {
   if (!current || activeCall) return;
   const target = callTarget();
   if (!target.to_id && !target.room_id) return;
+  if (target.room_id) { joinRoomChannel(target.room_id); return; }
   activeCall = { callId: callId(), target, kind: current.kind, person: callPerson(), incoming: false, status: 'waiting' };
   updateCallWindow();
   startRingtone('ringout');
   const id = activeCall.callId;
+  // Nobody answered: hang up with reason no-answer instead of ringing forever.
+  activeCall.ringTimer = setTimeout(() => {
+    if (activeCall?.callId !== id || activeCall.status !== 'waiting') return;
+    endCall('no-answer'); showSystemDialog(t('noAnswer'), 'info', t('call'));
+  }, RING_TIMEOUT);
   sendCallMessage({ type: 'call', call_id: id, ...target }).catch(error => {
     if (activeCall?.callId !== id) return;
-    stopRingtone(); activeCall = null; desktopControls?.closeCallWindow(); showSystemDialog(error.message, 'error', t('callStart'));
+    clearTimeout(activeCall.ringTimer); stopRingtone(); activeCall = null; desktopControls?.closeCallWindow(); showSystemDialog(error.message, 'error', t('callStart'));
   });
 }
+
+// ---- Room voice channels --------------------------------------------------------------------
+// The server only relays: `call` with room_id announces joining, `call_answer` accepts an invite,
+// `call_audio` goes to everyone else in the channel and `call_hangup` (reason leave) leaves it.
+// Who is in a channel is derived from those messages (from_id), there is no REST list.
+const roomChannels = new Map(); // room id → { callId, members: Map(user id → last seen) }
+const PRESENCE_TIMEOUT = 20000;
+const senderOf = payload => Number(payload.from_id ?? payload.sender_id ?? payload.user_id ?? payload.user?.id) || 0;
+function sameCall(payload) {
+  if (!activeCall) return false;
+  return activeCall.room ? payload.room_id != null && Number(payload.room_id) === Number(activeCall.target.room_id) : payload.call_id === activeCall.callId;
+}
+function noteRoomPresence(payload, senderId) {
+  const roomId = Number(payload.room_id);
+  if (!roomId || !senderId || senderId === Number(me?.id)) return;
+  const channel = roomChannels.get(roomId) || { callId: payload.call_id, members: new Map() };
+  if (payload.type === 'call_hangup') channel.members.delete(senderId);
+  else { channel.members.set(senderId, Date.now()); if (payload.call_id) channel.callId = payload.call_id; }
+  roomChannels.set(roomId, channel);
+}
+function activeChannel(roomId) {
+  const channel = roomChannels.get(Number(roomId)); if (!channel) return null;
+  for (const [id, seen] of channel.members) if (Date.now() - seen > PRESENCE_TIMEOUT) channel.members.delete(id);
+  return channel.members.size ? channel : null;
+}
+function addParticipant(userId) {
+  if (!activeCall?.room || !userId || userId === Number(me?.id)) return;
+  const existing = activeCall.participants.get(userId);
+  if (existing) { existing.seen = Date.now(); return; }
+  activeCall.participants.set(userId, { id: userId, user: userFor(userId) || { id: userId, display_name: t('user') }, seen: Date.now(), speaking: false, muted: false });
+  updateCallWindow();
+}
+function removeParticipant(userId) {
+  if (!activeCall?.room || !activeCall.participants.delete(userId)) return;
+  const peer = callAudio?.peers?.get(userId);
+  if (peer) { try { peer.decoder.close(); } catch {} callAudio.peers.delete(userId); }
+  if (remoteScreen?.senderId === userId) { stopRemoteScreen(); refreshScreenView(); }
+  updateCallWindow();
+}
+function roomCall(roomId, fields) {
+  const room = rooms.find(item => Number(item.id) === Number(roomId));
+  const participants = new Map();
+  const call = { target: { room_id: Number(roomId) }, kind: 'room', room: true, person: { display_name: `# ${room?.name || t('room')}` }, participants, ...fields };
+  // Someone who left without call_hangup disappears when their frames stop.
+  call.presenceTimer = setInterval(() => {
+    if (activeCall !== call) return;
+    for (const [id, item] of participants) if (Date.now() - item.seen > PRESENCE_TIMEOUT) removeParticipant(id);
+  }, 5000);
+  return call;
+}
+function joinRoomChannel(roomId, invite) {
+  const channel = activeChannel(roomId);
+  const id = invite?.callId || channel?.callId || callId();
+  activeCall = roomCall(roomId, { callId: id, incoming: false, status: 'connecting' });
+  channel?.members.forEach((seen, userId) => addParticipant(userId));
+  updateCallWindow();
+  // Accepting an invite (or joining a channel that is already on) is call_answer; opening it is call.
+  sendCallMessage({ type: invite || channel ? 'call_answer' : 'call', call_id: id, room_id: Number(roomId) }).catch(() => {});
+  startCallAudio().then(() => { if (activeCall?.callId === id) { activeCall.status = 'connected'; updateCallWindow(); } }).catch(error => endCall() || showSystemDialog(error.message, 'error', t('microphone')));
+}
+function handleRoomSignal(payload, senderId) {
+  noteRoomPresence(payload, senderId);
+  if (senderId && senderId === Number(me?.id)) return; // the server echoes our own announce
+  if (activeCall?.room && sameCall(payload)) {
+    if (payload.type === 'call_hangup') removeParticipant(senderId);
+    else addParticipant(senderId);
+    return;
+  }
+  // Not in this channel: an unobtrusive invite, no ringing (and no busy reply from a call).
+  if (payload.type !== 'call' || activeCall || !senderId) return;
+  activeCall = roomCall(payload.room_id, { callId: payload.call_id, incoming: true, status: 'invite', invitedBy: senderId });
+  activeChannel(payload.room_id)?.members.forEach((seen, userId) => addParticipant(userId));
+  const invite = activeCall;
+  invite.ringTimer = setTimeout(() => { if (activeCall === invite && invite.incoming) endCall(undefined, false); }, RING_TIMEOUT);
+  playSound('notify');
+  updateCallWindow();
+}
 function handleCallSignal(payload) {
-  const senderId = Number(payload.from_id ?? payload.sender_id ?? payload.user_id ?? payload.user?.id);
+  const senderId = senderOf(payload);
+  if (payload.room_id != null) { handleRoomSignal(payload, senderId); return; }
   const isOwnEcho = activeCall?.callId === payload.call_id && !senderId || senderId === Number(me?.id);
   if (payload.type === 'call') {
     if (isOwnEcho) return;
@@ -687,16 +875,26 @@ function handleCallSignal(payload) {
     if (!target) return;
     if (activeCall) { sendCallMessage({ type: 'call_hangup', call_id: payload.call_id, ...target, reason: 'busy' }).catch(() => {}); return; }
     activeCall = { callId: payload.call_id, target, kind: payload.room_id != null ? 'room' : 'dm', person: payload.room_id != null ? { display_name: `# ${rooms.find(room => Number(room.id) === Number(payload.room_id))?.name || t('room')}` } : userFor(senderId) || { display_name: t('user') }, incoming: true, status: 'ringing' };
+    // If the caller's hangup is lost, stop ringing a little after they would have given up.
+    const incoming = activeCall;
+    incoming.ringTimer = setTimeout(() => { if (activeCall === incoming && incoming.incoming) endCall(undefined, false); }, RING_TIMEOUT + 15000);
     startRingtone('ringin');
     updateCallWindow(); return;
   }
   if (!activeCall || activeCall.callId !== payload.call_id) return;
   if (payload.type === 'call_answer') {
+    clearTimeout(activeCall.ringTimer);
     stopRingtone();
     activeCall.incoming = false; activeCall.status = 'connecting'; updateCallWindow();
     startCallAudio().then(() => { if (activeCall?.callId === payload.call_id) { activeCall.status = 'connected'; updateCallWindow(); } }).catch(error => endCall('mic') || showSystemDialog(error.message, 'error', t('microphone')));
   }
-  if (payload.type === 'call_hangup') { stopRingtone(); stopCallAudio(); stopScreenShare(false); stopRemoteScreen(); activeCall = null; desktopControls?.closeCallWindow(); }
+  if (payload.type === 'call_hangup') {
+    const calling = !activeCall.incoming && activeCall.status === 'waiting';
+    clearTimeout(activeCall.ringTimer); stopRingtone(); stopCallAudio(); stopScreenShare(false); stopRemoteScreen(); activeCall = null; desktopControls?.closeCallWindow();
+    // Tell the caller why the call did not start.
+    const reasonText = calling && { busy: t('callBusy'), declined: t('callDeclined'), 'no-answer': t('noAnswer') }[payload.reason];
+    if (reasonText) showSystemDialog(reasonText, 'info', t('call'));
+  }
 }
 async function boot() {
   try {
@@ -723,8 +921,8 @@ function applyServerUrl(value) {
     return true;
   } catch { $('#auth-error').textContent = t('serverUrlInvalid'); return false; }
 }
-$('#server-url').onchange = () => { if (applyServerUrl($('#server-url').value)) renderSavedUsers(); };
-$('#classic-server-url').onchange = () => applyServerUrl($('#classic-server-url').value);
+$('#server-url').onchange = () => { if (applyServerUrl($('#server-url').value)) { renderSavedUsers(); refreshServerInfo(); } };
+$('#classic-server-url').onchange = () => { if (applyServerUrl($('#classic-server-url').value)) refreshServerInfo(); };
 // DNS resolver (desktop only): chosen on the logon screen or in Display Properties.
 const DNS_CHOICES = ['system', 'cloudflare', 'google', 'quad9', 'adguard', 'custom'];
 let dnsDraft;
@@ -874,8 +1072,14 @@ $('#change-user').onclick = () => leaveAccount(false);
 $('#logout').onclick = () => leaveAccount(true);
 async function acceptCall() {
   if (!activeCall?.incoming) return;
+  if (activeCall.room) {
+    // Joining from an invite: keep the channel's call_id so everyone matches.
+    const invite = activeCall; clearTimeout(invite.ringTimer); clearInterval(invite.presenceTimer); activeCall = null;
+    joinRoomChannel(invite.target.room_id, { callId: invite.callId });
+    return;
+  }
   try {
-    if (!activeCall.target.to_id) throw new Error(t('roomAudioUnsupported'));
+    clearTimeout(activeCall.ringTimer);
     stopRingtone();
     const id = activeCall.callId;
     await sendCallMessage({ type: 'call_answer', call_id: id, ...activeCall.target });
@@ -885,7 +1089,7 @@ async function acceptCall() {
   }
   catch (error) { showSystemDialog(error.message, 'error', t('callAccept')); }
 }
-desktopControls?.onCallAction?.(({ action, transport, side } = {}) => {
+desktopControls?.onCallAction?.(({ action, transport, side, id } = {}) => {
   if (action === 'accept') acceptCall();
   else if (action === 'transport') setCallTransport(transport);
   else if (action === 'decline') endCall('declined');
@@ -895,7 +1099,12 @@ desktopControls?.onCallAction?.(({ action, transport, side } = {}) => {
     callAudio?.stream?.getAudioTracks().forEach(track => { track.enabled = !activeCall.muted; });
     updateCallWindow();
   }
-  else if (action === 'mute-remote') { if (!activeCall) return; activeCall.remoteMuted = !activeCall.remoteMuted; updateCallWindow(); }
+  else if (action === 'mute-remote') {
+    if (!activeCall) return;
+    const participant = activeCall.room ? activeCall.participants.get(Number(id)) : null;
+    if (participant) participant.muted = !participant.muted; else activeCall.remoteMuted = !activeCall.remoteMuted;
+    updateCallWindow();
+  }
   else if (action === 'screen-view') refreshScreenView(side === 'self' ? 'self' : 'remote');
   else if (action === 'share') toggleScreenShare().catch(error => showSystemDialog(error.name === 'NotSupportedError' ? t('screenAccess') : error.message, 'warning', t('screenShare')));
   else if (action === 'hangup' || action === 'dismiss') endCall(activeCall?.incoming ? 'declined' : undefined);
