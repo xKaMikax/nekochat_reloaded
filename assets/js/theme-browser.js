@@ -77,3 +77,5 @@ async function showDiscovery() {
     });
   } catch (error) { status.textContent = error.message; status.classList.add('error'); }
 }
+// XP click sound on buttons, like in the chat window.
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });

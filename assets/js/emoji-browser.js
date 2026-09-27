@@ -35,3 +35,5 @@ $('#emoji-grid').onclick = event => { const button = event.target.closest('[data
 controls.onThemeChanged(applyFrame);
 controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
 Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { applyFrame(theme); language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
+// XP click sound on buttons, like in the chat window.
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });
