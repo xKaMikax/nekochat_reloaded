@@ -15,6 +15,8 @@
     'theme:browser-install': id => themes.installCatalogTheme(String(id || '')),
     'display:current': async () => { await themes.ready(); return themes.activeDisplay; },
     'display:apply': settings => themes.saveDisplaySettings(settings || {}),
+    'backup:export-themes': () => themes.exportThemeFiles(),
+    'backup:restore-themes': archive => themes.restoreThemeFiles(String(archive || '')),
   };
 
   const icon = new URL('icons/icon-192.png', location.href).href;

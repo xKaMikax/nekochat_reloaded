@@ -1,0 +1,40 @@
+{
+  "name": "Nekochat Reloaded",
+  "identifier": "dev.kamika.nekochat-reloaded.source",
+  "subtitle": "Windows XP styled Nekochat client",
+  "description": "Official source of Nekochat Reloaded for AltStore: new versions appear here as soon as they are released.",
+  "iconURL": "https://xkamikax.github.io/nekochat_reloaded/icons/icon-512.png",
+  "website": "https://github.com/xKaMikax/nekochat_reloaded",
+  "tintColor": "#245EDB",
+  "apps": [
+    {
+      "name": "Nekochat Reloaded",
+      "bundleIdentifier": "dev.kamika.nekochat-reloaded",
+      "developerName": "KaMika",
+      "subtitle": "Windows XP styled Nekochat client",
+      "localizedDescription": "An unofficial Nekochat client in the style of Windows XP: rooms, direct messages, voice calls, themes from .msstyles files, statuses and settings backups.",
+      "iconURL": "https://xkamikax.github.io/nekochat_reloaded/icons/icon-512.png",
+      "tintColor": "#245EDB",
+      "category": "social",
+      "screenshots": [],
+      "versions": [
+        {
+          "version": "1.4.1",
+          "buildVersion": "8",
+          "date": "2026-09-27",
+          "localizedDescription": "Automatic updates, client badges next to statuses, the Nekochat Reloaded server by default and themes in backups.",
+          "downloadURL": "https://github.com/xKaMikax/nekochat_reloaded/releases/download/build_v1.4.1/Nekochat-Reloaded-1.4.1.ipa",
+          "size": 4326739,
+          "minOSVersion": "16.4"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSMicrophoneUsageDescription": "Nekochat Reloaded uses the microphone for voice calls."
+        }
+      }
+    }
+  ],
+  "news": []
+}

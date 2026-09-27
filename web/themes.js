@@ -567,6 +567,35 @@
     const scheme = prepared.metadata.defaultScheme || '';
     return { themes: await listThemes(), id, scheme, revision: now(), cssUrl: await cssUrl(prepared, scheme) };
   }
+  // ---- Settings backups: installed themes as "themes/<id>/…" entries, base64 like the apps --
+  const toBase64 = bytes => { let binary = ''; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(binary); };
+  async function exportThemeFiles() {
+    const files = [];
+    for (const record of await dbAll('themes')) {
+      for (const [name, blob] of Object.entries(record.files)) files.push({ path: `themes/${record.id}/${name}`, data: toBase64(new Uint8Array(await blob.arrayBuffer())) });
+      if (record.catalogId) files.push({ path: `themes/${record.id}/catalog-theme.json`, data: btoa(JSON.stringify({ id: record.catalogId })) });
+    }
+    return files;
+  }
+  // Adds the themes of a backup archive (made on any platform) to the installed ones.
+  async function restoreThemeFiles(archiveBase64) {
+    const entries = await readZip(Uint8Array.from(atob(archiveBase64), char => char.charCodeAt(0)).buffer);
+    const byTheme = new Map();
+    for (const [name, bytes] of Object.entries(entries)) {
+      const match = name.match(/^themes\/([^/]+)\/(.+)$/); if (!match || RESERVED_IDS.has(match[1]) || match[1].startsWith('.')) continue;
+      if (!byTheme.has(match[1])) byTheme.set(match[1], {});
+      byTheme.get(match[1])[match[2]] = bytes;
+    }
+    for (const [id, files] of byTheme) {
+      let catalogId = null;
+      if (files['catalog-theme.json']) { try { catalogId = JSON.parse(new TextDecoder().decode(files['catalog-theme.json'])).id || null; } catch {} delete files['catalog-theme.json']; }
+      if (!findSource(Object.keys(files))) continue;
+      await dbDelete('rendered', id);
+      await installRecord({ id, installed: now(), catalogId, files: Object.fromEntries(Object.entries(files).map(([name, bytes]) => [name, new Blob([bytes])])) });
+    }
+    return listThemes();
+  }
+
   // dialog.showOpenDialog: the click that opened it counts as the user action for the picker.
   function pickFile() {
     return new Promise(resolve => {
@@ -653,7 +682,7 @@
     ready: () => loaded,
     get activeTheme() { return activeTheme; },
     get activeDisplay() { return activeDisplay; },
-    listThemes, previewTheme, activateTheme, removeTheme, importTheme,
+    listThemes, previewTheme, activateTheme, removeTheme, importTheme, exportThemeFiles, restoreThemeFiles,
     fetchCatalog, fetchCatalogThemeDetails, installCatalogTheme, saveDisplaySettings,
   };
 })();

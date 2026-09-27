@@ -246,6 +246,11 @@
       previewTheme: (id, scheme) => invoke('theme:preview', id, scheme),
       applyTheme: async (id, scheme) => { activeTheme = await invoke('theme:apply', id, scheme); notifyThemeChanged(activeTheme); return clone(activeTheme); },
       importTheme: () => invoke('theme:import'),
+      // Updates (nekochat.js): the site is the update; reloading loads the new version.
+      getUpdateInfo: () => Promise.resolve({ mode: 'reload', platform: 'web' }),
+      // Settings backups (backup.js): themes travel as base64, like on Android and iPhone.
+      exportThemeFiles: async () => (await invoke('backup:export-themes')).map(file => ({ path: file.path, data: Uint8Array.from(atob(file.data), char => char.charCodeAt(0)) })),
+      restoreThemeFiles: archive => { let binary = ''; const bytes = new Uint8Array(archive); for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return invoke('backup:restore-themes', btoa(binary)); },
       listCatalogThemes: () => invoke('theme:browser-list'),
       getCatalogThemeDetails: id => invoke('theme:browser-details', String(id || '')),
       installCatalogTheme: id => invoke('theme:browser-install', String(id || '')),
