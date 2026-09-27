@@ -12,6 +12,8 @@ Only the Nekochat servers listed in `NEKOCHAT_SERVERS` are accepted.
 
 ## API
 
+Interactive docs (Swagger UI): `/api/docs` (alias `/docs`); OpenAPI spec: `/api/openapi.json` (alias `/openapi.json`).
+
 | Method | Path | Body / answer |
 |---|---|---|
 | GET | `/api/health` | `{ok, version}` |

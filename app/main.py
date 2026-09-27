@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -30,7 +32,25 @@ SESSION_DAYS = int(os.environ.get("RELOADED_SESSION_DAYS", "30"))
 MAX_SETTINGS_BYTES = 64 * 1024
 MAX_READ_STATE_CHATS = 2000
 
-app = FastAPI(title="Nekochat Reloaded companion", version=VERSION)
+DESCRIPTION = """
+Companion server for the **Nekochat Reloaded** clients: settings and read state shared between
+a user's devices, and a do-not-disturb status other Reloaded users can see.
+
+**Accounts.** Sign in to your Nekochat server, then call `POST /link` with the Nekochat token
+(`Authorization: Bearer <Nekochat token>`). The companion checks it once with that server's
+`/api/me` and answers with its own session token; the Nekochat token is not stored.
+Use the companion token for every other request (the **Authorize** button above).
+"""
+TAGS = [
+    {"name": "account", "description": "Linking a Nekochat account and the session"},
+    {"name": "sync", "description": "Settings and read state shared between devices"},
+    {"name": "status", "description": "Do-not-disturb status"},
+    {"name": "server", "description": "Server information"},
+]
+# Same layout as the Nekochat server: Swagger UI at /api/docs, the spec at /api/openapi.json.
+app = FastAPI(title="Nekochat Reloaded companion", version=VERSION, description=DESCRIPTION, openapi_tags=TAGS,
+              docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
+bearer = HTTPBearer(auto_error=False, description="Companion session token from /link (or, for /link itself, the Nekochat token)")
 # The web client runs on another origin (GitHub Pages); sessions use a bearer header, not cookies.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -102,8 +122,8 @@ def token_hash(token: str) -> str:
 
 
 # ---- sessions --------------------------------------------------------------------------------
-def current_account(authorization: str = Header(default="")) -> sqlite3.Row:
-    token = authorization.removeprefix("Bearer ").strip()
+def current_account(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> sqlite3.Row:
+    token = credentials.credentials.strip() if credentials else ""
     if not token:
         raise HTTPException(401, "Missing session token")
     with database() as db:
@@ -135,18 +155,28 @@ class LinkIn(BaseModel):
     device: str = Field(default="", max_length=100)
 
 
-@app.get("/api/health")
+@app.get("/docs", include_in_schema=False)
+def docs_alias():
+    return RedirectResponse("/api/docs")
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def openapi_alias():
+    return app.openapi()
+
+
+@app.get("/api/health", tags=["server"])
 def health():
     return {"ok": True, "version": VERSION}
 
 
-@app.get("/api/info")
+@app.get("/api/info", tags=["server"])
 def info():
     return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status"]}
 
 
-@app.post("/link")
-async def link(payload: LinkIn, authorization: str = Header(default="")):
+@app.post("/link", tags=["account"])
+async def link(payload: LinkIn, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
     """Links a Nekochat account: the Nekochat token proves who the user is, once.
 
     The token is only forwarded to that Nekochat server's /api/me and is not stored.
@@ -154,7 +184,7 @@ async def link(payload: LinkIn, authorization: str = Header(default="")):
     server = payload.server.strip().rstrip("/")
     if server not in NEKOCHAT_SERVERS:
         raise HTTPException(400, "This Nekochat server is not supported by this companion")
-    nekochat_token = authorization.removeprefix("Bearer ").strip()
+    nekochat_token = credentials.credentials.strip() if credentials else ""
     if not nekochat_token:
         raise HTTPException(401, "Send the Nekochat token as Authorization: Bearer <token>")
     try:
@@ -186,14 +216,14 @@ async def link(payload: LinkIn, authorization: str = Header(default="")):
         return {"token": session, "expires_in": SESSION_DAYS * 86400, **account_view(account, db)}
 
 
-@app.get("/me")
+@app.get("/me", tags=["account"])
 def me(account: sqlite3.Row = Depends(current_account)):
     """Everything the client keeps here, in one package."""
     with database() as db:
         return account_view(account, db)
 
 
-@app.put("/settings")
+@app.put("/settings", tags=["sync"])
 def put_settings(settings: dict[str, Any], account: sqlite3.Row = Depends(current_account)):
     """Replaces the synced client settings (muted chats, sounds, background, ...)."""
     text = json.dumps(settings, separators=(",", ":"))
@@ -209,13 +239,13 @@ class ReadStateIn(BaseModel):
     chats: dict[str, str | int]
 
 
-@app.get("/read-state")
+@app.get("/read-state", tags=["sync"])
 def get_read_state(account: sqlite3.Row = Depends(current_account)):
     with database() as db:
         return {r["chat"]: r["last_read"] for r in db.execute("SELECT chat, last_read FROM read_state WHERE account_id = ?", (account["id"],))}
 
 
-@app.put("/read-state")
+@app.put("/read-state", tags=["sync"])
 def put_read_state(payload: ReadStateIn, account: sqlite3.Row = Depends(current_account)):
     """Stores the last read message per chat, so every device shows the same unread counts."""
     chats = {chat: str(value) for chat, value in payload.chats.items() if chat.split(":")[0] in ("room", "dm") and len(chat) <= 40 and len(str(value)) <= 64}
@@ -238,7 +268,7 @@ class StatusIn(BaseModel):
     status: str
 
 
-@app.put("/status")
+@app.put("/status", tags=["status"])
 def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account)):
     """Your own status, seen by other Reloaded users of the same Nekochat server."""
     if payload.status not in STATUSES:
@@ -252,7 +282,7 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
     return {"ok": True, "status": payload.status}
 
 
-@app.get("/statuses")
+@app.get("/statuses", tags=["status"])
 def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account)):
     """Statuses of the given Nekochat user ids on your server; users without one are omitted."""
     wanted = [int(part) for part in ids.split(",") if part.strip().isdigit()][:500]
@@ -268,15 +298,15 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
     return {str(row["nekochat_id"]): row["status"] for row in rows}
 
 
-@app.post("/logout")
-def logout(authorization: str = Header(default="")):
-    token = authorization.removeprefix("Bearer ").strip()
+@app.post("/logout", tags=["account"])
+def logout(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+    token = credentials.credentials.strip() if credentials else ""
     with database() as db:
         db.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash(token),))
     return {"ok": True}
 
 
-@app.delete("/me")
+@app.delete("/me", tags=["account"])
 def delete_me(account: sqlite3.Row = Depends(current_account)):
     """Forgets everything this server keeps about the account (sessions, settings, read state)."""
     with database() as db:
