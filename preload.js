@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('windowControls', {
   getDisplaySettings: () => ipcRenderer.invoke('display:current'),
   prepareDisplayCapture: () => ipcRenderer.invoke('display:prepare-capture'),
   applyDisplaySettings: settings => ipcRenderer.invoke('display:apply', settings),
+  // Only the desktop app can choose the DNS resolver; phone WebViews use the system one.
+  dnsSupported: true,
   onThemeChanged: callback => ipcRenderer.on('theme:changed', (_, data) => callback(data)),
   onDisplayChanged: callback => ipcRenderer.on('display:changed', (_, data) => callback(data)),
   onProfileChanged: callback => ipcRenderer.on('profile:changed', (_, data) => callback(data)),

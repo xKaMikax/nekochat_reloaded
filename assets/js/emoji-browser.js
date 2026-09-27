@@ -2,8 +2,8 @@ const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { title: 'Эмодзи NekoChat Reloaded', search: 'Поиск emoji…', all: 'Все', found: 'Найдено', groups: 'Категории emoji', skinTone: 'Тон кожи:' },
-  en: { title: 'NekoChat Reloaded Emoji', search: 'Search emoji…', all: 'All', found: 'Found', groups: 'Emoji categories', skinTone: 'Skin tone:' }
+  ru: { title: 'Эмодзи NekoChat Reloaded', search: 'Поиск emoji…', all: 'Все', found: 'Найдено', groups: 'Категории emoji', skinTone: 'Тон кожи:', tones: { '': 'Стандартный', '🏻': 'Светлый', '🏼': 'Светло-средний', '🏽': 'Средний', '🏾': 'Тёмно-средний', '🏿': 'Тёмный' } },
+  en: { title: 'NekoChat Reloaded Emoji', search: 'Search emoji…', all: 'All', found: 'Found', groups: 'Emoji categories', skinTone: 'Skin tone:', tones: { '': 'Default', '🏻': 'Light', '🏼': 'Medium-light', '🏽': 'Medium', '🏾': 'Medium-dark', '🏿': 'Dark' } }
 };
 const groupNames = {
   'Smileys & Emotion': ['Смайлы и эмоции', 'Smileys & Emotion'], 'People & Body': ['Люди и тело', 'People & Body'],
@@ -26,7 +26,7 @@ function render() {
   $('#emoji-count').textContent = `${t('found')}: ${items.length}`;
   $('#emoji-grid').innerHTML = items.map(item => `<button type="button" data-emoji="${esc(item.e)}" title="${esc(item.n)}" aria-label="${esc(item.n)}">${esc(item.e)}</button>`).join('');
 }
-function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#emoji-search').placeholder = t('search'); $('#emoji-groups').setAttribute('aria-label', t('groups')); $('#skin-tone-label').textContent = t('skinTone'); render(); }
+function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#emoji-search').placeholder = t('search'); $('#emoji-groups').setAttribute('aria-label', t('groups')); $('#skin-tone-label').textContent = t('skinTone'); document.querySelectorAll('[data-skin-tone]').forEach(button => { const name = t('tones')[button.dataset.skinTone]; if (name) { button.title = name; button.setAttribute('aria-label', name); } }); render(); }
 $('#close').onclick = () => controls.close();
 $('#emoji-search').oninput = render;
 $('#emoji-groups').onclick = event => { const group = event.target.closest('[data-group]')?.dataset.group; if (group) { selectedGroup = group; render(); } };

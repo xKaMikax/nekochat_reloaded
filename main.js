@@ -43,9 +43,17 @@ function readZipEntryData(buffer, entry) {
 }
 async function extractZip(buffer, destinationRoot) {
   const entries = readZipEntries(buffer);
-  if (entries.some(entry => entry.name.startsWith('/') || entry.name.split('/').includes('..'))) throw new Error('Theme.ZIP contains an unsafe path.');
+  // ZIP names come from the archive: reject backslashes, drive letters and anything that
+  // resolves outside the destination (on Windows a backslash and "C:" also act as path parts).
+  const root = path.resolve(destinationRoot);
+  const targetOf = name => {
+    if (!name || name.includes('\\') || name.includes('\0') || /^[a-z]:/i.test(name) || name.startsWith('/') || name.split('/').includes('..')) return null;
+    const target = path.resolve(root, name);
+    return target === root || target.startsWith(`${root}${path.sep}`) ? target : null;
+  };
+  if (entries.some(entry => !targetOf(entry.name))) throw new Error('Theme.ZIP contains an unsafe path.');
   for (const entry of entries) {
-    const target = path.join(destinationRoot, entry.name);
+    const target = targetOf(entry.name);
     if (entry.name.endsWith('/')) { await fs.mkdir(target, { recursive: true }); continue; }
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, readZipEntryData(buffer, entry));
@@ -78,7 +86,21 @@ let closingCallWindow = false;
 const detachedChatWindows = new Map();
 const closingDetachedWindows = new Set();
 let activeTheme;
-let activeDisplay = { language: 'ru', loginUi: 'xp', micDeviceId: '', noiseSuppression: 'webrtc' };
+let activeDisplay = { language: 'ru', loginUi: 'xp', micDeviceId: '', noiseSuppression: 'webrtc', dns: 'system', dnsCustom: '' };
+// Chromium resolves names itself; it accepts custom resolvers only as DNS-over-HTTPS.
+const DNS_PROVIDERS = { cloudflare: 'https://cloudflare-dns.com/dns-query', google: 'https://dns.google/dns-query', quad9: 'https://dns.quad9.net/dns-query', adguard: 'https://dns.adguard-dns.com/dns-query' };
+function dnsServer(settings) {
+  if (settings.dns === 'custom') return /^https:\/\/[^\s]+$/i.test(settings.dnsCustom || '') ? settings.dnsCustom : '';
+  return DNS_PROVIDERS[settings.dns] || '';
+}
+function applyDnsSettings() {
+  const server = dnsServer(activeDisplay);
+  try {
+    app.configureHostResolver(server ? { secureDnsMode: 'secure', secureDnsServers: [server] } : { secureDnsMode: 'automatic', secureDnsServers: [] });
+    session.defaultSession.clearHostResolverCache();
+    session.defaultSession.closeAllConnections?.();
+  } catch (error) { console.warn('DNS settings were not applied:', error); }
+}
 let displayCaptureSource;
 
 function notifyThemeChanged(theme) {
@@ -87,8 +109,13 @@ function notifyThemeChanged(theme) {
 function notifyDisplayChanged(settings) {
   BrowserWindow.getAllWindows().forEach(win => win.webContents.send('display:changed', settings));
 }
-async function saveDisplaySettings(settings) {
-  activeDisplay = { language: settings.language === 'en' ? 'en' : 'ru', loginUi: settings.loginUi === 'classic' ? 'classic' : 'xp', micDeviceId: typeof settings.micDeviceId === 'string' ? settings.micDeviceId : '', noiseSuppression: ['off', 'rnnoise'].includes(settings.noiseSuppression) ? settings.noiseSuppression : 'webrtc' };
+async function saveDisplaySettings(changes) {
+  // Screens save only what they show (the logon screen changes only DNS), so keep the rest.
+  const settings = { ...activeDisplay, ...changes };
+  const dns = settings.dns === 'custom' || DNS_PROVIDERS[settings.dns] ? settings.dns : 'system';
+  if (dns === 'custom' && !dnsServer(settings)) throw new Error(settings.language === 'en' ? 'The DNS-over-HTTPS address must start with https://' : 'Адрес DNS-over-HTTPS должен начинаться с https://');
+  activeDisplay = { language: settings.language === 'en' ? 'en' : 'ru', loginUi: settings.loginUi === 'classic' ? 'classic' : 'xp', micDeviceId: typeof settings.micDeviceId === 'string' ? settings.micDeviceId : '', noiseSuppression: ['off', 'rnnoise'].includes(settings.noiseSuppression) ? settings.noiseSuppression : 'webrtc', dns, dnsCustom: typeof settings.dnsCustom === 'string' ? settings.dnsCustom.trim() : '' };
+  applyDnsSettings();
   await fs.mkdir(path.dirname(displayStatePath), { recursive: true });
   await fs.writeFile(displayStatePath, JSON.stringify(activeDisplay));
   notifyDisplayChanged(activeDisplay);
@@ -577,6 +604,7 @@ app.whenReady().then(async () => {
   try { saved = JSON.parse(await fs.readFile(themeStatePath, 'utf8')); } catch {}
   if (String(saved.id).toLowerCase() === 'aero') saved = { id: 'Classic', scheme: 'classic' };
   try { activeDisplay = { ...activeDisplay, ...JSON.parse(await fs.readFile(displayStatePath, 'utf8')) }; } catch {}
+  applyDnsSettings();
   try { await activateTheme(saved.id, saved.scheme); }
   catch { try { await activateTheme('Classic', 'classic'); } catch (error) { console.error('Theme activation failed (built-in assets missing?):', error); } }
   ipcMain.on('window:minimize', e => BrowserWindow.fromWebContents(e.sender).minimize());
@@ -620,7 +648,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('display:current', () => activeDisplay);
   ipcMain.handle('display:prepare-capture', async () => {
     const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 } });
-    if (!sources[0]) throw new Error('В системе не найден доступный экран или окно для демонстрации.');
+    if (!sources[0]) throw new Error(activeDisplay.language === 'en' ? 'No screen or window is available for sharing.' : 'В системе не найден доступный экран или окно для демонстрации.');
     displayCaptureSource = sources[0]; return true;
   });
   ipcMain.handle('display:apply', (_, settings) => saveDisplaySettings(settings || {}));
