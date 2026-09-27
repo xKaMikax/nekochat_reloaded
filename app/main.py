@@ -24,7 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.4.1"
+VERSION = "0.5.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -101,6 +101,7 @@ def migrate() -> None:
             CREATE TABLE IF NOT EXISTS user_status (
                 account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
                 status TEXT NOT NULL,            -- online, away, dnd (do not disturb) or invisible
+                client TEXT NOT NULL DEFAULT '', -- app the user last reported from, e.g. "Android 1.4.1"
                 updated_at INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS backups (
@@ -123,6 +124,8 @@ def migrate() -> None:
             """
         )
         # Backups made by server 0.4.0 have no client column yet.
+        if "client" not in [row["name"] for row in db.execute("PRAGMA table_info(user_status)")]:
+            db.execute("ALTER TABLE user_status ADD COLUMN client TEXT NOT NULL DEFAULT ''")
         if "client" not in [row["name"] for row in db.execute("PRAGMA table_info(backups)")]:
             db.execute("ALTER TABLE backups ADD COLUMN client TEXT NOT NULL DEFAULT ''")
 
@@ -283,6 +286,7 @@ STATUSES = ("online", "away", "dnd", "invisible")
 
 class StatusIn(BaseModel):
     status: str
+    client: str | None = Field(default=None, max_length=40, description='The app sending it, e.g. "PC 1.4.1"; kept as it was when omitted')
 
 
 @app.put("/status", tags=["status"])
@@ -293,11 +297,13 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
     """
     if payload.status not in STATUSES:
         raise HTTPException(400, f"Status must be one of: {', '.join(STATUSES)}")
+    client = (payload.client or "").strip()
     with database() as db:
         db.execute(
-            "INSERT INTO user_status (account_id, status, updated_at) VALUES (?, ?, ?) "
-            "ON CONFLICT (account_id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at",
-            (account["id"], payload.status, now()),
+            "INSERT INTO user_status (account_id, status, client, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT (account_id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at"
+            + (", client = excluded.client" if client else ""),
+            (account["id"], payload.status, client, now()),
         )
     return {"ok": True, "status": payload.status}
 
@@ -319,6 +325,26 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
             (account["server"], *wanted),
         ).fetchall()
     return {str(row["nekochat_id"]): "offline" if row["status"] == "invisible" else row["status"] for row in rows}
+
+
+@app.get("/presence", tags=["status"])
+def get_presence(ids: str = "", account: sqlite3.Row = Depends(current_account)):
+    """Status and client app of the given Nekochat user ids on your server, for users who use a Reloaded client.
+
+    Each entry is `{"status": ..., "client": "Android 1.4.1"}`. An invisible user is reported as
+    `offline` without a client, exactly like someone who is not there.
+    """
+    wanted = [int(part) for part in ids.split(",") if part.strip().isdigit()][:500]
+    if not wanted:
+        return {}
+    marks = ",".join("?" * len(wanted))
+    with database() as db:
+        rows = db.execute(
+            f"SELECT accounts.nekochat_id, user_status.status, user_status.client FROM user_status JOIN accounts ON accounts.id = user_status.account_id "
+            f"WHERE accounts.server = ? AND accounts.nekochat_id IN ({marks})",
+            (account["server"], *wanted),
+        ).fetchall()
+    return {str(row["nekochat_id"]): {"status": "offline", "client": ""} if row["status"] == "invisible" else {"status": row["status"], "client": row["client"]} for row in rows}
 
 
 # ---- backups ---------------------------------------------------------------------------------
