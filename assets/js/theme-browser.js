@@ -78,4 +78,4 @@ async function showDiscovery() {
   } catch (error) { status.textContent = error.message; status.classList.add('error'); }
 }
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });

@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8"><base href="../../">
+  <link rel="stylesheet" href="assets/css/style.css"><link id="preview-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/theme-controls.css"><link rel="stylesheet" href="assets/css/theme-editor-preview.css">
+</head>
+<body>
+  <div class="preview-desktop">
+    <div class="preview-slot inactive-slot"><div class="xp-window xp-inactive">
+      <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/nekochat_icon.png')"></span><span class="xp-title">Inactive Window</span><div class="xp-window-controls"><button class="preview-min"></button><button class="preview-max"></button><button class="preview-close"></button></div></header>
+      <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="preview-body"></main><i class="xp-side xp-side-right"></i></div><i class="xp-bottom"></i>
+    </div></div>
+    <div class="preview-slot active-slot"><div class="xp-window">
+      <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/nekochat_icon.png')"></span><span class="xp-title">Active Window</span><div class="xp-window-controls"><button class="preview-min"></button><button class="preview-max"></button><button class="preview-close"></button></div></header>
+      <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="preview-body">
+        <fieldset class="preview-group"><legend>Group box</legend>
+          <label class="preview-check"><input type="checkbox" checked> Check box</label>
+          <label class="preview-check"><input type="checkbox"> Another one</label>
+          <input class="preview-slider" type="range" min="0" max="100" value="60">
+        </fieldset>
+        <div class="preview-scroll"><p>Window text. Hover and press the buttons, check boxes and the slider to see every state.</p><p class="preview-highlight">Selected text</p><p>Scroll bars use the theme's arrows, shaft and thumb.</p><p>…</p><p>…</p></div>
+        <div class="preview-buttons"><button class="preview-button">OK</button><button class="preview-button">Cancel</button></div>
+      </main><i class="xp-side xp-side-right"></i></div><i class="xp-bottom"></i>
+    </div></div>
+  </div>
+  <script>
+    // The editor sends the edited theme.css as a blob URL.
+    const link = document.querySelector('#preview-theme');
+    const refresh = () => { const style = getComputedStyle(document.documentElement); document.documentElement.classList.toggle('xp-sliders', style.getPropertyValue('--xp-slider-thumb').trim() !== ''); document.documentElement.classList.toggle('xp-checkboxes', style.getPropertyValue('--xp-checkbox-checked').trim() !== ''); };
+    addEventListener('message', event => { if (event.data?.type !== 'theme-editor-preview') return; link.addEventListener('load', refresh, { once: true }); link.href = event.data.cssUrl; setTimeout(refresh, 200); });
+  </script>
+</body>
+</html>

@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   setWindowMeta: (title, icon) => ipcRenderer.send('window:set-meta', { title, icon }),
   openThemeSettings: () => ipcRenderer.send('theme:open-settings'),
   openThemeBrowser: () => ipcRenderer.send('theme:open-browser'),
+  openThemeEditor: () => ipcRenderer.send('theme:open-editor'),
+  loadThemeForEditor: (id, scheme) => ipcRenderer.invoke('theme-editor:load', id, scheme),
+  saveEditedTheme: theme => ipcRenderer.invoke('theme-editor:save', theme),
   openEmojiBrowser: () => ipcRenderer.send('emoji:open-browser'),
   openProfileSettings: () => ipcRenderer.send('profile:open-settings'),
   openRoomCreate: () => ipcRenderer.send('room:create-open'),
@@ -22,11 +25,21 @@ contextBridge.exposeInMainWorld('windowControls', {
   previewTheme: (id, scheme) => ipcRenderer.invoke('theme:preview', id, scheme),
   applyTheme: (id, scheme) => ipcRenderer.invoke('theme:apply', id, scheme),
   importTheme: () => ipcRenderer.invoke('theme:import'),
+  exportThemeFiles: () => ipcRenderer.invoke('backup:export-themes'),
+  restoreThemeFiles: archive => ipcRenderer.invoke('backup:restore-themes', archive),
+  relaunch: () => ipcRenderer.send('app:relaunch'),
   listCatalogThemes: () => ipcRenderer.invoke('theme:browser-list'),
   getCatalogThemeDetails: id => ipcRenderer.invoke('theme:browser-details', id),
   installCatalogTheme: id => ipcRenderer.invoke('theme:browser-install', id),
   removeTheme: id => ipcRenderer.invoke('theme:remove', id),
   notifyMessage: message => ipcRenderer.send('notification:message', message),
+  setUnreadCount: count => ipcRenderer.send('unread:set', count),
+  // Desktop only: the server admin panel (the renderer cannot send its session cookie).
+  openAdminPanel: server => ipcRenderer.send('admin:open', server),
+  adminRequest: request => ipcRenderer.invoke('admin:request', request),
+  onBalloonShow: callback => ipcRenderer.on('balloon:show', (_, data) => callback(data)),
+  balloonClick: () => ipcRenderer.send('balloon:click'),
+  balloonClose: () => ipcRenderer.send('balloon:close'),
   showSystemDialog: data => ipcRenderer.send('system:show', data),
   systemAction: action => ipcRenderer.send('system:action', action),
   getDisplaySettings: () => ipcRenderer.invoke('display:current'),
@@ -49,3 +62,5 @@ contextBridge.exposeInMainWorld('windowControls', {
   roomCreated: room => ipcRenderer.send('room:created', room),
   resize: (direction, dx, dy) => ipcRenderer.send('window:resize', { direction, dx, dy })
 });
+// The window frame uses the inactive half of the theme's frame images while the window is not focused.
+ipcRenderer.on('window:focus', (_, focused) => document.documentElement.classList.toggle('xp-inactive', !focused));

@@ -299,6 +299,8 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
     output.mkdir(parents=True, exist_ok=True)
     caption = find(images, '_FRAMECAPTION_BMP', prefix)
     cap_height = caption.height // 2
+    # The caption bitmap stacks the active title bar over the inactive one.
+    inactive = caption.crop((0, cap_height, caption.width, cap_height * 2))
     caption = caption.crop((0, 0, caption.width, cap_height))
     left, right = 28, 35
     if caption.width <= left + right:
@@ -306,6 +308,9 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
     save(caption.crop((0, 0, left, cap_height)), output, 'title-left.png')
     save(caption.crop((left, 0, caption.width - right, cap_height)), output, 'title-fill.png')
     save(caption.crop((caption.width - right, 0, caption.width, cap_height)), output, 'title-right.png')
+    save(inactive.crop((0, 0, left, cap_height)), output, 'title-left-inactive.png')
+    save(inactive.crop((left, 0, caption.width - right, cap_height)), output, 'title-fill-inactive.png')
+    save(inactive.crop((caption.width - right, 0, caption.width, cap_height)), output, 'title-right-inactive.png')
     save(find(images, '_FRAMELEFT_BMP', prefix), output, 'frame-left.png')
     save(find(images, '_FRAMERIGHT_BMP', prefix), output, 'frame-right.png')
     bottom = find(images, '_FRAMEBOTTOM_BMP', prefix)
@@ -352,9 +357,24 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
         for index, state_name in enumerate(('normal', 'hover', 'pressed')):
             save(state(glyph, index), output, f'{name}-glyph-{state_name}.png')
     (output / 'theme.css').write_text(
-        ':root { --xp-caption-left: %dpx; --xp-caption-right: %dpx; --xp-caption-middle: 1px; --xp-caption-height: %dpx; --xp-bottom-left: %dpx; --xp-bottom-right: %dpx; --xp-bottom-middle: 1px; --xp-bottom-height: %dpx; --xp-theme-window: %s; --xp-theme-buttonface: %s; --xp-theme-windowtext: %s; --xp-theme-highlight: %s; --xp-title-fill: url("%s/title-fill.png"); --xp-title-left: url("%s/title-left.png"); --xp-title-right: url("%s/title-right.png"); --xp-frame-left: url("%s/frame-left.png"); --xp-frame-right: url("%s/frame-right.png"); --xp-bottom-fill: url("%s/bottom-fill.png"); --xp-bottom-left-image: url("%s/bottom-left.png"); --xp-bottom-right-image: url("%s/bottom-right.png"); --xp-caption-normal: url("%s/caption-normal.png"); --xp-caption-hover: url("%s/caption-hover.png"); --xp-caption-pressed: url("%s/caption-pressed.png"); --xp-close-normal: url("%s/close-normal.png"); --xp-close-hover: url("%s/close-hover.png"); --xp-close-pressed: url("%s/close-pressed.png"); --xp-close-glyph: url("%s/close-glyph-normal.png"); --xp-close-glyph-hover: url("%s/close-glyph-hover.png"); --xp-close-glyph-pressed: url("%s/close-glyph-pressed.png"); --xp-minimize-glyph: url("%s/minimize-glyph-normal.png"); --xp-minimize-glyph-hover: url("%s/minimize-glyph-hover.png"); --xp-minimize-glyph-pressed: url("%s/minimize-glyph-pressed.png"); --xp-maximize-glyph: url("%s/maximize-glyph-normal.png"); --xp-maximize-glyph-hover: url("%s/maximize-glyph-hover.png"); --xp-maximize-glyph-pressed: url("%s/maximize-glyph-pressed.png"); --xp-button-normal: url("%s/button-normal.png"); --xp-button-hover: url("%s/button-hover.png"); --xp-button-pressed: url("%s/button-pressed.png"); }\n'
+        ':root { --xp-frame-states: 2; --xp-caption-left: %dpx; --xp-caption-right: %dpx; --xp-caption-middle: 1px; --xp-caption-height: %dpx; --xp-bottom-left: %dpx; --xp-bottom-right: %dpx; --xp-bottom-middle: 1px; --xp-bottom-height: %dpx; --xp-theme-window: %s; --xp-theme-buttonface: %s; --xp-theme-windowtext: %s; --xp-theme-highlight: %s; --xp-title-fill: url("%s/title-fill.png"); --xp-title-left: url("%s/title-left.png"); --xp-title-right: url("%s/title-right.png"); --xp-frame-left: url("%s/frame-left.png"); --xp-frame-right: url("%s/frame-right.png"); --xp-bottom-fill: url("%s/bottom-fill.png"); --xp-bottom-left-image: url("%s/bottom-left.png"); --xp-bottom-right-image: url("%s/bottom-right.png"); --xp-caption-normal: url("%s/caption-normal.png"); --xp-caption-hover: url("%s/caption-hover.png"); --xp-caption-pressed: url("%s/caption-pressed.png"); --xp-close-normal: url("%s/close-normal.png"); --xp-close-hover: url("%s/close-hover.png"); --xp-close-pressed: url("%s/close-pressed.png"); --xp-close-glyph: url("%s/close-glyph-normal.png"); --xp-close-glyph-hover: url("%s/close-glyph-hover.png"); --xp-close-glyph-pressed: url("%s/close-glyph-pressed.png"); --xp-minimize-glyph: url("%s/minimize-glyph-normal.png"); --xp-minimize-glyph-hover: url("%s/minimize-glyph-hover.png"); --xp-minimize-glyph-pressed: url("%s/minimize-glyph-pressed.png"); --xp-maximize-glyph: url("%s/maximize-glyph-normal.png"); --xp-maximize-glyph-hover: url("%s/maximize-glyph-hover.png"); --xp-maximize-glyph-pressed: url("%s/maximize-glyph-pressed.png"); --xp-button-normal: url("%s/button-normal.png"); --xp-button-hover: url("%s/button-hover.png"); --xp-button-pressed: url("%s/button-pressed.png"); }\n'
         % (left, right, cap_height, bleft, bright, bottom.height, colours['Window'], colours['ButtonFace'], colours['WindowText'], colours['Hilight'], *(asset,) * 26), encoding='utf-8')
+    # XP trackbar: the thumb pointing down (the volume slider look) and its track. Optional,
+    # so themes without these bitmaps still import.
+    slider = False
+    try:
+        thumb = find(images, '_TRACKBARDOWN16_BMP', prefix)
+        frame_height = thumb.height // 5
+        for state_index, state_name in enumerate(('normal', 'hover', 'pressed')):
+            save(strip_state(thumb, frame_height, state_index), output, f'slider-thumb-{state_name}.png')
+        save(find(images, '_SLIDERTRACK_BMP', prefix), output, 'slider-track.png')
+        slider = True
+    except KeyError:
+        pass
     with (output / 'theme.css').open('a', encoding='utf-8') as css:
+        if slider:
+            css.write(':root { --xp-slider-thumb: url("%s/slider-thumb-normal.png"); --xp-slider-thumb-hover: url("%s/slider-thumb-hover.png"); --xp-slider-thumb-pressed: url("%s/slider-thumb-pressed.png"); --xp-slider-track: url("%s/slider-track.png"); }\n' % ((asset,) * 4))
+        css.write(':root { --xp-title-fill-inactive: url("%s/title-fill-inactive.png"); --xp-title-left-inactive: url("%s/title-left-inactive.png"); --xp-title-right-inactive: url("%s/title-right-inactive.png"); }\n' % ((asset,) * 3))
         css.write(':root { --xp-checkbox-unchecked: url("%s/checkbox-unchecked-normal.png"); --xp-checkbox-unchecked-hover: url("%s/checkbox-unchecked-hover.png"); --xp-checkbox-unchecked-pressed: url("%s/checkbox-unchecked-pressed.png"); --xp-checkbox-checked: url("%s/checkbox-checked-normal.png"); --xp-checkbox-checked-hover: url("%s/checkbox-checked-hover.png"); --xp-checkbox-checked-pressed: url("%s/checkbox-checked-pressed.png"); --xp-groupbox: url("%s/groupbox.png"); --xp-field-outline: url("%s/field-outline.png"); }\n' % (asset, asset, asset, asset, asset, asset, asset, asset))
         css.write(':root { --xp-scroll-up: url("%s/scroll-up-normal.png"); --xp-scroll-up-hover: url("%s/scroll-up-hover.png"); --xp-scroll-up-pressed: url("%s/scroll-up-pressed.png"); --xp-scroll-down: url("%s/scroll-down-normal.png"); --xp-scroll-down-hover: url("%s/scroll-down-hover.png"); --xp-scroll-down-pressed: url("%s/scroll-down-pressed.png"); --xp-scroll-left: url("%s/scroll-left-normal.png"); --xp-scroll-left-hover: url("%s/scroll-left-hover.png"); --xp-scroll-left-pressed: url("%s/scroll-left-pressed.png"); --xp-scroll-right: url("%s/scroll-right-normal.png"); --xp-scroll-right-hover: url("%s/scroll-right-hover.png"); --xp-scroll-right-pressed: url("%s/scroll-right-pressed.png"); --xp-scroll-shaft-vertical: url("%s/scroll-shaft-vertical.png"); --xp-scroll-shaft-horizontal: url("%s/scroll-shaft-horizontal.png"); --xp-scroll-thumb-vertical: url("%s/scroll-thumb-vertical-normal.png"); --xp-scroll-thumb-vertical-hover: url("%s/scroll-thumb-vertical-hover.png"); --xp-scroll-thumb-vertical-pressed: url("%s/scroll-thumb-vertical-pressed.png"); --xp-scroll-thumb-horizontal: url("%s/scroll-thumb-horizontal-normal.png"); --xp-scroll-thumb-horizontal-hover: url("%s/scroll-thumb-horizontal-hover.png"); --xp-scroll-thumb-horizontal-pressed: url("%s/scroll-thumb-horizontal-pressed.png"); }\n' % ((asset,) * 20))
 

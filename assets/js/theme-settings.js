@@ -28,7 +28,13 @@ async function refreshMicDevices(selected) {
     if (selected && mics.some(device => device.deviceId === selected)) $('#mic-device').value = selected;
   } catch (error) { $('#mic-device').innerHTML = '<option value="">Default</option>'; }
 }
-function refreshFrame(theme) { if (theme?.cssUrl) document.querySelector('#frame-theme').href = theme.cssUrl; }
+// The theme's XP trackbar skins the sliders only when the theme has one (not Classic).
+function refreshSliderSkin() { const style = getComputedStyle(document.documentElement); document.documentElement.classList.toggle('xp-sliders', style.getPropertyValue('--xp-slider-thumb').trim() !== ''); document.documentElement.classList.toggle('xp-checkboxes', style.getPropertyValue('--xp-checkbox-checked').trim() !== ''); }
+// The stylesheet's load event is not reliable for file:// links, so check again shortly after.
+function refreshFrame(theme) {
+  if (theme?.cssUrl) document.querySelector('#frame-theme').href = theme.cssUrl;
+  [0, 150, 500, 1500].forEach(delay => setTimeout(refreshSliderSkin, delay));
+}
 function refreshPreview(theme) { previewTheme = theme; document.querySelectorAll('iframe[src="assets/html/theme_preview.html"]').forEach(frame => frame.contentWindow?.postMessage({ type: 'theme-preview', theme }, '*')); }
 document.querySelectorAll('iframe[src="assets/html/theme_preview.html"]').forEach(frame => frame.addEventListener('load', () => { if (previewTheme) frame.contentWindow.postMessage({ type: 'theme-preview', theme: previewTheme }, '*'); }));
 async function applySelection() {
@@ -36,6 +42,13 @@ async function applySelection() {
   await controls.applyDisplaySettings({ language: $('#display-language').value, loginUi: $('#login-ui').value, micDeviceId: $('#mic-device').value, noiseSuppression: $('#noise-suppression').value, ...(controls.dnsSupported ? { dns: $('#dns-provider').value, dnsCustom: $('#dns-custom').value.trim() } : {}) });
   // Per device, like the active theme: the chat window reads it when screen sharing starts.
   localStorage.setItem('nk_screen_codec', $('#screen-codec').value);
+  // Companion server that syncs settings and read state between devices (empty = off).
+  { const url = $('#reloaded-server').value.trim(); if (url && !/^https?:\/\//i.test(url)) throw new Error('The Nekochat Reloaded server address must start with http:// or https://'); localStorage.setItem('nk_reloaded_server', url.replace(/\/$/, '')); }
+  localStorage.setItem('nk_show_admin_button', $('#show-admin-button').checked ? '1' : '0');
+  localStorage.setItem('nk_sound_scheme', $('#sound-scheme').value);
+  localStorage.setItem('nk_sound_volume', $('#sound-volume').value);
+  localStorage.setItem('nk_chat_wallpaper_opacity', $('#chat-wallpaper-opacity').value);
+  saveWallpaper();
   localStorage.setItem('nk_active_theme', result.id);
   localStorage.setItem('nk_active_scheme', result.scheme || '');
   refreshFrame(result);
@@ -43,16 +56,35 @@ async function applySelection() {
 async function previewSelection() { refreshPreview(await controls.previewTheme($('#theme-list').value, $('#colour-scheme').value)); }
 $('#theme-list').onchange = async () => { try { refreshSchemes(); await previewSelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
 $('#colour-scheme').onchange = async () => { try { await previewSelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
-document.querySelectorAll('.property-tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.property-tab').forEach(item => item.classList.toggle('active', item === tab)); $('#themes-page').hidden = tab.dataset.page !== 'themes'; $('#appearance-page').hidden = tab.dataset.page !== 'appearance'; $('#display-page').hidden = tab.dataset.page !== 'display'; });
+document.querySelectorAll('.property-tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.property-tab').forEach(item => item.classList.toggle('active', item === tab)); document.querySelectorAll('.property-page').forEach(page => { page.hidden = page.id !== `${tab.dataset.page}-page`; }); });
 $('#close').onclick = () => controls.close(); $('#cancel').onclick = () => controls.close(); $('#ok').onclick = () => controls.close();
 $('#apply').onclick = async () => { try { $('#theme-error').textContent = ''; await applySelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
 $('#theme-import').onclick = async () => { try { $('#theme-error').textContent = 'Importing theme…'; const result = await controls.importTheme(); if (!result) { $('#theme-error').textContent = ''; return; } themeMetadata = result.themes; $('#theme-list').innerHTML = themeMetadata.map(theme => `<option value="${esc(theme.id)}">${esc(theme.name)}</option>`).join(''); $('#theme-list').value = result.id; refreshSchemes(result.scheme); await previewSelection(); $('#theme-error').textContent = 'Theme added. Click Apply to use it.'; } catch (error) { $('#theme-error').textContent = error.message; } };
 // DNS is chosen only in the desktop app; Chromium takes custom resolvers as DNS-over-HTTPS.
 function refreshDnsRows() { const supported = Boolean(controls.dnsSupported); document.querySelectorAll('.dns-setting').forEach(row => { row.hidden = !supported; }); $('#dns-custom-row').hidden = !supported || $('#dns-provider').value !== 'custom'; }
 $('#dns-provider').onchange = refreshDnsRows;
+$('#chat-wallpaper-opacity').oninput = () => { $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; };
+$('#sound-volume').oninput = () => { $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; };
+// Chat background: built-in pictures or your own, shrunk to a JPEG that fits in localStorage.
+let pendingWallpaper = null;
+$('#chat-wallpaper').onchange = () => { if ($('#chat-wallpaper').value === 'custom') $('#chat-wallpaper-file').click(); };
+$('#chat-wallpaper-file').onchange = async () => {
+  const file = $('#chat-wallpaper-file').files[0]; $('#chat-wallpaper-file').value = '';
+  if (!file) { $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; return; }
+  const bitmap = await createImageBitmap(file); const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas'); canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  pendingWallpaper = canvas.toDataURL('image/jpeg', .85);
+};
+function saveWallpaper() {
+  const choice = $('#chat-wallpaper').value;
+  if (choice === 'custom' && pendingWallpaper) { try { localStorage.setItem('nk_chat_wallpaper_image', pendingWallpaper); } catch { $('#theme-error').textContent = 'The picture is too large.'; return; } }
+  if (choice === 'custom' && !localStorage.getItem('nk_chat_wallpaper_image')) return;
+  localStorage.setItem('nk_chat_wallpaper', choice); pendingWallpaper = null;
+}
 $('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
 $('#advanced').onclick = () => alert('Advanced colour editing is available when the theme provides multiple colour schemes.');
 controls.onThemeChanged(theme => { refreshFrame(theme); refreshPreview(theme); });
-Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
+Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#sound-scheme').value = localStorage.getItem('nk_sound_scheme') || 'xp'; $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });

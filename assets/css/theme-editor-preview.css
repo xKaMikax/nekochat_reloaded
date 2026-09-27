@@ -1,0 +1,52 @@
+html, body { overflow: hidden; background: #3a6ea5; font: 11px Tahoma, sans-serif; }
+.preview-desktop { position: relative; width: 100%; height: 100%; background: url('../images/Bliss.jpg') center / cover, #3a6ea5; }
+.preview-slot { position: absolute; }
+.inactive-slot { top: 10px; left: 10px; width: 260px; height: 150px; }
+.active-slot { top: 60px; left: 36px; right: 10px; bottom: 10px; min-width: 300px; }
+.preview-slot .xp-window { min-width: 0; min-height: 0; -webkit-app-region: no-drag; }
+.preview-slot .xp-titlebar { -webkit-app-region: no-drag; }
+.preview-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: var(--xp-theme-window, #ece9d8); color: var(--xp-theme-windowtext, #000); }
+
+/* Caption buttons: the app styles them by id (#minimize, #maximize, #close), which the preview cannot reuse twice. */
+.xp-window-controls .preview-min, .xp-window-controls .preview-max { background-image: var(--xp-caption-normal); }
+.xp-window-controls .preview-close { background-image: var(--xp-close-normal); }
+.xp-window-controls .preview-min:hover, .xp-window-controls .preview-max:hover { background-image: var(--xp-caption-hover, var(--xp-caption-normal)); }
+.xp-window-controls .preview-close:hover { background-image: var(--xp-close-hover, var(--xp-close-normal)); }
+.xp-window-controls .preview-min:active, .xp-window-controls .preview-max:active { background-image: var(--xp-caption-pressed, var(--xp-caption-normal)); }
+.xp-window-controls .preview-close:active { background-image: var(--xp-close-pressed, var(--xp-close-normal)); }
+.preview-min::after { background-image: var(--xp-minimize-glyph); }
+.preview-max::after { background-image: var(--xp-maximize-glyph); }
+.preview-close::after { background-image: var(--xp-close-glyph); }
+.preview-min:hover::after { background-image: var(--xp-minimize-glyph-hover, var(--xp-minimize-glyph)); }
+.preview-max:hover::after { background-image: var(--xp-maximize-glyph-hover, var(--xp-maximize-glyph)); }
+.preview-close:hover::after { background-image: var(--xp-close-glyph-hover, var(--xp-close-glyph)); }
+
+.preview-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; padding: 4px 8px 6px; border: 4px solid transparent; border-image: var(--xp-groupbox, linear-gradient(#d0d0bf, #d0d0bf)) 4 fill; }
+.preview-group legend { padding: 0 3px; color: var(--xp-theme-highlight, #0046d5); }
+.preview-check { display: inline-flex; align-items: center; gap: 5px; }
+.preview-check input { appearance: none; width: 13px; height: 13px; margin: 0; background: var(--xp-checkbox-unchecked, #fff) center / 13px 13px no-repeat; }
+.preview-check:hover input { background-image: var(--xp-checkbox-unchecked-hover, var(--xp-checkbox-unchecked)); }
+.preview-check input:active { background-image: var(--xp-checkbox-unchecked-pressed, var(--xp-checkbox-unchecked)); }
+.preview-check input:checked { background-image: var(--xp-checkbox-checked); }
+.preview-check:hover input:checked { background-image: var(--xp-checkbox-checked-hover, var(--xp-checkbox-checked)); }
+.preview-check input:checked:active { background-image: var(--xp-checkbox-checked-pressed, var(--xp-checkbox-checked)); }
+html:not(.xp-checkboxes) .preview-check input { appearance: auto; background: none; }
+.preview-slider { width: 130px; }
+
+.preview-scroll { flex: 1; min-height: 40px; overflow-y: scroll; padding: 2px 6px; border: 1px solid #7f9db9; background: #fff; }
+.preview-scroll p { margin: 4px 0; }
+.preview-highlight { display: inline-block; padding: 0 2px; background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.preview-scroll::-webkit-scrollbar { width: 17px; background: #f0f0e8; }
+.preview-scroll::-webkit-scrollbar-track, .preview-scroll::-webkit-scrollbar-track-piece { background: var(--xp-scroll-shaft-vertical, #d7e3f2) center top / 17px 17px repeat-y; }
+.preview-scroll::-webkit-scrollbar-button { display: block; width: 17px; height: 17px; background-color: #d7e3f2; background-repeat: no-repeat; background-size: 17px 17px; }
+.preview-scroll::-webkit-scrollbar-button:single-button:vertical:decrement { background-image: var(--xp-scroll-up); }
+.preview-scroll::-webkit-scrollbar-button:single-button:vertical:increment { background-image: var(--xp-scroll-down); }
+.preview-scroll::-webkit-scrollbar-button:single-button:vertical:decrement:hover { background-image: var(--xp-scroll-up-hover, var(--xp-scroll-up)); }
+.preview-scroll::-webkit-scrollbar-button:single-button:vertical:increment:hover { background-image: var(--xp-scroll-down-hover, var(--xp-scroll-down)); }
+.preview-scroll::-webkit-scrollbar-thumb { min-height: 22px; border: 4px solid transparent; border-image: var(--xp-scroll-thumb-vertical, linear-gradient(#fff, #9fb9d5)) 4 fill stretch; }
+.preview-scroll::-webkit-scrollbar-thumb:hover { border-image-source: var(--xp-scroll-thumb-vertical-hover, var(--xp-scroll-thumb-vertical)); }
+
+.preview-buttons { display: flex; justify-content: flex-end; gap: 6px; }
+.preview-button { min-width: 72px; height: 23px; border: 4px solid transparent; border-image: var(--xp-button-normal) 4 fill; background: transparent; font: inherit; }
+.preview-button:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
+.preview-button:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal)); }

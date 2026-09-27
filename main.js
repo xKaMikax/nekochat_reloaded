@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification, desktopCapturer, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification, desktopCapturer, session, screen } = require('electron');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const fs = require('fs/promises');
@@ -44,8 +44,9 @@ function readZipEntryData(buffer, entry) {
   if (entry.method === 8) return zlib.inflateRawSync(compressed);
   throw new Error(`Unsupported ZIP compression method: ${entry.method}.`);
 }
-async function extractZip(buffer, destinationRoot) {
-  const entries = readZipEntries(buffer);
+async function extractZip(buffer, destinationRoot, prefix = '') {
+  // With a prefix only the entries under it are written, relative to it (backups keep themes in themes/).
+  const entries = readZipEntries(buffer).filter(entry => entry.name.startsWith(prefix) && entry.name.length > prefix.length).map(entry => ({ ...entry, name: entry.name.slice(prefix.length) }));
   // ZIP names come from the archive: reject backslashes, drive letters and anything that
   // resolves outside the destination (on Windows a backslash and "C:" also act as path parts).
   const root = path.resolve(destinationRoot);
@@ -75,6 +76,7 @@ const builtInThemes = [
 ];
 let settingsWindow;
 let themeBrowserWindow;
+let themeEditorWindow;
 let emojiBrowserWindow;
 let emojiBrowserOwner;
 const systemDialogWindows = new Set();
@@ -128,7 +130,7 @@ async function saveDisplaySettings(changes) {
 function openThemeSettings(owner) {
   if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.focus(); return; }
   settingsWindow = new BrowserWindow({
-    title: 'Display Properties', width: 520, height: 480, minWidth: 460, minHeight: 400, resizable: true,
+    title: 'Display Properties', width: 520, height: 560, minWidth: 460, minHeight: 400, resizable: true,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -136,6 +138,46 @@ function openThemeSettings(owner) {
   settingsWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'));
 }
 
+// Server admin panel (/admin/*). Its session is an HttpOnly SameSite=Lax cookie, which a page
+// on file:// never sends to the server, so the requests go through the main process and the
+// cookie is kept here, per server, until the app quits.
+let adminWindow;
+const adminCookies = new Map();
+function openAdminPanel(owner, server) {
+  const url = typeof server === 'string' && /^https?:\/\//.test(server) ? server.replace(/\/$/, '') : '';
+  if (!url) return;
+  if (adminWindow && !adminWindow.isDestroyed()) { adminWindow.focus(); return; }
+  adminWindow = new BrowserWindow({
+    title: 'Nekochat Reloaded Admin', width: 860, height: 600, minWidth: 620, minHeight: 420,
+    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  adminWindow.on('closed', () => { adminWindow = null; });
+  adminWindow.loadFile(path.join(__dirname, 'assets', 'html', 'admin.html'), { query: { server: url } });
+}
+async function adminRequest({ server, method = 'GET', path: route = '', body } = {}) {
+  const url = typeof server === 'string' && /^https?:\/\//.test(server) ? server.replace(/\/$/, '') : '';
+  if (!url || typeof route !== 'string' || !/^\/[a-z0-9/_?=&%.-]*$/i.test(route)) throw new Error('Invalid admin request.');
+  const response = await fetch(`${url}/admin${route}`, {
+    method, headers: { 'Content-Type': 'application/json', ...(adminCookies.get(url) ? { Cookie: adminCookies.get(url) } : {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const cookie = response.headers.getSetCookie?.().find(item => item.startsWith('neko_admin='));
+  if (cookie) adminCookies.set(url, cookie.split(';')[0]);
+  if (route === '/logout') adminCookies.delete(url);
+  const data = await response.json().catch(() => ({}));
+  return { status: response.status, ok: response.ok, data };
+}
+function openThemeEditor(owner) {
+  if (themeEditorWindow && !themeEditorWindow.isDestroyed()) { themeEditorWindow.focus(); return; }
+  themeEditorWindow = new BrowserWindow({
+    title: 'Theme Editor', width: 860, height: 600, minWidth: 620, minHeight: 420,
+    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  themeEditorWindow.on('closed', () => { themeEditorWindow = null; });
+  themeEditorWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_editor.html'));
+}
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
@@ -284,14 +326,14 @@ async function scanThemes(root, userInstalled = false) {
   let entries;
   try { entries = await fs.readdir(root, { withFileTypes: true }); } catch { return found; }
   for (const entry of entries) {
-    if (!entry.isDirectory() || reservedThemeIds.includes(entry.name)) continue;
+    if (!entry.isDirectory() || entry.name.startsWith('.') || reservedThemeIds.includes(entry.name)) continue;
     const directory = path.join(root, entry.name);
     const files = await fs.readdir(directory, { withFileTypes: true });
     const source = files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.theme')) || files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.msstyles')) || files.find(file => file.isFile() && file.name.toLowerCase() === 'theme.css');
     if (source) {
       let catalogId;
       try { catalogId = JSON.parse(await fs.readFile(path.join(directory, 'catalog-theme.json'), 'utf8')).id; } catch {}
-      found.push({ id: entry.name, source: path.join(directory, source.name), css: source.name.toLowerCase() === 'theme.css', userInstalled, catalogId });
+      found.push({ id: entry.name, source: path.join(directory, source.name), css: source.name.toLowerCase() === 'theme.css', userInstalled, catalogId, editorMade: files.some(file => file.name === 'theme-editor.json') });
     }
   }
   return found;
@@ -407,12 +449,23 @@ async function materializePrebuiltTheme(id, source, metadata) {
   return output;
 }
 
+// A url() inside a custom property resolves against the stylesheet that uses the variable,
+// not theme.css, so relative pictures are made absolute in a runtime copy of theme.css.
+async function materializeCssTheme(id, source) {
+  const css = await fs.readFile(source, 'utf8');
+  if (!/url\((["']?)(?!(?:data|file|https?|blob):)[^"')]+\1\)/i.test(css)) return path.dirname(source);
+  const base = pathToFileURL(`${path.dirname(source)}${path.sep}`).href;
+  const output = path.join(runtimeThemesRoot, `css-${id}`);
+  await fs.mkdir(output, { recursive: true });
+  await fs.writeFile(path.join(output, 'theme.css'), css.replace(/url\((["']?)([^"')]+)\1\)/g, (match, quote, url) => /^(data|file|https?|blob):/i.test(url) ? match : `url("${new URL(url, base).href}")`));
+  return output;
+}
 async function prepareTheme(id) {
   const theme = (await discoverThemes()).find(item => item.id === id);
   if (!theme) throw new Error('Theme not found');
   const prebuilt = await prebuiltFor(id);
   if (prebuilt) return { ...theme, output: await materializePrebuiltTheme(id, prebuilt.output, prebuilt.metadata), metadata: prebuilt.metadata };
-  if (theme.css) return { ...theme, output: path.dirname(theme.source), css: true, metadata: { theme: id, schemes: [{ id: 'default', name: 'Default' }], defaultScheme: 'default' } };
+  if (theme.css) return { ...theme, output: await materializeCssTheme(id, theme.source), css: true, metadata: { theme: id, schemes: [{ id: 'default', name: 'Default' }], defaultScheme: 'default' } };
   const output = path.join(runtimeThemesRoot, id);
   await fs.mkdir(runtimeThemesRoot, { recursive: true });
   if (theme.classic) {
@@ -516,6 +569,74 @@ async function installCatalogTheme(id) {
   } finally { await fs.rm(temporary, { recursive: true, force: true }).catch(() => {}); }
 }
 
+// ---- Settings backups: installed themes go into the archive the Display Properties window builds.
+async function exportUserThemes() {
+  const files = [];
+  const walk = async (folder, relative) => {
+    let entries = [];
+    try { entries = await fs.readdir(folder, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const name = relative ? `${relative}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) await walk(path.join(folder, entry.name), name);
+      else if (entry.isFile()) files.push({ path: `themes/${name}`, data: await fs.readFile(path.join(folder, entry.name)) });
+    }
+  };
+  await walk(userThemesRoot, '');
+  return files;
+}
+// Adds the backup's themes next to the installed ones; nothing installed is removed.
+async function restoreUserThemes(archive) {
+  const buffer = Buffer.from(archive);
+  await fs.mkdir(userThemesRoot, { recursive: true });
+  await extractZip(buffer, userThemesRoot, 'themes/');
+  return listThemes();
+}
+// ---- Theme editor: a theme is edited as its theme.css (variables); saving writes a user theme
+// folder with theme.css and every picture it uses, so it no longer depends on the base theme.
+async function loadThemeForEditor(id, scheme) {
+  const prepared = await prepareTheme(id);
+  const activeScheme = scheme || prepared.metadata.defaultScheme;
+  const directory = prepared.css ? prepared.output : path.join(prepared.output, 'schemes', activeScheme);
+  const css = await fs.readFile(path.join(directory, 'theme.css'), 'utf8');
+  const base = pathToFileURL(`${directory}${path.sep}`).href;
+  // Relative pictures become absolute file URLs, so the editor can show and preview them.
+  return { id, scheme: activeScheme, css: css.replace(/url\((["']?)([^"')]+)\1\)/g, (match, quote, url) => /^(data|file|https?):/i.test(url) ? match : `url("${new URL(url, base).href}")`) };
+}
+function editorThemeId(name) {
+  // Same characters the theme:apply handler accepts.
+  const id = String(name || '').replace(/[^\p{L}\p{N}._ ()-]/gu, '').replace(/\s+/g, ' ').replace(/\.{2,}/g, '.').trim().replace(/^\.+|\.+$/g, '').slice(0, 48);
+  if (!id) throw new Error('Enter a name for the theme.');
+  if (reservedThemeIds.includes(id) || builtInThemes.some(theme => theme.id.toLowerCase() === id.toLowerCase())) throw new Error('This name belongs to a built-in theme; choose another.');
+  return id;
+}
+async function saveEditedTheme({ name, css, images, base }) {
+  const id = editorThemeId(name);
+  const directory = path.resolve(userThemesRoot, id);
+  if (!directory.startsWith(`${path.resolve(userThemesRoot)}${path.sep}`)) throw new Error('Invalid theme name.');
+  // Only a theme made in the editor is overwritten; an installed theme with the same name is kept.
+  let existing = false;
+  try { await fs.access(directory); existing = true; } catch {}
+  if (existing) { try { await fs.access(path.join(directory, 'theme-editor.json')); } catch { throw new Error('A theme with this name is already installed; choose another name.'); } }
+  const staging = path.join(userThemesRoot, `.saving-${Date.now()}`);
+  await fs.mkdir(path.join(staging, 'images'), { recursive: true });
+  const used = new Map(); const names = new Set();
+  const fileName = wanted => { let candidate = wanted.replace(/[^\w.-]/g, '_') || 'image.png'; for (let n = 2; names.has(candidate.toLowerCase()); n += 1) candidate = candidate.replace(/(-\d+)?(\.\w+)?$/, `-${n}$2`); names.add(candidate.toLowerCase()); return candidate; };
+  for (const [wanted, data] of Object.entries(images || {})) {
+    const file = fileName(path.basename(wanted)); await fs.writeFile(path.join(staging, 'images', file), Buffer.from(data)); used.set(`edited:${wanted}`, file);
+  }
+  let output = String(css || '');
+  const references = [...output.matchAll(/url\((["']?)(file:[^"')]+)\1\)/g)].map(match => match[2]);
+  for (const url of new Set(references)) {
+    const file = fileName(path.basename(fileURLToPath(url)));
+    await fs.copyFile(fileURLToPath(url), path.join(staging, 'images', file)); used.set(url, file);
+  }
+  output = output.replace(/url\((["']?)((?:file|edited):[^"')]+)\1\)/g, (match, quote, url) => used.has(url) ? `url("images/${used.get(url)}")` : match);
+  await fs.writeFile(path.join(staging, 'theme.css'), output);
+  await fs.writeFile(path.join(staging, 'theme-editor.json'), JSON.stringify({ name: id, base: base || null, saved: new Date().toISOString() }, null, 1));
+  await fs.rm(directory, { recursive: true, force: true });
+  await fs.rename(staging, directory);
+  return { id, themes: await listThemes() };
+}
 async function listThemes() {
   const themes = await discoverThemes();
   const results = await Promise.all(themes.map(async theme => {
@@ -523,7 +644,7 @@ async function listThemes() {
       const prepared = await prepareTheme(theme.id);
       const rawName = prepared.metadata.theme || theme.id;
       const name = String(rawName).replace(/\.(theme|msstyles)$/i, '');
-      return { id: theme.id, name, schemes: prepared.metadata.schemes || [], removable: Boolean(theme.userInstalled), catalogId: theme.catalogId || null };
+      return { id: theme.id, name, schemes: prepared.metadata.schemes || [], removable: Boolean(theme.userInstalled), catalogId: theme.catalogId || null, editable: Boolean(theme.userInstalled && theme.editorMade) };
     } catch (error) {
       console.warn(`Ignoring incomplete theme ${theme.id}: ${error.message}`);
       return null;
@@ -574,6 +695,17 @@ function showMainWindow() {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show(); mainWindow.focus();
 }
+// Unread messages: tray icon with a red dot and a tooltip, the taskbar badge (Linux launchers /
+// macOS) and a red overlay dot on the Windows taskbar button.
+let unreadCount = 0;
+function setUnreadCount(count) {
+  unreadCount = Math.max(0, Number(count) || 0);
+  const icon = unreadCount ? 'nekochat_icon_unread.png' : 'nekochat_icon.png';
+  tray?.setImage(nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', icon)).resize({ width: 16, height: 16 }));
+  tray?.setToolTip(unreadCount ? `Nekochat Reloaded — ${unreadCount} ${activeDisplay.language === 'en' ? 'unread' : 'непрочитанных'}` : 'Nekochat Reloaded');
+  try { app.setBadgeCount(unreadCount); } catch {}
+  if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) mainWindow.setOverlayIcon(unreadCount ? nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', 'unread-overlay.png')) : null, unreadCount ? String(unreadCount) : '');
+}
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', 'nekochat_icon.png')).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
@@ -590,13 +722,36 @@ async function notificationIcon(avatarUrl) {
     return image.isEmpty() ? path.join(__dirname, 'assets', 'images', 'nekochat_icon.png') : image;
   } catch { return path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'); }
 }
+// New messages pop up as a Windows XP notification balloon above the tray instead of the
+// system notification. The balloon never takes focus and hides itself after 7 seconds.
+let balloonWindow; let balloonTimer; let balloonReady;
+function hideBalloon() { clearTimeout(balloonTimer); if (balloonWindow && !balloonWindow.isDestroyed()) balloonWindow.hide(); }
 async function showMessageNotification({ sender, content, avatarUrl } = {}) {
-  if (!Notification.isSupported()) return;
-  const notification = new Notification({ title: 'Nekochat Reloaded', body: `${sender || 'User'}\n${content || ''}`, icon: await notificationIcon(avatarUrl) });
-  notification.on('click', showMainWindow);
-  notification.show();
+  const width = 330; const height = 118;
+  if (!balloonWindow || balloonWindow.isDestroyed()) {
+    balloonWindow = new BrowserWindow({
+      width, height, frame: false, transparent: true, resizable: false, movable: false, skipTaskbar: true, alwaysOnTop: true,
+      focusable: false, show: false, hasShadow: false, backgroundColor: '#00000000',
+      webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+    });
+    balloonWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    balloonReady = balloonWindow.loadFile(path.join(__dirname, 'assets', 'html', 'balloon.html'));
+  }
+  await balloonReady;
+  const area = screen.getPrimaryDisplay().workArea;
+  balloonWindow.setBounds({ x: area.x + area.width - width - 10, y: area.y + area.height - height - 4, width, height });
+  balloonWindow.webContents.send('balloon:show', { title: 'Nekochat Reloaded', sender: String(sender || 'User'), content: String(content || ''), avatarUrl: String(avatarUrl || ''), language: activeDisplay.language });
+  balloonWindow.showInactive();
+  clearTimeout(balloonTimer); balloonTimer = setTimeout(hideBalloon, 7000);
 }
 
+// XP draws an inactive window with a lighter frame: tell every window when it gains or loses focus.
+app.on('browser-window-created', (_, win) => {
+  const send = focused => { if (!win.isDestroyed()) win.webContents.send('window:focus', focused); };
+  win.on('focus', () => send(true));
+  win.on('blur', () => send(false));
+  win.webContents.on('did-finish-load', () => send(win.isFocused()));
+});
 app.whenReady().then(async () => {
   session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
     // This handler is reached only after display:prepare-capture has successfully
@@ -619,6 +774,9 @@ app.whenReady().then(async () => {
   ipcMain.on('notification:message', (_, data) => { showMessageNotification(data); });
   ipcMain.on('theme:open-settings', e => openThemeSettings(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.on('theme:open-editor', e => openThemeEditor(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.handle('theme-editor:load', (_, id, scheme) => loadThemeForEditor(String(id || ''), scheme ? String(scheme) : undefined));
+  ipcMain.handle('theme-editor:save', (_, theme) => saveEditedTheme(theme || {}));
   ipcMain.on('emoji:open-browser', e => openEmojiBrowser(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('system:show', (e, data) => showSystemDialog(BrowserWindow.fromWebContents(e.sender), data || {}));
   ipcMain.on('system:action', (e, action) => {
@@ -648,6 +806,14 @@ app.whenReady().then(async () => {
   ipcMain.handle('theme:browser-install', (_, id) => installCatalogTheme(String(id || '')));
   ipcMain.handle('theme:remove', (_, id) => removeTheme(String(id || '')));
   ipcMain.handle('theme:current', () => activeTheme);
+  ipcMain.handle('backup:export-themes', () => exportUserThemes());
+  ipcMain.handle('backup:restore-themes', (_, archive) => restoreUserThemes(archive));
+  ipcMain.on('app:relaunch', () => { quitting = true; app.relaunch(); app.exit(0); });
+  ipcMain.on('balloon:click', () => { hideBalloon(); showMainWindow(); });
+  ipcMain.on('balloon:close', hideBalloon);
+  ipcMain.on('admin:open', (event, server) => openAdminPanel(BrowserWindow.fromWebContents(event.sender), server));
+  ipcMain.handle('admin:request', (_, request) => adminRequest(request));
+  ipcMain.on('unread:set', (_, count) => setUnreadCount(count));
   ipcMain.handle('display:current', () => activeDisplay);
   ipcMain.handle('display:prepare-capture', async () => {
     const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 } });
@@ -662,7 +828,8 @@ app.whenReady().then(async () => {
     return { id, scheme: activeScheme, revision: Date.now(), cssUrl: runtimeCssUrl(directory) };
   });
   ipcMain.handle('theme:apply', async (_, id, scheme) => {
-    if (!/^[a-zA-Z0-9._ -]+$/.test(id) || (scheme && !/^[a-zA-Z0-9._-]+$/.test(scheme))) throw new Error('Invalid theme name');
+    // Theme editor names may use any letters ("Luna (моя)"); separators and ".." never pass.
+    if (!/^[\p{L}\p{N}._ ()-]+$/u.test(id) || id.includes('..') || (scheme && !/^[a-zA-Z0-9._-]+$/.test(scheme))) throw new Error('Invalid theme name');
     return activateTheme(id, scheme);
   });
   ipcMain.handle('theme:import', async event => {
