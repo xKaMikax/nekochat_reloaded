@@ -138,7 +138,7 @@
   function sendCallState(state) {
     if (!isDestroyed(callWindow)) send(callWindow, 'call:update', state);
     // Android: the call window cannot pop up over other apps, so ring through a notification.
-    if (state?.incoming && !native.isForeground()) native.notifyCall(String(state.title || 'NekoChat Reloaded'), String(state.status || ''));
+    if (state?.incoming && !native.isForeground()) native.notifyCall(String(state.title || 'Nekochat Reloaded'), String(state.status || ''));
   }
   function openCallWindow(owner, state) {
     callOwner = owner;

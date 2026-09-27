@@ -45,7 +45,7 @@
         const [op] = line.split(' ', 1);
         switch (op.toUpperCase()) {
           case 'INFO':
-            write(`CONNECT ${JSON.stringify({ verbose: false, pedantic: false, user, pass, name: 'NekoChat Reloaded', lang: 'javascript', version: '1.0.0', protocol: 1, echo: false, headers: false, no_responders: false })}\r\n`);
+            write(`CONNECT ${JSON.stringify({ verbose: false, pedantic: false, user, pass, name: 'Nekochat Reloaded', lang: 'javascript', version: '1.0.0', protocol: 1, echo: false, headers: false, no_responders: false })}\r\n`);
             write(`SUB ${subscribe} 1\r\nPING\r\n`);
             break;
           case 'PING': write('PONG\r\n'); break;

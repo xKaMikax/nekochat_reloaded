@@ -1,10 +1,10 @@
-# NekoChat Reloaded — Android client
+# Nekochat Reloaded — Android client
 
-<img src="screenshots/nekochat-android.png" alt="NekoChat Reloaded Android client" width="320">
+<img src="screenshots/nekochat-android.png" alt="Nekochat Reloaded Android client" width="320">
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
+> **Warning:** this is a custom Nekochat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
-NekoChat Reloaded is an unofficial Android client for NekoChat. It is the PC client in your pocket: the same Windows XP-style interface instead of using NekoChat in a browser tab.
+Nekochat Reloaded is an unofficial Android client for Nekochat. It is the PC client in your pocket: the same Windows XP-style interface instead of using Nekochat in a browser tab.
 
 ## What the client includes
 

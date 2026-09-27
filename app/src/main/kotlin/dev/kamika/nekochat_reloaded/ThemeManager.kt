@@ -110,7 +110,7 @@ class ThemeManager(private val context: Context) {
                 result.put(JSONObject().put("id", theme.id).put("name", name).put("schemes", prepared.metadata.optJSONArray("schemes") ?: JSONArray())
                     .put("removable", theme.userInstalled).put("catalogId", theme.catalogId ?: JSONObject.NULL))
             } catch (error: Exception) {
-                android.util.Log.w("NekoChat", "Ignoring incomplete theme ${theme.id}: ${error.message}")
+                android.util.Log.w("Nekochat", "Ignoring incomplete theme ${theme.id}: ${error.message}")
             }
         }
         return result

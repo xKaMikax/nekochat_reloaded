@@ -1,5 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+}
+
+// Release signing key: keystore.properties next to settings.gradle.kts (not in git) with
+// storeFile, storePassword, keyAlias and keyPassword. Without it, release builds fall back
+// to the debug key.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -10,16 +20,25 @@ android {
         applicationId = "dev.kamika.nekochat_reloaded"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.1-beta-1"
+        versionCode = 7
+        versionName = "1.3.1"
+    }
+
+    signingConfigs {
+        if (keystoreProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signed with the debug key so `assembleRelease` produces an installable APK.
-            // Replace with a real signingConfig before publishing.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

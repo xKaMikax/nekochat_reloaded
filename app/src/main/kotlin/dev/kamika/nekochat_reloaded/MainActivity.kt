@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
             mediaPlaybackRequiresUserGesture = false
             allowFileAccess = false
             allowContentAccess = false
-            // Users may point the client at their own http:// NekoChat server.
+            // Users may point the client at their own http:// Nekochat server.
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             textZoom = 100
             setSupportZoom(false)

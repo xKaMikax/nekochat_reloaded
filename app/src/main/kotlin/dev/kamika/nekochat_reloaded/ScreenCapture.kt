@@ -69,7 +69,7 @@ object ScreenCapture {
         projection = mediaProjection
         reader = imageReader
         thread = handlerThread
-        display = mediaProjection.createVirtualDisplay("NekoChat screen", width, height, metrics.densityDpi,
+        display = mediaProjection.createVirtualDisplay("Nekochat screen", width, height, metrics.densityDpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, handler)
         pendingStart?.invoke(width, height, null)
         pendingStart = null
