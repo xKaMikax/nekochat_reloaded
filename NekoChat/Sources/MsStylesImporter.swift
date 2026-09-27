@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 /// Swift port of tools/import_msstyles.py (the same as MsStylesImporter.kt on Android).
 /// Produces the same theme.json / theme.css / PNG layout as the PC importer.
 enum MsStylesImporter {
-    static let version = 1
+    static let version = 4
 
     // MARK: - Images (straight, non-premultiplied RGBA)
 
@@ -363,12 +363,17 @@ enum MsStylesImporter {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         var caption = try find(images, "_FRAMECAPTION_BMP", prefix)
         let capHeight = caption.height / 2
+        // The caption bitmap stacks the active title bar over the inactive one.
+        let inactive = caption.crop(0, capHeight, caption.width, capHeight * 2)
         caption = caption.crop(0, 0, caption.width, capHeight)
         var left = 28, right = 35
         if caption.width <= left + right { left = max(1, caption.width / 4); right = max(1, caption.width / 4) }
         try save(caption.crop(0, 0, left, capHeight), output, "title-left.png")
         try save(caption.crop(left, 0, caption.width - right, capHeight), output, "title-fill.png")
         try save(caption.crop(caption.width - right, 0, caption.width, capHeight), output, "title-right.png")
+        try save(inactive.crop(0, 0, left, capHeight), output, "title-left-inactive.png")
+        try save(inactive.crop(left, 0, caption.width - right, capHeight), output, "title-fill-inactive.png")
+        try save(inactive.crop(caption.width - right, 0, caption.width, capHeight), output, "title-right-inactive.png")
         try save(try find(images, "_FRAMELEFT_BMP", prefix), output, "frame-left.png")
         try save(try find(images, "_FRAMERIGHT_BMP", prefix), output, "frame-right.png")
         let bottom = try find(images, "_FRAMEBOTTOM_BMP", prefix)
@@ -412,12 +417,21 @@ enum MsStylesImporter {
             for (index, stateName) in states.enumerated() { try save(state(glyph, index), output, "\(name)-glyph-\(stateName).png") }
         }
         func u(_ name: String) -> String { "url(\"\(asset)/\(name)\")" }
-        var css = ":root { --xp-caption-left: \(left)px; --xp-caption-right: \(right)px; --xp-caption-middle: 1px; --xp-caption-height: \(capHeight)px; --xp-bottom-left: \(bleft)px; --xp-bottom-right: \(bright)px; --xp-bottom-middle: 1px; --xp-bottom-height: \(bottom.height)px; "
+        var css = ":root { --xp-frame-states: 2; --xp-caption-left: \(left)px; --xp-caption-right: \(right)px; --xp-caption-middle: 1px; --xp-caption-height: \(capHeight)px; --xp-bottom-left: \(bleft)px; --xp-bottom-right: \(bright)px; --xp-bottom-middle: 1px; --xp-bottom-height: \(bottom.height)px; "
         css += "--xp-theme-window: \(colours["Window"]!); --xp-theme-buttonface: \(colours["ButtonFace"]!); --xp-theme-windowtext: \(colours["WindowText"]!); --xp-theme-highlight: \(colours["Hilight"]!); "
         css += "--xp-title-fill: \(u("title-fill.png")); --xp-title-left: \(u("title-left.png")); --xp-title-right: \(u("title-right.png")); --xp-frame-left: \(u("frame-left.png")); --xp-frame-right: \(u("frame-right.png")); --xp-bottom-fill: \(u("bottom-fill.png")); --xp-bottom-left-image: \(u("bottom-left.png")); --xp-bottom-right-image: \(u("bottom-right.png")); "
         css += "--xp-caption-normal: \(u("caption-normal.png")); --xp-caption-hover: \(u("caption-hover.png")); --xp-caption-pressed: \(u("caption-pressed.png")); --xp-close-normal: \(u("close-normal.png")); --xp-close-hover: \(u("close-hover.png")); --xp-close-pressed: \(u("close-pressed.png")); "
         css += "--xp-close-glyph: \(u("close-glyph-normal.png")); --xp-close-glyph-hover: \(u("close-glyph-hover.png")); --xp-close-glyph-pressed: \(u("close-glyph-pressed.png")); --xp-minimize-glyph: \(u("minimize-glyph-normal.png")); --xp-minimize-glyph-hover: \(u("minimize-glyph-hover.png")); --xp-minimize-glyph-pressed: \(u("minimize-glyph-pressed.png")); "
         css += "--xp-maximize-glyph: \(u("maximize-glyph-normal.png")); --xp-maximize-glyph-hover: \(u("maximize-glyph-hover.png")); --xp-maximize-glyph-pressed: \(u("maximize-glyph-pressed.png")); --xp-button-normal: \(u("button-normal.png")); --xp-button-hover: \(u("button-hover.png")); --xp-button-pressed: \(u("button-pressed.png")); }\n"
+        // XP trackbar (thumb pointing down + track); optional, themes without it still import.
+        var slider = false
+        if let thumb = try? find(images, "_TRACKBARDOWN16_BMP", prefix), let track = try? find(images, "_SLIDERTRACK_BMP", prefix) {
+            for (index, name) in ["normal", "hover", "pressed"].enumerated() { try save(stripState(thumb, thumb.height / 5, index), output, "slider-thumb-\(name).png") }
+            try save(track, output, "slider-track.png")
+            slider = true
+        }
+        if slider { css += ":root { --xp-slider-thumb: \(u("slider-thumb-normal.png")); --xp-slider-thumb-hover: \(u("slider-thumb-hover.png")); --xp-slider-thumb-pressed: \(u("slider-thumb-pressed.png")); --xp-slider-track: \(u("slider-track.png")); }\n" }
+        css += ":root { --xp-title-fill-inactive: \(u("title-fill-inactive.png")); --xp-title-left-inactive: \(u("title-left-inactive.png")); --xp-title-right-inactive: \(u("title-right-inactive.png")); }\n"
         css += ":root { --xp-checkbox-unchecked: \(u("checkbox-unchecked-normal.png")); --xp-checkbox-unchecked-hover: \(u("checkbox-unchecked-hover.png")); --xp-checkbox-unchecked-pressed: \(u("checkbox-unchecked-pressed.png")); --xp-checkbox-checked: \(u("checkbox-checked-normal.png")); --xp-checkbox-checked-hover: \(u("checkbox-checked-hover.png")); --xp-checkbox-checked-pressed: \(u("checkbox-checked-pressed.png")); --xp-groupbox: \(u("groupbox.png")); --xp-field-outline: \(u("field-outline.png")); }\n"
         css += ":root { "
         for direction in ["up", "down", "left", "right"] {

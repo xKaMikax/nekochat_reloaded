@@ -1,6 +1,6 @@
 /* Real msstyles BUTTON_BMP rendered as a 9-slice: no tiling or distorted text. */
 .theme-button,
-.settings-window .inline-actions button, .settings-window footer button,
+.settings-window .inline-actions button, .settings-window footer button, .admin-window .admin button:not(.property-tab),
 .settings-window .appearance-actions button, .settings-window .preview-window button,
 .chat-app .tab, .chat-app .add-button, .chat-app .settings-button, .chat-app .refresh-list,
 .chat-app .composer button, .chat-app .xp-button, .xp-dialog .xp-button:not(.icon-only), .call-window .call-actions button, .call-window .screen-switch, .room-create-window .actions button, .room-members-actions .xp-button {
@@ -14,7 +14,7 @@
 /* Touch screens keep :hover after a tap, which left the Luna 'hot' frame on the last tapped
    button: the hover look applies only to devices that can really hover (mouse, touchpad). */
 @media (hover: hover) {
-.settings-window .inline-actions button:hover, .settings-window footer button:hover,
+.settings-window .inline-actions button:hover, .settings-window footer button:hover, .admin-window .admin button:not(.property-tab):hover,
 .settings-window .appearance-actions button:hover, .settings-window .preview-window button:hover,
 .chat-app .tab:hover, .chat-app .add-button:hover, .chat-app .settings-button:hover, .chat-app .refresh-list:hover,
 .chat-app .composer button:hover, .chat-app .xp-button:hover, .xp-dialog .xp-button:not(.icon-only):hover, .call-window .call-actions button:hover, .call-window .screen-switch:hover, .room-create-window .actions button:hover, .room-members-actions .xp-button:hover {
@@ -23,7 +23,7 @@
   box-shadow: var(--xp-button-shadow-hover, var(--xp-button-shadow, none)) !important;
 }
 }
-.settings-window .inline-actions button:active, .settings-window footer button:active,
+.settings-window .inline-actions button:active, .settings-window footer button:active, .admin-window .admin button:not(.property-tab):active,
 .settings-window .appearance-actions button:active, .settings-window .preview-window button:active,
 .chat-app .tab:active, .chat-app .tab.active, .chat-app .add-button:active, .chat-app .settings-button:active, .chat-app .refresh-list:active,
 .chat-app .composer button:active, .chat-app .xp-button:active, .xp-dialog .xp-button:not(.icon-only):active, .call-window .call-actions button:active, .call-window .screen-switch:active, .call-window .screen-switch[aria-pressed="true"], .room-create-window .actions button:active, .room-members-actions .xp-button:active {
@@ -31,3 +31,14 @@
   background: var(--xp-button-background-pressed, var(--xp-button-background, transparent)) !important;
   box-shadow: var(--xp-button-shadow-pressed, var(--xp-button-shadow, none)) !important;
 }
+/* XP trackbar from the theme (msstyles TRACKBARDOWN16 + SLIDERTRACK): used only when the theme
+   provides it (html.xp-sliders, set by the page), otherwise the default slider stays. */
+html.xp-sliders input[type="range"] { -webkit-appearance: none; appearance: none; height: 26px; margin: 0; background: transparent; cursor: pointer; }
+html.xp-sliders input[type="range"]::-webkit-slider-runnable-track { height: 5px; border: 2px solid transparent; border-image: var(--xp-slider-track) 2 fill / 2px stretch; box-sizing: border-box; }
+html.xp-sliders input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 26px; margin-top: -12px; border: 0; background: var(--xp-slider-thumb) no-repeat center / 13px 26px; }
+html.xp-sliders input[type="range"]:hover::-webkit-slider-thumb, html.xp-sliders input[type="range"]:focus-visible::-webkit-slider-thumb { background-image: var(--xp-slider-thumb-hover, var(--xp-slider-thumb)); }
+html.xp-sliders input[type="range"]:active::-webkit-slider-thumb { background-image: var(--xp-slider-thumb-pressed, var(--xp-slider-thumb)); }
+html.xp-sliders input[type="range"]::-moz-range-track { height: 5px; border: 2px solid transparent; border-image: var(--xp-slider-track) 2 fill / 2px stretch; box-sizing: border-box; }
+html.xp-sliders input[type="range"]::-moz-range-thumb { width: 13px; height: 26px; border: 0; border-radius: 0; background: var(--xp-slider-thumb) no-repeat center / 13px 26px; }
+html.xp-sliders input[type="range"]:hover::-moz-range-thumb { background-image: var(--xp-slider-thumb-hover, var(--xp-slider-thumb)); }
+html.xp-sliders input[type="range"]:active::-moz-range-thumb { background-image: var(--xp-slider-thumb-pressed, var(--xp-slider-thumb)); }

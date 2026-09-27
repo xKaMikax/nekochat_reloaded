@@ -35,7 +35,9 @@ const detachedChat = windowQuery.get('detached') === '1' && ['room', 'dm'].inclu
   : null;
 if (detachedChat) document.documentElement.classList.add('detached-chat');
 const sounds = Object.freeze({ navigation: 'navigation.wav', notify: 'notify.wav', logon: 'logon.wav', logoff: 'logoff.wav', ringin: 'ringin.wav', ringout: 'ringout.wav', exclamation: 'exclamation.wav', default: 'default.wav', error: 'error.wav', critical: 'critical-stop.wav' });
-function playSound(name) { const audio = new Audio(`assets/sounds/${sounds[name]}`); audio.volume = .72; audio.play().catch(() => {}); return audio; }
+// Sound scheme and volume from Display Properties (localStorage, shared by every window).
+function soundSettings() { let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} return { scheme, volume: Math.min(100, Math.max(0, Number.isFinite(volume) ? volume : 72)) }; }
+function playSound(name) { const audio = new Audio(`assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
 function showSystemDialog(message, type = 'error', title = 'Nekochat Reloaded', options = {}) {
   if (desktopControls?.showSystemDialog) { desktopControls.showSystemDialog({ message: String(message || t('unknownError')), type, title, ...options }); return; }
   const dialog = $('#system-dialog'); if (!dialog) return;
@@ -69,6 +71,12 @@ Object.assign(translations.ru, { profileOnline: 'онлайн', online: 'В се
 Object.assign(translations.en, { profileOnline: 'online', online: 'Online', offline: 'Offline', noBio: 'Nothing has been written yet.', userNoBio: 'This user has not written anything yet.', nothingFound: 'Nothing found.' });
 Object.assign(translations.ru, { join: 'Присоединиться', roomJoin: 'Не удалось присоединиться к комнате' });
 Object.assign(translations.en, { join: 'Join', roomJoin: 'Could not join room' });
+Object.assign(translations.ru, { dndOn: 'Не беспокоить', dndOff: 'Снова в сети', statusOnline: 'В сети', statusAway: 'Неактивен', statusInvisible: 'Невидимый', statusTitle: 'Статус', themeEditor: 'Редактор тем' });
+Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online', statusOnline: 'Online', statusAway: 'Away', statusInvisible: 'Invisible', statusTitle: 'Status', themeEditor: 'Theme editor' });
+Object.assign(translations.ru, { adminPanel: 'Админ-панель сервера' });
+Object.assign(translations.en, { adminPanel: 'Server admin panel' });
+Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
+Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
 Object.assign(translations.en, { retrying: 'Retrying in 5 seconds…' });
 Object.assign(translations.ru, { roomChannel: 'Голосовой канал: {room}', roomInvite: '{name} в голосовом канале {room}', roomInviteStatus: 'Войти в канал?', roomParticipants: 'В канале: {count}', noAnswer: 'Абонент не ответил.', callBusy: 'Абонент занят.', callDeclined: 'Звонок отклонён.', accountBanned: 'Ваша учётная запись заблокирована на этом сервере.', serverMessage: 'Сообщение сервера', screenCodecUnsupported: 'Этот Chromium не умеет кодировать экран ни в VP9, ни в VP8.', screenCodecDecode: 'Демонстрация экрана в кодеке {codec} не поддерживается на этом устройстве.' });
@@ -133,7 +141,9 @@ function showAuthScreen() { $('#chat-app').hidden = true; $('#auth-screen').hidd
 function showLoginForm() { $('#auth-screen').classList.remove('account-selected'); $('#auth-form').hidden = false; $('#saved-users').hidden = true; $('#show-login-form').hidden = true; $('#back-to-users').hidden = savedSessions().length === 0; $('#auth-error').textContent = ''; $('#login-selected-avatar').innerHTML = '<img src="assets/images/nekochat_icon.png" alt="Nekochat">'; $('#login-selected-name').textContent = t('loginTitle'); $('#login-selected-hint').textContent = t('enterAccountDetails'); }
 function showWelcome() { $('#auth-screen').hidden = false; $('#welcome-screen').hidden = false; }
 async function useSavedSession(index) {
-  const session = savedSessions()[index]; if (!session?.token || !session?.server) return;
+  const session = savedSessions()[index]; if (!session?.server) return;
+  // Accounts restored from a backup have no session: sign in on their server with the name filled in.
+  if (!session.token) { API = session.server; localStorage.setItem('nk_server_url', API); $('#server-url').value = API; $('#classic-server-url').value = API; showLoginForm(); $('#auth-username').value = session.user?.username || ''; $('#auth-password')?.focus(); return; }
   API = session.server; token = session.token; localStorage.setItem('nk_server_url', API); localStorage.setItem('nk_token', token); $('#server-url').value = API; $('#classic-server-url').value = API; showWelcome();
   try { const user = await api('/api/me'); rememberSession(user); setLoggedIn(user, true); await refresh(); }
   catch (error) { writeSavedSessions(savedSessions().filter(item => item?.key !== session.key)); token = null; localStorage.removeItem('nk_token'); showAuthScreen(); showLoginForm(); $('#auth-username').value = session.user?.username || ''; showSystemDialog(t('sessionExpired'), 'warning', t('sessionEnded')); }
@@ -143,6 +153,148 @@ const avatar = user => user?.avatar ? `<img src="${API}/avatars/${encodeURICompo
 function avatarFrameAttributes(user) { const colour = avatarColour(user); return colour ? ` avatar-profile-colour style="--profile-avatar-colour:${colour}"` : ''; }
 function setProfileAvatarFrame(user) { const colour = avatarColour(user); document.querySelectorAll('.avatar-me').forEach(node => { node.classList.toggle('has-profile-colour', Boolean(colour)); colour ? node.style.setProperty('--profile-avatar-colour', colour) : node.style.removeProperty('--profile-avatar-colour'); }); }
 function setUserAvatarFrame(node, user) { const colour = avatarColour(user); node.classList.toggle('avatar-profile-colour', Boolean(colour)); colour ? node.style.setProperty('--profile-avatar-colour', colour) : node.style.removeProperty('--profile-avatar-colour'); }
+// ---- Unread counters and muted chats ---------------------------------------------------------
+const chatKey = (kind, id) => `${kind}:${Number(id)}`;
+// Material-style icons, drawn like the other conversation header buttons (members, call).
+const ICON_BELL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>';
+const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 18.69 7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0-.01 0-.01.01L18 14.68z"/></svg>';
+const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+const unread = new Map();
+let mutedChats = new Set();
+// ---- Nekochat Reloaded companion server ------------------------------------------------------
+// Optional (Display Properties → "Nekochat Reloaded server"). It keeps settings and the read
+// state of each chat, so every device of the user shows the same muted chats and unread counts.
+// The Nekochat token proves the account once (/link); afterwards only the companion's own
+// session token is used. When the companion is unreachable the client works without it.
+const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
+const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {} };
+const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
+function companionUrl() { try { return (localStorage.getItem('nk_reloaded_server') || '').trim().replace(/\/$/, ''); } catch { return ''; } }
+const companionTokenKey = () => `nk_reloaded_token:${companion.url}|${API}|${me?.id}`;
+async function companionFetch(method, path, body) {
+  if (!companion.url || !companion.token) return null;
+  try {
+    const response = await fetch(`${companion.url}${path}`, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${companion.token}` }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (response.status === 401) { companion.token = ''; try { localStorage.removeItem(companionTokenKey()); localStorage.removeItem('nk_reloaded_active'); } catch {} companionConnect(); return null; }
+    return response.ok ? response.json() : null;
+  } catch { return null; }
+}
+function applyCompanionBundle(bundle) {
+  if (!bundle) return;
+  const settings = bundle.settings || {};
+  if (Array.isArray(settings.muted)) { mutedChats = new Set(settings.muted.map(String)); saveMuted(); }
+  // Other windows (Display Properties) follow through the storage event.
+  for (const key of SYNCED_KEYS) { if (settings[key] !== undefined && settings[key] !== null) try { localStorage.setItem(key, String(settings[key])); } catch {} }
+  applyWallpaper();
+  applyReadState(bundle.read_state || {});
+  setOwnStatus(bundle.status || 'online', false);
+  renderList(); updateUnread();
+}
+// ---- Status (companion server): online (green), away (yellow), do not disturb (red, also
+// silences notifications and sounds here) and invisible (other Reloaded users see you offline).
+// "Away" is also set automatically after 10 minutes without activity and cleared on return.
+const STATUSES = ['online', 'away', 'dnd', 'invisible'];
+const AUTO_AWAY_AFTER = 10 * 60 * 1000;
+let autoAway = false; let lastActivity = Date.now();
+const isDnd = () => companion.status === 'dnd';
+const statusLabel = status => t({ online: 'statusOnline', away: 'statusAway', dnd: 'dndOn', invisible: 'statusInvisible', offline: 'offline' }[status] || 'statusOnline');
+function setOwnStatus(status, send = true) {
+  companion.status = STATUSES.includes(status) ? status : 'online';
+  const dot = document.querySelector('.online-dot');
+  if (dot) { STATUSES.forEach(item => dot.classList.toggle(item, item !== 'online' && item === companion.status)); dot.title = statusLabel(companion.status); }
+  if (me && !me.status) { $('#profile-status').textContent = `● ${companion.status === 'online' ? t('profileOnline') : statusLabel(companion.status)}`; STATUSES.forEach(item => $('#profile-status').classList.toggle(item, item !== 'online' && item === companion.status)); }
+  // The chip shows the status; the plain "● online" line is only kept for a custom status text.
+  if (me) $('#profile-status').hidden = !!companion.token && !me.status;
+  const button = $('#status-button');
+  if (button) { button.hidden = !companion.token; button.querySelector('.status-dot').className = `status-dot ${companion.status}`; $('#status-label').textContent = statusLabel(companion.status); }
+  if (send) companionFetch('PUT', '/status', { status: companion.status });
+}
+function chooseStatus(status) { autoAway = false; setOwnStatus(status); $('#status-menu').hidden = true; }
+// Automatic "away" only replaces a plain "online", and only it is cleared on activity.
+function noteActivity() {
+  lastActivity = Date.now();
+  if (autoAway && companion.status === 'away') { autoAway = false; setOwnStatus('online'); }
+}
+['pointerdown', 'keydown', 'pointermove', 'wheel', 'touchstart'].forEach(name => window.addEventListener(name, noteActivity, { passive: true }));
+setInterval(() => {
+  if (companion.token && companion.status === 'online' && Date.now() - lastActivity > AUTO_AWAY_AFTER) { autoAway = true; setOwnStatus('away'); }
+}, 30000);
+async function refreshStatuses() {
+  const ids = users.map(user => user.id).filter(Boolean).join(',');
+  if (!ids) return;
+  const statuses = await companionFetch('GET', `/statuses?ids=${ids}`);
+  if (!statuses) return;
+  const changed = JSON.stringify(statuses) !== JSON.stringify(companion.statuses);
+  companion.statuses = statuses;
+  if (changed) renderList();
+}
+const userStatus = id => companion.statuses[String(id)] || null;
+// Online per Nekochat, unless the user is invisible (reported as "offline") on the companion.
+const userOnline = user => user.is_online === true && userStatus(user.id) !== 'offline';
+// A chat read on another device loses its unread counter here too.
+function applyReadState(state) {
+  companion.readState = { ...companion.readState, ...state };
+  for (const [chat, lastRead] of Object.entries(state)) {
+    const newest = latestIncoming.get(chat);
+    if (newest !== undefined && Number(lastRead) >= Number(newest)) { latestIncoming.delete(chat); unread.delete(chat); }
+  }
+  renderList(); updateUnread();
+}
+async function companionConnect() {
+  clearInterval(companion.timer);
+  companion.url = companionUrl(); companion.token = '';
+  if (!companion.url || !token || !me) return;
+  try { companion.token = localStorage.getItem(companionTokenKey()) || ''; } catch {}
+  let bundle = companion.token ? await companionFetch('GET', '/me') : null;
+  if (!bundle) {
+    try {
+      const response = await fetch(`${companion.url}/link`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ server: API, device: navigator.userAgent.slice(0, 100) }) });
+      if (!response.ok) return;
+      bundle = await response.json(); companion.token = bundle.token;
+      try { localStorage.setItem(companionTokenKey(), companion.token); } catch {}
+    } catch { return; }
+  }
+  // Display Properties (backups) finds the session through this key.
+  try { localStorage.setItem('nk_reloaded_active', companionTokenKey()); } catch {}
+  applyCompanionBundle(bundle);
+  refreshStatuses();
+  companion.timer = setInterval(async () => { const state = await companionFetch('GET', '/read-state'); if (state) applyReadState(state); refreshStatuses(); }, 30000);
+}
+// Settings changes are sent a moment later, together.
+function pushCompanionSettings() {
+  if (!companion.token) return;
+  clearTimeout(companion.pushTimer);
+  companion.pushTimer = setTimeout(() => {
+    const settings = { muted: [...mutedChats] };
+    for (const key of SYNCED_KEYS) { try { const value = localStorage.getItem(key); if (value !== null) settings[key] = value; } catch {} }
+    companionFetch('PUT', '/settings', settings);
+  }, 800);
+}
+function markRead(chat, messageId) {
+  if (!companion.token || messageId === undefined || messageId === null || String(messageId).startsWith('local-')) return;
+  if (Number(companion.readState[chat]) >= Number(messageId)) return;
+  companion.readState[chat] = String(messageId);
+  companionFetch('PUT', '/read-state', { chats: { [chat]: messageId } });
+}
+window.addEventListener('storage', event => {
+  if (event.key === 'nk_reloaded_server') companionConnect();
+  else if (SYNCED_KEYS.includes(event.key)) pushCompanionSettings();
+});
+function loadMuted() { try { mutedChats = new Set(JSON.parse(localStorage.getItem(`nk_muted:${API}|${me?.id}`) || '[]')); } catch { mutedChats = new Set(); } }
+function saveMuted() { try { localStorage.setItem(`nk_muted:${API}|${me?.id}`, JSON.stringify([...mutedChats])); } catch {} }
+const isMuted = key => mutedChats.has(key);
+function toggleMuted(key) { if (mutedChats.has(key)) mutedChats.delete(key); else mutedChats.add(key); saveMuted(); renderList(); renderConversationHeader(); updateUnread(); pushCompanionSettings(); }
+function totalUnread() { let total = 0; unread.forEach((count, key) => { if (!isMuted(key)) total += count; }); return total; }
+function updateUnread() {
+  const total = totalUnread();
+  // Window title and the tray / taskbar badge (desktop) show how many messages wait.
+  if (!detachedChat) desktopControls?.setUnreadCount?.(total);
+  const sums = { room: 0, dm: 0 };
+  unread.forEach((count, key) => { if (!isMuted(key)) sums[key.split(':')[0]] += count; });
+  // Like Outlook Express folders: "Rooms (2)" with the count in blue.
+  document.querySelectorAll('.tab').forEach(tab => { const kind = tab.dataset.tab === 'rooms' ? 'room' : 'dm'; let count = tab.querySelector('.unread-count'); if (!sums[kind]) { count?.remove(); return; } if (!count) { count = document.createElement('span'); count.className = 'unread-count'; tab.append(count); } count.textContent = ` (${sums[kind] > 99 ? '99+' : sums[kind]})`; });
+}
+function clearUnread(key) { if (!unread.delete(key)) return; renderList(); updateUnread(); }
 const formatTime = value => new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const displayName = user => user?.display_name || user?.username || t('user');
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
@@ -153,7 +305,7 @@ function fitXpLogonBackground() {
 }
 
 function setLoggedIn(user, announceLogin = false) {
-  me = user; rememberSession(user); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
+  me = user; rememberSession(user); loadMuted(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
   setProfileAvatarFrame(me);
   $('#me-avatar').innerHTML = avatar(me); $('#me-name').textContent = me.display_name; $('#me-handle').textContent = `@${me.username}`;
   $('#profile-avatar').innerHTML = avatar(me); $('#profile-name').textContent = me.display_name; $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`;
@@ -161,7 +313,7 @@ function setLoggedIn(user, announceLogin = false) {
   banner.style.backgroundImage = me.banner ? `url("${API}/avatars/${encodeURIComponent(me.banner)}")` : 'var(--xp-title-fill)';
   banner.style.backgroundColor = me.banner ? '' : (me.profile_color || '');
   banner.classList.toggle('has-user-banner', Boolean(me.banner));
-  connectSocket(); connectEventStream();
+  connectSocket(); connectEventStream(); companionConnect();
   if (announceLogin) playSound('logon');
 }
 let conversationOrder = new Map();
@@ -185,20 +337,42 @@ function showRoomMembers(room) {
   const members = Array.isArray(room?.members) ? room.members : [];
   $('#room-members-title').textContent = t('membersTitle', { name: room?.name || '' });
   $('#room-members-list').innerHTML = members.map(user => `<article class="room-member"><span class="avatar${avatarFrameAttributes(user)}">${avatar(user)}</span><span><b>${esc(displayName(user))}</b><small>@${esc(user.username || '')}</small></span></article>`).join('') || `<p class="room-member">${esc(t('membersUnavailable'))}</p>`;
-  $('#room-members-dialog').showModal();
+  // Anyone in the room can add people by user name (POST /rooms/{id}/members).
+  const member = members.some(user => Number(user.id) === Number(me?.id));
+  $('#room-members-add').hidden = !member; $('#room-members-error').textContent = ''; $('#room-members-username').value = '';
+  $('#room-members-add').onsubmit = async event => {
+    event.preventDefault();
+    const username = $('#room-members-username').value.trim().replace(/^@/, ''); if (!username) return;
+    try {
+      const updated = await api(`/rooms/${room.id}/members`, { method: 'POST', body: JSON.stringify({ username }) });
+      rooms = rooms.map(item => Number(item.id) === Number(updated.id) ? updated : item);
+      if (current?.kind === 'room' && Number(current.data.id) === Number(updated.id)) { current.data = updated; renderConversationHeader(); }
+      renderList(); showRoomMembers(updated);
+    } catch (error) { $('#room-members-error').textContent = error.message; }
+  };
+  if (!$('#room-members-dialog').open) $('#room-members-dialog').showModal();
 }
 function renderList() {
   const query = $('#search').value.trim().toLowerCase(); const list = $('#chat-list');
-  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: user.is_online === true, kind: 'dm', frame: avatarFrameAttributes(user) }));
-  list.innerHTML = items.map(item => `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? 'online' : 'offline'}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}</b><small>${esc(item.sub)}</small></span></button>`).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
+  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, kind: 'dm', frame: avatarFrameAttributes(user) }));
+  list.innerHTML = items.map(item => {
+    const key = chatKey(item.kind, item.id); const count = unread.get(key) || 0; const muted = isMuted(key);
+    // Rooms whose voice channel is on show a speaker and how many people are in it.
+    const channel = item.kind === 'room' ? activeChannel(item.id) : null;
+    const voice = channel ? `<span class="voice-badge" title="${esc(t('voiceNow', { count: channel.members.size }))}">${ICON_SPEAKER}${channel.members.size}</span>` : '';
+    const badge = count ? `<span class="unread-count${muted ? ' muted' : ''}"> (${count > 99 ? '99+' : count})</span>` : '';
+    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline'))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}</b><small>${esc(item.sub)}${voice}</small></span></button>`;
+  }).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
-  const online = user.is_online === true;
+  const online = userOnline(user);
   $('#user-profile-avatar').innerHTML = avatar(user);
   setUserAvatarFrame($('#user-profile-avatar'), user);
   $('#user-profile-name').textContent = displayName(user);
   $('#user-profile-handle').textContent = `@${user.username}`;
-  $('#user-profile-status').textContent = `● ${online ? t('online') : t('offline')}${user.status ? ` · ${user.status}` : ''}`;
+  const shown = !userOnline(user) ? 'offline' : ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : 'online';
+  $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${user.status ? ` · ${user.status}` : ''}`;
+  ['away', 'dnd'].forEach(item => $('#user-profile-status').classList.toggle(item, shown === item));
   $('#user-profile-status').classList.toggle('offline', !online);
   $('#user-profile-bio').textContent = user.bio || t('userNoBio');
   const banner = $('#user-profile-banner');
@@ -208,23 +382,52 @@ function showUserProfile(user) {
   $('#user-profile-dialog').showModal();
 }
 function messageKey(message) { return `${message.id ?? ''}:${message.created_at ?? ''}:${message.content ?? ''}`; }
-function appendMessage(message, mine, key = messageKey(message), pending = false) {
+// "Today", "Yesterday" or the date, shown between messages of different days.
+function dayLabel(date) {
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return t('today');
+  if (diff === 1) return t('yesterday');
+  return date.toLocaleDateString(displaySettings.language === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long', ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
+}
+function appendMessage(message, mine, key = messageKey(message), pending = false, { incoming = false } = {}) {
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id) || { display_name: t('unknown') };
   const profileId = sender.id ? ` data-profile-id="${sender.id}"` : '';
-  $('#messages').insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time></div><p>${esc(message.content)}</p></div></article>`);
-  $('#messages').scrollTop = $('#messages').scrollHeight;
+  const list = $('#messages');
+  // Only follow the conversation when the reader is already at the bottom.
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const created = new Date(message.created_at || Date.now());
+  const day = Number.isNaN(created.getTime()) ? '' : created.toDateString();
+  const lastArticle = [...list.querySelectorAll('article')].pop();
+  if (day && lastArticle?.dataset.day !== day) list.insertAdjacentHTML('beforeend', `<div class="day-separator"><span>${esc(dayLabel(created))}</span></div>`);
+  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time></div><p>${esc(message.content)}</p></div></article>`);
+  if (!incoming || atBottom || mine) { list.scrollTop = list.scrollHeight; hideNewMessages(); }
+  else showNewMessages();
 }
+// "New messages ↓" when a message arrives while the reader looks at older ones.
+let newMessagesCount = 0;
+function showNewMessages() {
+  newMessagesCount += 1;
+  let button = $('#new-messages');
+  if (!button) { button = document.createElement('button'); button.id = 'new-messages'; button.type = 'button'; button.className = 'xp-button new-messages'; button.onclick = () => { const list = $('#messages'); list.scrollTop = list.scrollHeight; hideNewMessages(); }; $('#messages').after(button); }
+  button.textContent = `${t('newMessages', { count: newMessagesCount })} ↓`; button.hidden = false;
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && current) clearUnread(chatKey(current.kind, current.data.id)); });
+$('#messages').addEventListener('scroll', () => { const list = $('#messages'); if (list.scrollHeight - list.scrollTop - list.clientHeight < 40) hideNewMessages(); });
+function hideNewMessages() { newMessagesCount = 0; const button = $('#new-messages'); if (button) button.hidden = true; }
 function renderConversationHeader() {
   if (!current) return;
   const { kind, data } = current;
   const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
   const profileId = kind === 'dm' ? ` data-profile-id="${data.id}"` : '';
-  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
+  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button mute-chat-button" id="mute-chat" type="button" aria-label="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}" title="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}">${isMuted(chatKey(kind, data.id)) ? ICON_BELL_OFF : ICON_BELL}</button><button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
 }
 async function openChat(kind, id, { force = false } = {}) {
   const data = kind === 'room' ? rooms.find(room => room.id === id) : users.find(user => user.id === id); if (!data) return;
   if (!force && !detachedChat && await desktopControls?.focusDetachedChat?.({ kind, id })) return;
-  current = { kind, data }; $('#messages').innerHTML = ''; $('#empty-state').hidden = true;
+  current = { kind, data }; $('#messages').innerHTML = ''; $('#empty-state').hidden = true; hideNewMessages();
+  clearUnread(chatKey(kind, id));
   historyKey = '';
   $('#message-input').disabled = false; document.querySelectorAll('#composer button').forEach(button => { button.disabled = false; });
   $('#message-input').placeholder = t('messagePlaceholder');
@@ -249,6 +452,7 @@ async function refreshCurrentHistory() {
     if (key === historyKey) return;
     historyKey = key; $('#messages').innerHTML = '';
     history.forEach(message => appendMessage(message, (message.user?.id || message.sender?.id) === me.id));
+    const last = history[history.length - 1]; if (last) markRead(chatKey(selected.kind, selected.data.id), last.id);
   } catch (error) {
     $('#messages').innerHTML = '';
     const warning = /not a member|forbidden|access denied/i.test(String(error.message));
@@ -297,18 +501,21 @@ function socketMessage(payload) {
   // with a toast for messages they can see immediately. A hidden window (tray on PC,
   // background on phones) shows nothing, so the open chat gets a notification too.
   const seen = (matchingRoom || matchingDirect) && document.visibilityState === 'visible';
+  const key = type === 'room_message' ? chatKey('room', roomId) : chatKey('dm', message.sender_id ?? payload.from_id ?? message.user_id);
+  // A muted chat still counts unread messages, but never notifies or plays a sound.
   if (!mine && !seen) {
-    desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
+    unread.set(key, (unread.get(key) || 0) + 1); if (message.id !== undefined) latestIncoming.set(key, message.id); renderList(); updateUnread();
+    if (!isMuted(key) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
   }
-  if (!matchingRoom && !matchingDirect) { if (!mine) playSound('notify'); return; }
-  const key = messageKey(message);
-  if ([...document.querySelectorAll('#messages article')].some(node => node.dataset.key === key)) return;
+  if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playSound('notify'); return; }
+  const messageId = messageKey(message);
+  if ([...document.querySelectorAll('#messages article')].some(node => node.dataset.key === messageId)) return;
   if (mine) {
     const pending = [...document.querySelectorAll('#messages article[data-pending="true"], #messages article[data-failed="true"]')].find(node => node.dataset.content === String(message.content));
-    if (pending) { markDelivered(pending, key); return; }
+    if (pending) { markDelivered(pending, messageId); return; }
   }
-  appendMessage(message, mine);
-  $('#messages article:last-child').dataset.key = key;
+  appendMessage(message, mine, messageId, false, { incoming: !mine });
+  if (seen) markRead(key, message.id);
 }
 function openWebSocketConnection() {
   return new Promise((resolve, reject) => {
@@ -826,10 +1033,14 @@ function noteRoomPresence(payload, senderId) {
   const roomId = Number(payload.room_id);
   if (!roomId || !senderId || senderId === Number(me?.id)) return;
   const channel = roomChannels.get(roomId) || { callId: payload.call_id, members: new Map() };
+  const before = channel.members.size;
   if (payload.type === 'call_hangup') channel.members.delete(senderId);
   else { channel.members.set(senderId, Date.now()); if (payload.call_id) channel.callId = payload.call_id; }
   roomChannels.set(roomId, channel);
+  if (channel.members.size !== before) renderList();
 }
+// People who stop sending frames leave the speaker badge after PRESENCE_TIMEOUT.
+setInterval(() => { if ([...roomChannels.values()].some(channel => channel.members.size)) renderList(); }, 10000);
 function activeChannel(roomId) {
   const channel = roomChannels.get(Number(roomId)); if (!channel) return null;
   for (const [id, seen] of channel.members) if (Date.now() - seen > PRESENCE_TIMEOUT) channel.members.delete(id);
@@ -997,7 +1208,7 @@ function openProfileFromTrigger(event) {
   if (user) showUserProfile(user);
 }
 $('#conversation-header').addEventListener('click', openProfileFromTrigger);
-$('#conversation-header').addEventListener('click', event => { if (event.target.closest('#start-call')) startCall(); if (event.target.closest('#room-members') && current?.kind === 'room') showRoomMembers(current.data); });
+$('#conversation-header').addEventListener('click', event => { if (event.target.closest('#mute-chat') && current) { toggleMuted(chatKey(current.kind, current.data.id)); return; } if (event.target.closest('#start-call')) startCall(); if (event.target.closest('#room-members') && current?.kind === 'room') showRoomMembers(current.data); });
 $('#conversation-header').addEventListener('pointerdown', event => {
   if (!current || event.button !== 0 || event.target.closest('button, .profile-trigger')) return;
   const start = { x: event.screenX, y: event.screenY };
@@ -1094,7 +1305,7 @@ desktopControls?.onSystemAction?.(async action => {
   } catch (error) { showSystemDialog(error.message, 'error', t('roomJoin')); }
 });
 $('#profile-button').onclick = () => $('#profile-dialog').showModal(); document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => document.querySelector(`#${button.dataset.close}`).close());
-function leaveAccount(forgetSession) { hadConnection = false; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
+function leaveAccount(forgetSession) { hadConnection = false; try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
 function expireSession() {
   if (!token || !me) return;
   const username = me.username || '';
@@ -1165,7 +1376,19 @@ function openProfileTask(task) {
   $('.editor-upload').hidden = task !== 'details';
 }
 $('#edit-profile').onclick = () => desktopControls?.openProfileSettings();
+// Desktop only: the admin panel of the current server (sign-in with the hash from its console).
+$('#status-button').onclick = event => { event.stopPropagation(); $('#status-menu').hidden = !$('#status-menu').hidden; };
+$('#status-menu').onclick = event => { const item = event.target.closest('[data-status]'); if (item) chooseStatus(item.dataset.status); };
+document.addEventListener('click', event => { if (!event.target.closest('.status-picker')) $('#status-menu').hidden = true; });
+// The server admin panel button is off unless turned on in Display Properties → Settings.
+function refreshAdminButton() { let shown = false; try { shown = localStorage.getItem('nk_show_admin_button') === '1'; } catch {} $('#admin-panel-button').hidden = !desktopControls?.openAdminPanel || !shown; }
+refreshAdminButton();
+window.addEventListener('storage', event => { if (event.key === 'nk_show_admin_button') refreshAdminButton(); });
+$('#admin-panel-button').onclick = () => { $('#profile-dialog').close(); desktopControls.openAdminPanel(API); };
 $('#theme-browser-profile').onclick = () => { $('#profile-dialog').close(); desktopControls?.openThemeBrowser(); };
+// The theme editor needs the desktop app (it writes theme folders).
+$('#theme-editor-profile').hidden = !desktopControls?.openThemeEditor;
+$('#theme-editor-profile').onclick = () => { $('#profile-dialog').close(); desktopControls.openThemeEditor(); };
 $('#personalize').onclick = () => { $('#profile-dialog').close(); desktopControls?.openThemeSettings(); };
 document.querySelectorAll('[data-profile-task]').forEach(button => button.onclick = () => openProfileTask(button.dataset.profileTask));
 $('#profile-back').onclick = () => openProfileTask(); $('#profile-cancel').onclick = () => $('#profile-editor').close();
@@ -1186,6 +1409,18 @@ $('#theme-apply').onclick = async () => { try { $('#theme-error').textContent = 
 $('#theme-import').onclick = async () => { try { $('#theme-error').textContent = t('importingTheme'); const result = await desktopControls.importTheme(); if (!result) { $('#theme-error').textContent = ''; return; } await renderThemeList(); refreshWindowTheme(result.revision); $('#theme-error').textContent = t('themeInstalled'); } catch (error) { $('#theme-error').textContent = ''; showSystemDialog(error.message, 'error', t('themeImport')); } };
 fitXpLogonBackground();
 window.addEventListener('resize', fitXpLogonBackground);
+// Chat background from Display Properties; the storage event updates open windows at once.
+function applyWallpaper() {
+  let choice = 'none', image = ''; try { choice = localStorage.getItem('nk_chat_wallpaper') || 'none'; image = localStorage.getItem('nk_chat_wallpaper_image') || ''; } catch {}
+  const url = { bliss: 'assets/images/Bliss.jpg', logon: 'assets/images/xp_1920x1200.jpg', custom: image }[choice] || '';
+  let visibility = 35; try { visibility = Number(localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35); } catch {}
+  const veil = 100 - Math.min(100, Math.max(5, Number.isFinite(visibility) ? visibility : 35));
+  // A veil of the window colour over the picture keeps the messages readable.
+  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url));
+  list.style.backgroundImage = url ? `linear-gradient(color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent), color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent)), url("${url}")` : '';
+}
+applyWallpaper();
+window.addEventListener('storage', event => { if (event.key?.startsWith('nk_chat_wallpaper')) applyWallpaper(); });
 window.addEventListener('message', event => {
   if (event.data?.type === 'xp-display-settings') applyDisplaySettings(event.data.settings || {});
   if (event.data?.type === 'xp-theme-refresh') { const link = document.querySelector('#nekochat-style'); if (link) link.href = `assets/css/nekochat.css?theme=${event.data.revision}`; const theme = document.querySelector('#nekochat-theme'); if (theme && event.data.cssUrl) theme.href = event.data.cssUrl; }
