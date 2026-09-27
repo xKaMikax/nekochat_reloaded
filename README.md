@@ -2,7 +2,7 @@
 
 ![NekoChat Reloaded desktop client](https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded/pc/screenshots/nekochat-pc.png)
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
+> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
 ## What the client includes
 
