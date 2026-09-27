@@ -1,0 +1,17 @@
+/* Windows XP notification balloon: pale yellow, thin black border, rounded corners and a tail
+   pointing down at the tray. The page is transparent around it. */
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 11px Tahoma, "Segoe UI", sans-serif; user-select: none; }
+.balloon { position: absolute; inset: 0 0 14px 0; box-sizing: border-box; padding: 7px 9px 8px; border: 1px solid #000; border-radius: 8px; background: #ffffe1; color: #000; box-shadow: 2px 2px 3px rgba(0,0,0,.35); cursor: pointer; }
+.balloon::after, .balloon::before { content: ''; position: absolute; right: 26px; width: 0; height: 0; border-style: solid; }
+.balloon::before { bottom: -15px; border-width: 15px 0 0 15px; border-color: #000 transparent transparent transparent; }
+.balloon::after { bottom: -13px; right: 27px; border-width: 13px 0 0 13px; border-color: #ffffe1 transparent transparent transparent; }
+.balloon-title { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.balloon-title img { width: 16px; height: 16px; }
+.balloon-title b { flex: 1; font-size: 11px; }
+#balloon-close { width: 15px; height: 14px; padding: 0; border: 1px solid #b0a57a; border-radius: 2px; background: #ffffe1; color: #444; font: bold 11px/11px Tahoma, sans-serif; cursor: pointer; }
+#balloon-close:hover { border-color: #666; background: #fff; }
+.balloon-body { display: flex; gap: 8px; }
+.balloon-body img { width: 36px; height: 36px; flex: none; border: 1px solid #b0a57a; object-fit: cover; }
+.balloon-body div { min-width: 0; }
+#balloon-sender { display: block; }
+#balloon-text { display: -webkit-box; margin: 2px 0 0; overflow: hidden; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }

@@ -49,6 +49,7 @@
     fitToScreen(win);
     win.frame.addEventListener('load', () => {
       win.loaded = true;
+      markFocus();
       // Electron's 'ready-to-show': deliver what was sent before the page was ready.
       win.queue.splice(0).forEach(([channel, data]) => send(win, channel, data));
     });
@@ -74,10 +75,17 @@
   }
   window.addEventListener('resize', () => windows.forEach(fitToScreen));
 
+  let focusedWindow = null;
   function focus(win) {
     if (!win || win.destroyed) return;
     win.element.classList.remove('hidden');
     win.element.style.zIndex = String(++zIndex);
+    focusedWindow = win;
+    markFocus();
+  }
+  // Like Electron's focus/blur on PC: the other windows get the inactive frame (xp-inactive).
+  function markFocus() {
+    windows.forEach(item => { try { item.frame.contentDocument?.documentElement.classList.toggle('xp-inactive', item !== focusedWindow); } catch {} });
   }
   function show(win) { focus(win); }
   function isDestroyed(win) { return !win || win.destroyed; }
@@ -108,7 +116,7 @@
   // ---- window openers (main.js) ------------------------------------------------------
   function openThemeSettings(owner) {
     if (!isDestroyed(settingsWindow)) { focus(settingsWindow); return; }
-    settingsWindow = createWindow({ url: 'assets/html/theme_settings_frame.html', width: 520, height: 480, minWidth: 460, minHeight: 400, parent: owner });
+    settingsWindow = createWindow({ url: 'assets/html/theme_settings_frame.html', width: 520, height: 560, minWidth: 460, minHeight: 400, parent: owner });
     settingsWindow.onClosed = () => { settingsWindow = null; };
   }
   function openThemeBrowser(owner) {
@@ -246,6 +254,8 @@
         if (result?.activeTheme && result.activeTheme.revision !== activeTheme?.revision) { activeTheme = result.activeTheme; notifyThemeChanged(activeTheme); }
         return result;
       },
+      // Unread messages in the tab title and on the installed app's icon.
+      setUnreadCount: count => { const n = Math.max(0, Number(count) || 0); document.title = n ? `(${n}) Nekochat Reloaded` : 'Nekochat Reloaded'; try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch {} },
       notifyMessage: message => native.notifyMessage(String(message?.sender || 'User'), String(message?.content || ''), String(message?.avatarUrl || '')),
       showSystemDialog: data => showSystemDialog(win, clone(data) || {}),
       systemAction: action => { if (!isDestroyed(win.parent)) send(win.parent, 'system:action', clone(action)); },

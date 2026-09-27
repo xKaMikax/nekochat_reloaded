@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Nekochat Reloaded Admin</title><link id="frame-style" rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/theme-settings.css"><link rel="stylesheet" href="assets/css/admin.css"><link rel="stylesheet" href="assets/css/theme-controls.css">
+<script src="assets/js/web-bridge.js"></script><link rel="stylesheet" href="assets/css/web.css"></head>
+<body>
+  <div class="xp-window settings-window admin-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/nekochat_icon.png')"></span><span class="xp-title" id="admin-title">Администрирование Nekochat</span><div class="xp-window-controls"><button id="minimize" aria-label="Свернуть"></button><button id="maximize" aria-label="Развернуть"></button><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="properties admin">
+      <form class="admin-login" id="admin-login">
+        <h1 data-t="loginTitle">Вход в админ-панель</h1>
+        <p data-t="loginHint">Хеш печатается в консоль сервера при запуске и меняется при каждом перезапуске.</p>
+        <p class="admin-server" id="admin-server"></p>
+        <label><span data-t="hash">Хеш</span><input id="admin-hash" type="password" autocomplete="off" required></label>
+        <div class="admin-actions"><button type="submit" data-t="signIn">Войти</button></div>
+        <p class="admin-error" id="admin-login-error" role="alert"></p>
+      </form>
+      <section class="admin-panel" id="admin-panel" hidden>
+        <nav class="property-tabs admin-tabs" role="tablist"><button class="property-tab admin-tab active" type="button" data-page="stats" data-t="stats">Статистика</button><button class="property-tab admin-tab" type="button" data-page="users" data-t="users">Пользователи</button><button class="property-tab admin-tab" type="button" data-page="rooms" data-t="rooms">Комнаты</button><button class="property-tab admin-tab" type="button" data-page="messages" data-t="messages">Сообщения</button><span class="admin-spacer"></span><button type="button" id="admin-refresh" data-t="refresh">Обновить</button><button type="button" id="admin-logout" data-t="logout">Выйти</button></nav>
+        <div class="property-page admin-page" id="page-stats"><div class="admin-stats" id="admin-stats"></div></div>
+        <div class="property-page admin-page" id="page-users" hidden><div class="admin-toolbar"><input id="admin-user-search" type="search" data-tp="search"><button type="button" id="admin-user-find" data-t="find">Найти</button></div><div class="admin-table-wrap"><table class="admin-table" id="admin-users"></table></div></div>
+        <div class="property-page admin-page" id="page-rooms" hidden><div class="admin-table-wrap"><table class="admin-table" id="admin-rooms"></table></div></div>
+        <div class="property-page admin-page" id="page-messages" hidden><div class="admin-toolbar"><select id="admin-message-kind"><option value="messages" data-t="roomMessages">Сообщения в комнатах</option><option value="direct-messages" data-t="directMessages">Личные сообщения</option></select></div><div class="admin-table-wrap"><table class="admin-table" id="admin-messages"></table></div></div>
+        <p class="admin-status" id="admin-status" role="status"></p>
+      </section>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <dialog class="admin-dialog" id="admin-edit"><form method="dialog" id="admin-edit-form"><h2 id="admin-edit-title"></h2>
+    <label><span data-t="displayName">Отображаемое имя</span><input id="edit-display-name" maxlength="100"></label>
+    <label><span data-t="status">Статус</span><input id="edit-status" maxlength="100"></label>
+    <label><span data-t="bio">О себе</span><textarea id="edit-bio" rows="3"></textarea></label>
+    <label><span data-t="colour">Цвет профиля</span><input id="edit-colour" placeholder="#RRGGBB" maxlength="7"></label>
+    <div class="admin-actions"><button value="save" data-t="save">Сохранить</button><button value="cancel" formnovalidate data-t="cancel">Отмена</button></div></form></dialog>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 function playMinimizeSound(reverse = false) {
+  try { if (localStorage.getItem('nk_sound_scheme') === 'none' || Number(localStorage.getItem('nk_sound_volume') ?? 72) <= 0) return; } catch {}
   if (!reverse) { const audio = new Audio('assets/sounds/minimize.wav'); audio.play().catch(() => {}); return; }
   fetch('assets/sounds/minimize.wav').then(response => response.arrayBuffer()).then(async buffer => {
     const context = new AudioContext(); const decoded = await context.decodeAudioData(buffer);
