@@ -36,6 +36,12 @@ html, body {
 .xp-titlebar::before { left: 0; width: var(--xp-caption-left); background-image: var(--xp-title-left, url('../../themes/Current/title-left.png')); }
 .xp-titlebar::after { right: 0; width: var(--xp-caption-right); background-image: var(--xp-title-right, url('../../themes/Current/title-right.png')); }
 
+/* Inactive window: the theme's inactive title bar (the lower half of the msstyles caption)
+   and the paler XP title text. Themes without it keep the active look. */
+.xp-inactive .xp-titlebar { background-image: var(--xp-title-fill-inactive, var(--xp-title-fill, url('../../themes/Current/title-fill.png'))); }
+.xp-inactive .xp-titlebar::before { background-image: var(--xp-title-left-inactive, var(--xp-title-left, url('../../themes/Current/title-left.png'))); }
+.xp-inactive .xp-titlebar::after { background-image: var(--xp-title-right-inactive, var(--xp-title-right, url('../../themes/Current/title-right.png'))); }
+.xp-inactive .xp-title { color: var(--xp-title-inactive-text, #d8e4f8); text-shadow: none; }
 .xp-app-icon, .xp-title, .xp-window-controls { position: relative; z-index: 1; }
 
 .xp-app-icon {
@@ -93,22 +99,29 @@ html, body {
   display: block; width: 5px; flex: none;
   /* Native Luna side resource: five pixels, rendered at its original width. */
   background: var(--xp-frame-left, url('../../themes/Current/frame-left.png')) no-repeat;
-  background-size: 5px 100%;
+  /* msstyles frames (--xp-frame-states: 2) stack the active window's edge over the inactive
+     one: show the top half for the focused window and the bottom half otherwise. */
+  background-size: 5px calc(100% * var(--xp-frame-states, 1));
+  background-position: 0 0;
 }
+.xp-inactive .xp-side { background-position: 0 100%; }
 
 .xp-side-right { background-image: var(--xp-frame-right, url('../../themes/Current/frame-right.png')); }
 
 #app-host { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; flex: 1 1 auto; border: 0; background: #ece9d8; }
 
 .xp-bottom {
-  position: relative; display: block; width: 100%; height: var(--xp-bottom-height); flex: none;
+  position: relative; display: block; width: 100%; height: calc(var(--xp-bottom-height) / var(--xp-frame-states, 1)); flex: none;
   background: var(--xp-bottom-fill, url('../../themes/Current/bottom-fill.png')) repeat-x;
   background-size: var(--xp-bottom-middle) var(--xp-bottom-height);
-  /* Luna stores this strip in the opposite orientation to the window edge. */
-  transform: rotate(180deg);
+  background-position: 0 0;
+  /* Single-state strips (older themes) are stored upside down; the halves of a two-state
+     msstyles strip are already in window order. */
+  transform: rotate(calc(180deg * (2 - var(--xp-frame-states, 1))));
 }
+.xp-inactive .xp-bottom, .xp-inactive .xp-bottom::before, .xp-inactive .xp-bottom::after { background-position: 0 100%; }
 
-.xp-bottom::before, .xp-bottom::after { content: ''; position: absolute; top: 0; height: var(--xp-bottom-height); background-repeat: no-repeat; }
+.xp-bottom::before, .xp-bottom::after { content: ''; position: absolute; top: 0; height: 100%; background-repeat: no-repeat; background-size: 100% var(--xp-bottom-height); background-position: 0 0; }
 .xp-bottom::before { left: 0; width: var(--xp-bottom-left); background-image: var(--xp-bottom-left-image, url('../../themes/Current/bottom-left.png')); }
 .xp-bottom::after { right: 0; width: var(--xp-bottom-right); background-image: var(--xp-bottom-right-image, url('../../themes/Current/bottom-right.png')); }
 

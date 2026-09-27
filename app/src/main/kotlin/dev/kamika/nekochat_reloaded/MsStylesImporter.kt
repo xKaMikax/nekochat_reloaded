@@ -15,7 +15,7 @@ import java.nio.ByteOrder
  * difference between a theme rendered on the phone and a prebuilt one.
  */
 object MsStylesImporter {
-    const val VERSION = 1
+    const val VERSION = 4
 
     // ---- PE resources ----------------------------------------------------------------
 
@@ -266,12 +266,17 @@ object MsStylesImporter {
         output.mkdirs()
         var caption = find(images, "_FRAMECAPTION_BMP", prefix)
         val capHeight = caption.height / 2
+        // The caption bitmap stacks the active title bar over the inactive one.
+        val inactive = crop(caption, 0, capHeight, caption.width, capHeight * 2)
         caption = crop(caption, 0, 0, caption.width, capHeight)
         var left = 28; var right = 35
         if (caption.width <= left + right) { left = maxOf(1, caption.width / 4); right = maxOf(1, caption.width / 4) }
         save(crop(caption, 0, 0, left, capHeight), output, "title-left.png")
         save(crop(caption, left, 0, caption.width - right, capHeight), output, "title-fill.png")
         save(crop(caption, caption.width - right, 0, caption.width, capHeight), output, "title-right.png")
+        save(crop(inactive, 0, 0, left, capHeight), output, "title-left-inactive.png")
+        save(crop(inactive, left, 0, caption.width - right, capHeight), output, "title-fill-inactive.png")
+        save(crop(inactive, caption.width - right, 0, caption.width, capHeight), output, "title-right-inactive.png")
         save(find(images, "_FRAMELEFT_BMP", prefix), output, "frame-left.png")
         save(find(images, "_FRAMERIGHT_BMP", prefix), output, "frame-right.png")
         val bottom = find(images, "_FRAMEBOTTOM_BMP", prefix)
@@ -316,12 +321,21 @@ object MsStylesImporter {
         }
         fun u(name: String) = "url(\"$asset/$name\")"
         val css = StringBuilder()
-        css.append(":root { --xp-caption-left: ${left}px; --xp-caption-right: ${right}px; --xp-caption-middle: 1px; --xp-caption-height: ${capHeight}px; --xp-bottom-left: ${bleft}px; --xp-bottom-right: ${bright}px; --xp-bottom-middle: 1px; --xp-bottom-height: ${bottom.height}px; ")
+        css.append(":root { --xp-frame-states: 2; --xp-caption-left: ${left}px; --xp-caption-right: ${right}px; --xp-caption-middle: 1px; --xp-caption-height: ${capHeight}px; --xp-bottom-left: ${bleft}px; --xp-bottom-right: ${bright}px; --xp-bottom-middle: 1px; --xp-bottom-height: ${bottom.height}px; ")
         css.append("--xp-theme-window: ${colours["Window"]}; --xp-theme-buttonface: ${colours["ButtonFace"]}; --xp-theme-windowtext: ${colours["WindowText"]}; --xp-theme-highlight: ${colours["Hilight"]}; ")
         css.append("--xp-title-fill: ${u("title-fill.png")}; --xp-title-left: ${u("title-left.png")}; --xp-title-right: ${u("title-right.png")}; --xp-frame-left: ${u("frame-left.png")}; --xp-frame-right: ${u("frame-right.png")}; --xp-bottom-fill: ${u("bottom-fill.png")}; --xp-bottom-left-image: ${u("bottom-left.png")}; --xp-bottom-right-image: ${u("bottom-right.png")}; ")
         css.append("--xp-caption-normal: ${u("caption-normal.png")}; --xp-caption-hover: ${u("caption-hover.png")}; --xp-caption-pressed: ${u("caption-pressed.png")}; --xp-close-normal: ${u("close-normal.png")}; --xp-close-hover: ${u("close-hover.png")}; --xp-close-pressed: ${u("close-pressed.png")}; ")
         css.append("--xp-close-glyph: ${u("close-glyph-normal.png")}; --xp-close-glyph-hover: ${u("close-glyph-hover.png")}; --xp-close-glyph-pressed: ${u("close-glyph-pressed.png")}; --xp-minimize-glyph: ${u("minimize-glyph-normal.png")}; --xp-minimize-glyph-hover: ${u("minimize-glyph-hover.png")}; --xp-minimize-glyph-pressed: ${u("minimize-glyph-pressed.png")}; ")
         css.append("--xp-maximize-glyph: ${u("maximize-glyph-normal.png")}; --xp-maximize-glyph-hover: ${u("maximize-glyph-hover.png")}; --xp-maximize-glyph-pressed: ${u("maximize-glyph-pressed.png")}; --xp-button-normal: ${u("button-normal.png")}; --xp-button-hover: ${u("button-hover.png")}; --xp-button-pressed: ${u("button-pressed.png")}; }\n")
+        // XP trackbar (thumb pointing down + track); optional, themes without it still import.
+        val slider = try {
+            val thumb = find(images, "_TRACKBARDOWN16_BMP", prefix)
+            listOf("normal", "hover", "pressed").forEachIndexed { index, name -> save(stripState(thumb, thumb.height / 5, index), output, "slider-thumb-$name.png") }
+            save(find(images, "_SLIDERTRACK_BMP", prefix), output, "slider-track.png")
+            true
+        } catch (error: IllegalArgumentException) { false }
+        if (slider) css.append(":root { --xp-slider-thumb: ${u("slider-thumb-normal.png")}; --xp-slider-thumb-hover: ${u("slider-thumb-hover.png")}; --xp-slider-thumb-pressed: ${u("slider-thumb-pressed.png")}; --xp-slider-track: ${u("slider-track.png")}; }\n")
+        css.append(":root { --xp-title-fill-inactive: ${u("title-fill-inactive.png")}; --xp-title-left-inactive: ${u("title-left-inactive.png")}; --xp-title-right-inactive: ${u("title-right-inactive.png")}; }\n")
         css.append(":root { --xp-checkbox-unchecked: ${u("checkbox-unchecked-normal.png")}; --xp-checkbox-unchecked-hover: ${u("checkbox-unchecked-hover.png")}; --xp-checkbox-unchecked-pressed: ${u("checkbox-unchecked-pressed.png")}; --xp-checkbox-checked: ${u("checkbox-checked-normal.png")}; --xp-checkbox-checked-hover: ${u("checkbox-checked-hover.png")}; --xp-checkbox-checked-pressed: ${u("checkbox-checked-pressed.png")}; --xp-groupbox: ${u("groupbox.png")}; --xp-field-outline: ${u("field-outline.png")}; }\n")
         css.append(":root { ")
         for (direction in listOf("up", "down", "left", "right")) css.append("--xp-scroll-$direction: ${u("scroll-$direction-normal.png")}; --xp-scroll-$direction-hover: ${u("scroll-$direction-hover.png")}; --xp-scroll-$direction-pressed: ${u("scroll-$direction-pressed.png")}; ")
