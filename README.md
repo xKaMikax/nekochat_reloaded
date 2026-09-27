@@ -4,8 +4,7 @@
 
 *iPhone screenshot by [VASHYAN-CMD](https://github.com/VASHYAN-CMD).*
 
-NekoChat Reloaded is an unofficial Windows XP-style client for NekoChat. It is not the official NekoChat client.
-
+> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
 ## What the client includes
 
 - Rooms and direct messages.
