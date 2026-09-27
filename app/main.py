@@ -22,7 +22,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -74,6 +74,11 @@ def migrate() -> None:
                 created_at INTEGER NOT NULL,
                 expires_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS user_status (
+                account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+                status TEXT NOT NULL,            -- "online" or "dnd" (do not disturb)
+                updated_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS read_state (
                 account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 chat TEXT NOT NULL,              -- "room:<id>" or "dm:<user id>"
@@ -113,9 +118,11 @@ def current_account(authorization: str = Header(default="")) -> sqlite3.Row:
 
 def account_view(row: sqlite3.Row, db: sqlite3.Connection) -> dict[str, Any]:
     read = {r["chat"]: r["last_read"] for r in db.execute("SELECT chat, last_read FROM read_state WHERE account_id = ?", (row["id"],))}
+    status = db.execute("SELECT status FROM user_status WHERE account_id = ?", (row["id"],)).fetchone()
     return {
         "server": row["server"],
         "user": json.loads(row["profile"]),
+        "status": status["status"] if status else "online",
         "settings": json.loads(row["settings"]),
         "read_state": read,
         "linked_at": row["created_at"],
@@ -135,7 +142,7 @@ def health():
 
 @app.get("/api/info")
 def info():
-    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state"]}
+    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status"]}
 
 
 @app.post("/link")
@@ -222,6 +229,43 @@ def put_read_state(payload: ReadStateIn, account: sqlite3.Row = Depends(current_
             [(account["id"], chat, value, now()) for chat, value in chats.items()],
         )
     return {"ok": True, "updated": len(chats)}
+
+
+STATUSES = ("online", "dnd")
+
+
+class StatusIn(BaseModel):
+    status: str
+
+
+@app.put("/status")
+def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account)):
+    """Your own status, seen by other Reloaded users of the same Nekochat server."""
+    if payload.status not in STATUSES:
+        raise HTTPException(400, f"Status must be one of: {', '.join(STATUSES)}")
+    with database() as db:
+        db.execute(
+            "INSERT INTO user_status (account_id, status, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT (account_id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at",
+            (account["id"], payload.status, now()),
+        )
+    return {"ok": True, "status": payload.status}
+
+
+@app.get("/statuses")
+def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account)):
+    """Statuses of the given Nekochat user ids on your server; users without one are omitted."""
+    wanted = [int(part) for part in ids.split(",") if part.strip().isdigit()][:500]
+    if not wanted:
+        return {}
+    marks = ",".join("?" * len(wanted))
+    with database() as db:
+        rows = db.execute(
+            f"SELECT accounts.nekochat_id, user_status.status FROM user_status JOIN accounts ON accounts.id = user_status.account_id "
+            f"WHERE accounts.server = ? AND accounts.nekochat_id IN ({marks}) AND user_status.status != 'online'",
+            (account["server"], *wanted),
+        ).fetchall()
+    return {str(row["nekochat_id"]): row["status"] for row in rows}
 
 
 @app.post("/logout")

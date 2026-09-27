@@ -20,6 +20,8 @@ Only the Nekochat servers listed in `NEKOCHAT_SERVERS` are accepted.
 | GET | `/me` | the whole package: `{server, user, settings, read_state, linked_at}` |
 | PUT | `/settings` | any JSON object up to 64 KB (muted chats, sounds, background…) |
 | GET / PUT | `/read-state` | `{chats: {"room:5": 120, "dm:2": 88}}` — last read message per chat |
+| PUT | `/status` | `{status: "online" \| "dnd"}` — your status (do not disturb) |
+| GET | `/statuses?ids=1,2,3` | statuses of those Nekochat users on your server (only non-`online` ones) |
 | POST | `/logout` | ends this session |
 | DELETE | `/me` | forgets the account and everything stored for it |
 
