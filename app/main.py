@@ -24,7 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -96,7 +96,7 @@ def migrate() -> None:
             );
             CREATE TABLE IF NOT EXISTS user_status (
                 account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
-                status TEXT NOT NULL,            -- "online" or "dnd" (do not disturb)
+                status TEXT NOT NULL,            -- online, away, dnd (do not disturb) or invisible
                 updated_at INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS read_state (
@@ -261,7 +261,7 @@ def put_read_state(payload: ReadStateIn, account: sqlite3.Row = Depends(current_
     return {"ok": True, "updated": len(chats)}
 
 
-STATUSES = ("online", "dnd")
+STATUSES = ("online", "away", "dnd", "invisible")
 
 
 class StatusIn(BaseModel):
@@ -270,7 +270,10 @@ class StatusIn(BaseModel):
 
 @app.put("/status", tags=["status"])
 def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account)):
-    """Your own status, seen by other Reloaded users of the same Nekochat server."""
+    """Your own status, seen by other Reloaded users of the same Nekochat server.
+
+    `away` shows a yellow dot, `dnd` a red one; `invisible` makes you look offline to them.
+    """
     if payload.status not in STATUSES:
         raise HTTPException(400, f"Status must be one of: {', '.join(STATUSES)}")
     with database() as db:
@@ -284,7 +287,10 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
 
 @app.get("/statuses", tags=["status"])
 def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account)):
-    """Statuses of the given Nekochat user ids on your server; users without one are omitted."""
+    """Statuses of the given Nekochat user ids on your server; users who are simply online are omitted.
+
+    An invisible user is reported as `offline`, exactly like someone who is not there.
+    """
     wanted = [int(part) for part in ids.split(",") if part.strip().isdigit()][:500]
     if not wanted:
         return {}
@@ -295,7 +301,7 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
             f"WHERE accounts.server = ? AND accounts.nekochat_id IN ({marks}) AND user_status.status != 'online'",
             (account["server"], *wanted),
         ).fetchall()
-    return {str(row["nekochat_id"]): row["status"] for row in rows}
+    return {str(row["nekochat_id"]): "offline" if row["status"] == "invisible" else row["status"] for row in rows}
 
 
 @app.post("/logout", tags=["account"])

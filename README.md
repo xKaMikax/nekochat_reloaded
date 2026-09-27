@@ -22,8 +22,8 @@ Interactive docs (Swagger UI): `/api/docs` (alias `/docs`); OpenAPI spec: `/api/
 | GET | `/me` | the whole package: `{server, user, settings, read_state, linked_at}` |
 | PUT | `/settings` | any JSON object up to 64 KB (muted chats, sounds, background…) |
 | GET / PUT | `/read-state` | `{chats: {"room:5": 120, "dm:2": 88}}` — last read message per chat |
-| PUT | `/status` | `{status: "online" \| "dnd"}` — your status (do not disturb) |
-| GET | `/statuses?ids=1,2,3` | statuses of those Nekochat users on your server (only non-`online` ones) |
+| PUT | `/status` | `{status: "online" \| "away" \| "dnd" \| "invisible"}` — your status |
+| GET | `/statuses?ids=1,2,3` | statuses of those Nekochat users on your server (only non-`online` ones; invisible users show as `offline`) |
 | POST | `/logout` | ends this session |
 | DELETE | `/me` | forgets the account and everything stored for it |
 
