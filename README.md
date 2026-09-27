@@ -4,7 +4,7 @@
 
 *Screenshot by [VASHYAN-CMD](https://github.com/VASHYAN-CMD).*
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
+> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
 NekoChat Reloaded is an unofficial iPhone client for NekoChat. It brings the same Windows XP-style interface as the PC client to iPhone and iPad.
 
