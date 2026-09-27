@@ -854,15 +854,17 @@ function handleRoomSignal(payload, senderId) {
   if (activeCall?.room && sameCall(payload)) {
     if (payload.type === 'call_hangup') removeParticipant(senderId);
     else addParticipant(senderId);
+    // Everyone left before the invite was answered: nothing to join any more.
+    if (activeCall?.incoming && !activeCall.participants.size) endCall(undefined, false);
     return;
   }
-  // Not in this channel: an unobtrusive invite, no ringing (and no busy reply from a call).
+  // Not in this channel: an invite that rings like a call (no busy reply to a room, though).
   if (payload.type !== 'call' || activeCall || !senderId) return;
   activeCall = roomCall(payload.room_id, { callId: payload.call_id, incoming: true, status: 'invite', invitedBy: senderId });
   activeChannel(payload.room_id)?.members.forEach((seen, userId) => addParticipant(userId));
   const invite = activeCall;
   invite.ringTimer = setTimeout(() => { if (activeCall === invite && invite.incoming) endCall(undefined, false); }, RING_TIMEOUT);
-  playSound('notify');
+  startRingtone('ringin');
   updateCallWindow();
 }
 function handleCallSignal(payload) {
@@ -1074,7 +1076,7 @@ async function acceptCall() {
   if (!activeCall?.incoming) return;
   if (activeCall.room) {
     // Joining from an invite: keep the channel's call_id so everyone matches.
-    const invite = activeCall; clearTimeout(invite.ringTimer); clearInterval(invite.presenceTimer); activeCall = null;
+    const invite = activeCall; clearTimeout(invite.ringTimer); clearInterval(invite.presenceTimer); stopRingtone(); activeCall = null;
     joinRoomChannel(invite.target.room_id, { callId: invite.callId });
     return;
   }

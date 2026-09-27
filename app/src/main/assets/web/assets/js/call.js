@@ -53,3 +53,5 @@ $('#transport-menu').onclick = event => { const item = event.target.closest('[da
 document.addEventListener('click', event => { if (!event.target.closest('.call-menu')) setTransportMenu(false); });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') setTransportMenu(false); });
 controls.onCallUpdate(render); controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); }); controls.getDisplaySettings().then(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); }); controls.getActiveTheme().then(theme => { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }); controls.onThemeChanged(theme => { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; });
+// XP click sound on buttons, like in the chat window.
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });
