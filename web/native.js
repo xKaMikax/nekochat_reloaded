@@ -36,7 +36,7 @@
         .catch(error => window.NKHost.resolveNative(id, false, String(error?.message || error)));
     },
     notifyMessage(sender, content, avatarUrl) {
-      showNotification('NekoChat Reloaded', { body: `${sender}\n${content}`, icon: avatarUrl || icon, badge: icon }).catch(() => {});
+      showNotification('Nekochat Reloaded', { body: `${sender}\n${content}`, icon: avatarUrl || icon, badge: icon }).catch(() => {});
     },
     notifyCall(title, status) {
       showNotification(title, { body: status, icon, badge: icon, tag: callTag, renotify: true, requireInteraction: true }).catch(() => {});

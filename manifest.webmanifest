@@ -1,7 +1,7 @@
 {
-  "name": "NekoChat Reloaded",
-  "short_name": "NekoChat",
-  "description": "Windows XP styled NekoChat client.",
+  "name": "Nekochat Reloaded",
+  "short_name": "Nekochat",
+  "description": "Windows XP styled Nekochat client.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

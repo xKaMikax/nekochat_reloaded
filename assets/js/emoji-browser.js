@@ -2,8 +2,8 @@ const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { title: 'Эмодзи NekoChat Reloaded', search: 'Поиск emoji…', all: 'Все', found: 'Найдено', groups: 'Категории emoji', skinTone: 'Тон кожи:', tones: { '': 'Стандартный', '🏻': 'Светлый', '🏼': 'Светло-средний', '🏽': 'Средний', '🏾': 'Тёмно-средний', '🏿': 'Тёмный' } },
-  en: { title: 'NekoChat Reloaded Emoji', search: 'Search emoji…', all: 'All', found: 'Found', groups: 'Emoji categories', skinTone: 'Skin tone:', tones: { '': 'Default', '🏻': 'Light', '🏼': 'Medium-light', '🏽': 'Medium', '🏾': 'Medium-dark', '🏿': 'Dark' } }
+  ru: { title: 'Эмодзи Nekochat Reloaded', search: 'Поиск emoji…', all: 'Все', found: 'Найдено', groups: 'Категории emoji', skinTone: 'Тон кожи:', tones: { '': 'Стандартный', '🏻': 'Светлый', '🏼': 'Светло-средний', '🏽': 'Средний', '🏾': 'Тёмно-средний', '🏿': 'Тёмный' } },
+  en: { title: 'Nekochat Reloaded Emoji', search: 'Search emoji…', all: 'All', found: 'Found', groups: 'Emoji categories', skinTone: 'Skin tone:', tones: { '': 'Default', '🏻': 'Light', '🏼': 'Medium-light', '🏽': 'Medium', '🏾': 'Medium-dark', '🏿': 'Dark' } }
 };
 const groupNames = {
   'Smileys & Emotion': ['Смайлы и эмоции', 'Smileys & Emotion'], 'People & Body': ['Люди и тело', 'People & Body'],
@@ -35,3 +35,5 @@ $('#emoji-grid').onclick = event => { const button = event.target.closest('[data
 controls.onThemeChanged(applyFrame);
 controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
 Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { applyFrame(theme); language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
+// XP click sound on buttons, like in the chat window.
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = .72; audio.play().catch(() => {}); });

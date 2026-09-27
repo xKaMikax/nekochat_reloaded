@@ -1,10 +1,10 @@
-# NekoChat Reloaded
+# Nekochat Reloaded
 
-<img src="screenshots/nekochat-pc.png" alt="NekoChat Reloaded PC client" height="480"> <img src="screenshots/nekochat-android.png" alt="NekoChat Reloaded Android client" height="480"> <img src="screenshots/nekochat-iphone.png" alt="NekoChat Reloaded iPhone client" height="480">
+<img src="screenshots/nekochat-pc.png" alt="Nekochat Reloaded PC client" height="480"> <img src="screenshots/nekochat-android.png" alt="Nekochat Reloaded Android client" height="480"> <img src="screenshots/nekochat-iphone.png" alt="Nekochat Reloaded iPhone client" height="480">
 
 *iPhone screenshot by [VASHYAN-CMD](https://github.com/VASHYAN-CMD).*
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
+> **Warning:** this is a custom Nekochat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
 ## Web version
 
