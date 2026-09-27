@@ -18,23 +18,26 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.3.0"
+VERSION = "0.4.1"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
 SESSION_DAYS = int(os.environ.get("RELOADED_SESSION_DAYS", "30"))
 MAX_SETTINGS_BYTES = 64 * 1024
 MAX_READ_STATE_CHATS = 2000
+BACKUPS = Path(os.environ.get("RELOADED_BACKUPS", str(DATABASE.resolve().parent / "backups")))
+MAX_BACKUP_BYTES = int(os.environ.get("RELOADED_BACKUP_MB", "50")) * 1024 * 1024
+MAX_BACKUPS = int(os.environ.get("RELOADED_MAX_BACKUPS", "10"))
 
 DESCRIPTION = """
 Companion server for the **Nekochat Reloaded** clients: settings and read state shared between
-a user's devices, and a do-not-disturb status other Reloaded users can see.
+a user's devices, and statuses other Reloaded users can see, and settings backups (zip archives made by the client).
 
 **Accounts.** Sign in to your Nekochat server, then call `POST /link` with the Nekochat token
 (`Authorization: Bearer <Nekochat token>`). The companion checks it once with that server's
@@ -44,7 +47,8 @@ Use the companion token for every other request (the **Authorize** button above)
 TAGS = [
     {"name": "account", "description": "Linking a Nekochat account and the session"},
     {"name": "sync", "description": "Settings and read state shared between devices"},
-    {"name": "status", "description": "Do-not-disturb status"},
+    {"name": "status", "description": "Online, away, do-not-disturb and invisible statuses"},
+    {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
 ]
 # Same layout as the Nekochat server: Swagger UI at /api/docs, the spec at /api/openapi.json.
@@ -99,6 +103,16 @@ def migrate() -> None:
                 status TEXT NOT NULL,            -- online, away, dnd (do not disturb) or invisible
                 updated_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS backups (
+                id TEXT PRIMARY KEY,             -- random; also the file name in the backups folder
+                account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                device TEXT NOT NULL DEFAULT '',
+                client TEXT NOT NULL DEFAULT '',  -- client that made it, e.g. "PC 1.3.1"
+                size INTEGER NOT NULL,
+                sha256 TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS read_state (
                 account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 chat TEXT NOT NULL,              -- "room:<id>" or "dm:<user id>"
@@ -108,6 +122,9 @@ def migrate() -> None:
             );
             """
         )
+        # Backups made by server 0.4.0 have no client column yet.
+        if "client" not in [row["name"] for row in db.execute("PRAGMA table_info(backups)")]:
+            db.execute("ALTER TABLE backups ADD COLUMN client TEXT NOT NULL DEFAULT ''")
 
 
 migrate()
@@ -304,6 +321,75 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
     return {str(row["nekochat_id"]): "offline" if row["status"] == "invisible" else row["status"] for row in rows}
 
 
+# ---- backups ---------------------------------------------------------------------------------
+def backup_path(backup_id: str) -> Path:
+    return BACKUPS / f"{backup_id}.zip"
+
+
+def backup_view(row: sqlite3.Row) -> dict[str, Any]:
+    return {"id": row["id"], "name": row["name"], "device": row["device"], "client": row["client"], "size": row["size"], "sha256": row["sha256"], "created_at": row["created_at"]}
+
+
+def owned_backup(backup_id: str, account: sqlite3.Row, db: sqlite3.Connection) -> sqlite3.Row:
+    row = db.execute("SELECT * FROM backups WHERE id = ? AND account_id = ?", (backup_id, account["id"])).fetchone()
+    if not row or not backup_path(row["id"]).is_file():
+        raise HTTPException(404, "Backup not found")
+    return row
+
+
+@app.get("/backups", tags=["backups"])
+def list_backups(account: sqlite3.Row = Depends(current_account)):
+    """The account's backups, newest first."""
+    with database() as db:
+        rows = db.execute("SELECT * FROM backups WHERE account_id = ? ORDER BY created_at DESC, rowid DESC", (account["id"],)).fetchall()
+    return {"backups": [backup_view(row) for row in rows], "limit": MAX_BACKUPS, "max_bytes": MAX_BACKUP_BYTES}
+
+
+@app.post("/backups", tags=["backups"], status_code=201,
+          openapi_extra={"requestBody": {"required": True, "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}}}})
+async def create_backup(request: Request, name: str = "", device: str = "", client: str = "", account: sqlite3.Row = Depends(current_account)):
+    """Stores the request body (a zip archive) as a new backup. `client` names the app that made it, e.g. `PC 1.3.1`."""
+    with database() as db:
+        count = db.execute("SELECT COUNT(*) FROM backups WHERE account_id = ?", (account["id"],)).fetchone()[0]
+    if count >= MAX_BACKUPS:
+        raise HTTPException(409, f"You already have {MAX_BACKUPS} backups; delete one first")
+    data = bytearray()
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > MAX_BACKUP_BYTES:
+            raise HTTPException(413, f"The backup is larger than {MAX_BACKUP_BYTES // (1024 * 1024)} MB")
+    if not data.startswith(b"PK\x03\x04"):
+        raise HTTPException(400, "The backup must be a zip archive")
+    backup_id = secrets.token_hex(12)
+    BACKUPS.mkdir(parents=True, exist_ok=True)
+    temporary = BACKUPS / f"{backup_id}.part"
+    temporary.write_bytes(data)
+    temporary.replace(backup_path(backup_id))
+    name = name.strip()[:80] or time.strftime("Backup %Y-%m-%d %H:%M", time.gmtime())
+    with database() as db:
+        db.execute("INSERT INTO backups (id, account_id, name, device, client, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                   (backup_id, account["id"], name, device.strip()[:80], client.strip()[:40], len(data), hashlib.sha256(data).hexdigest(), now()))
+        row = db.execute("SELECT * FROM backups WHERE id = ?", (backup_id,)).fetchone()
+    return backup_view(row)
+
+
+@app.get("/backups/{backup_id}", tags=["backups"], response_class=FileResponse,
+         responses={200: {"content": {"application/zip": {}}, "description": "The zip archive"}})
+def download_backup(backup_id: str, account: sqlite3.Row = Depends(current_account)):
+    with database() as db:
+        row = owned_backup(backup_id, account, db)
+    return FileResponse(backup_path(row["id"]), media_type="application/zip", filename=f"{row['name']}.zip")
+
+
+@app.delete("/backups/{backup_id}", tags=["backups"])
+def delete_backup(backup_id: str, account: sqlite3.Row = Depends(current_account)):
+    with database() as db:
+        row = owned_backup(backup_id, account, db)
+        db.execute("DELETE FROM backups WHERE id = ?", (row["id"],))
+    backup_path(row["id"]).unlink(missing_ok=True)
+    return {"ok": True}
+
+
 @app.post("/logout", tags=["account"])
 def logout(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
     token = credentials.credentials.strip() if credentials else ""
@@ -314,7 +400,10 @@ def logout(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
 
 @app.delete("/me", tags=["account"])
 def delete_me(account: sqlite3.Row = Depends(current_account)):
-    """Forgets everything this server keeps about the account (sessions, settings, read state)."""
+    """Forgets everything this server keeps about the account (sessions, settings, read state, backups)."""
     with database() as db:
+        files = [row["id"] for row in db.execute("SELECT id FROM backups WHERE account_id = ?", (account["id"],))]
         db.execute("DELETE FROM accounts WHERE id = ?", (account["id"],))
+    for backup_id in files:
+        backup_path(backup_id).unlink(missing_ok=True)
     return {"ok": True}
