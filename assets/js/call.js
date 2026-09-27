@@ -1,8 +1,8 @@
 const $ = selector => document.querySelector(selector);
 const controls = window.windowControls;
 const words = {
-  ru: { window: 'NekoChat Reloaded — звонок', call: 'Звонок', connecting: 'Подключение…', you: 'Вы', user: 'Пользователь', connection: 'Подключение', screen: 'Демонстрация экрана', yourScreen: 'Ваш экран', remoteScreen: 'Экран собеседника', accept: 'Принять', decline: 'Отклонить', share: 'Демонстрация', stopShare: 'Остановить демо', mute: 'Заглушить', unmute: 'Включить звук', hangup: 'Завершить', close: 'Закрыть', connectionMenu: 'Соединение', transportWs: 'WebSocket', transportSse: 'SSE / HTTP2', watchScreen: 'Демонстрация', muteUser: 'Заглушить собеседника', unmuteUser: 'Включить звук собеседника' },
-  en: { window: 'NekoChat Reloaded — Call', call: 'Call', connecting: 'Connecting…', you: 'You', user: 'User', connection: 'Connecting', screen: 'Screen sharing', yourScreen: 'Your screen', remoteScreen: "Caller’s screen", accept: 'Accept', decline: 'Decline', share: 'Share screen', stopShare: 'Stop sharing', mute: 'Mute', unmute: 'Unmute', hangup: 'End call', close: 'Close', connectionMenu: 'Connection', transportWs: 'WebSocket', transportSse: 'SSE / HTTP2', watchScreen: 'Screen', muteUser: 'Mute participant', unmuteUser: 'Unmute participant' }
+  ru: { window: 'NekoChat Reloaded — звонок', call: 'Звонок', connecting: 'Подключение…', you: 'Вы', user: 'Пользователь', connection: 'Подключение', screen: 'Демонстрация экрана', yourScreen: 'Ваш экран', remoteScreen: 'Экран собеседника', accept: 'Принять', decline: 'Отклонить', share: 'Демонстрация', stopShare: 'Остановить демо', mute: 'Заглушить', unmute: 'Включить звук', hangup: 'Завершить', close: 'Закрыть', connectionMenu: 'Соединение', transportWs: 'WebSocket', transportSse: 'SSE / HTTP2', watchScreen: 'Демонстрация', muteUser: 'Заглушить собеседника', unmuteUser: 'Включить звук собеседника', join: 'Войти', dismiss: 'Скрыть', leave: 'Выйти' },
+  en: { window: 'NekoChat Reloaded — Call', call: 'Call', connecting: 'Connecting…', you: 'You', user: 'User', connection: 'Connecting', screen: 'Screen sharing', yourScreen: 'Your screen', remoteScreen: "Caller’s screen", accept: 'Accept', decline: 'Decline', share: 'Share screen', stopShare: 'Stop sharing', mute: 'Mute', unmute: 'Unmute', hangup: 'End call', close: 'Close', connectionMenu: 'Connection', transportWs: 'WebSocket', transportSse: 'SSE / HTTP2', watchScreen: 'Screen', muteUser: 'Mute participant', unmuteUser: 'Unmute participant', join: 'Join', dismiss: 'Dismiss', leave: 'Leave' }
 };
 let language = 'ru'; let currentState = {};
 const t = key => words[language][key];
@@ -15,13 +15,34 @@ function render(state = {}) {
   // With two screen shares, the button under a person switches the stage to that person's screen.
   document.querySelectorAll('[data-screen-side]').forEach(button => { const side = button.dataset.screenSide; button.hidden = !(side === 'self' ? state.selfSharing : state.remoteSharing); button.textContent = t('watchScreen'); button.classList.toggle('active', state.sharing === side); button.setAttribute('aria-pressed', String(state.sharing === side)); });
   ['#self-name', '#screen-self-name'].forEach(selector => { $(selector).textContent = state.self?.name || state.selfName || t('you'); }); ['#remote-name', '#screen-remote-name'].forEach(selector => { $(selector).textContent = state.remote?.name || state.personName || state.title?.replace(/^.*?:\s*/, '') || t('user'); });
-  $('#accept').hidden = !state.incoming; $('#decline').hidden = !state.incoming; $('#hangup').hidden = Boolean(state.incoming); $('#mute').hidden = Boolean(state.incoming); $('#share').hidden = Boolean(state.incoming) || !state.direct;
+  $('#accept').hidden = !state.incoming; $('#decline').hidden = !state.incoming; $('#hangup').hidden = Boolean(state.incoming); $('#mute').hidden = Boolean(state.incoming); $('#share').hidden = Boolean(state.incoming) || !(state.direct || state.room);
+  // A room voice channel: join/dismiss an invite, leave instead of hanging up.
+  $('#accept').textContent = state.room ? t('join') : t('accept'); $('#decline').textContent = state.room ? t('dismiss') : t('decline'); $('#hangup').textContent = state.room ? t('leave') : t('hangup');
   $('#mute').textContent = state.muted ? t('unmute') : t('mute'); $('#share').textContent = (state.selfSharing ?? state.sharing === 'self') ? t('stopShare') : t('share'); $('#call-connection').hidden = Boolean(state.connected);
-  const screen = state.sharing === 'self' || state.sharing === 'remote'; $('#call-stage').classList.toggle('sharing', screen); $('#screen-stage').hidden = !screen; $('#screen-preview').hidden = !state.screenPreview; $('#screen-preview').src = state.screenPreview || ''; $('#screen-preview').alt = state.sharing === 'self' ? t('yourScreen') : t('remoteScreen');
+  const screen = state.sharing === 'self' || state.sharing === 'remote'; $('#call-stage').classList.toggle('sharing', screen);
+  renderRoom(state, screen); $('#screen-stage').hidden = !screen; $('#screen-preview').hidden = !state.screenPreview; $('#screen-preview').src = state.screenPreview || ''; $('#screen-preview').alt = state.sharing === 'self' ? t('yourScreen') : t('remoteScreen');
   const transport = state.transport === 'sse' ? 'sse' : 'ws'; document.querySelectorAll('[data-transport]').forEach(item => item.setAttribute('aria-checked', String(item.dataset.transport === transport))); $('#call-transport').textContent = transport === 'sse' ? t('transportSse') : t('transportWs');
   const note = $('#call-note'); if (note) note.hidden = state.audioAvailable !== false;
 }
 function action(name, extra = {}) { controls.callAction({ action: name, ...extra }); }
+// Everyone in a room voice channel, you first. Clicking a person mutes them for you.
+function renderRoom(state, screen) {
+  const room = $('#call-room');
+  const show = Boolean(state.room) && !screen;
+  room.hidden = !show; $('.call-participants').hidden = Boolean(state.room) || screen;
+  if (!show) return;
+  const people = [{ id: 'self', avatar: state.self?.avatar || '☺', name: state.self?.name || t('you'), frame: state.self?.frame, speaking: state.self?.speaking, muted: state.muted }, ...(state.participants || [])];
+  room.replaceChildren(...people.map(person => {
+    const tile = document.createElement('article'); tile.className = 'call-person';
+    const picture = document.createElement('span'); picture.className = 'call-avatar'; picture.innerHTML = person.avatar;
+    picture.classList.toggle('muted', Boolean(person.muted));
+    picture.style.borderColor = person.muted ? '#d0141b' : person.speaking ? '#62b77c' : person.frame || '#5f93d2';
+    picture.title = person.id === 'self' ? (person.muted ? t('unmute') : t('mute')) : (person.muted ? t('unmuteUser') : t('muteUser'));
+    picture.onclick = () => { if (!currentState.connected) return; if (person.id === 'self') action('mute'); else action('mute-remote', { id: person.id }); };
+    const name = document.createElement('b'); name.textContent = person.name;
+    tile.append(picture, name); return tile;
+  }));
+}
 ['#self-avatar', '#screen-self-avatar'].forEach(selector => { $(selector).onclick = () => { if (currentState.connected) action('mute'); }; });
 ['#remote-avatar', '#screen-remote-avatar'].forEach(selector => { $(selector).onclick = () => { if (currentState.connected) action('mute-remote'); }; });
 document.querySelectorAll('[data-screen-side]').forEach(button => { button.onclick = () => action('screen-view', { side: button.dataset.screenSide }); });
