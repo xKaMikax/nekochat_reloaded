@@ -34,6 +34,8 @@ document.querySelectorAll('iframe[src="assets/html/theme_preview.html"]').forEac
 async function applySelection() {
   const result = await controls.applyTheme($('#theme-list').value, $('#colour-scheme').value);
   await controls.applyDisplaySettings({ language: $('#display-language').value, loginUi: $('#login-ui').value, micDeviceId: $('#mic-device').value, noiseSuppression: $('#noise-suppression').value, ...(controls.dnsSupported ? { dns: $('#dns-provider').value, dnsCustom: $('#dns-custom').value.trim() } : {}) });
+  // Per device, like the active theme: the chat window reads it when screen sharing starts.
+  localStorage.setItem('nk_screen_codec', $('#screen-codec').value);
   localStorage.setItem('nk_active_theme', result.id);
   localStorage.setItem('nk_active_scheme', result.scheme || '');
   refreshFrame(result);
@@ -51,4 +53,4 @@ $('#dns-provider').onchange = refreshDnsRows;
 $('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
 $('#advanced').onclick = () => alert('Advanced colour editing is available when the theme provides multiple colour schemes.');
 controls.onThemeChanged(theme => { refreshFrame(theme); refreshPreview(theme); });
-Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
+Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
