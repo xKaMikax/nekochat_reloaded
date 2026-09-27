@@ -4,7 +4,7 @@
 
 *iPhone screenshot by [VASHYAN-CMD](https://github.com/VASHYAN-CMD).*
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/xKaMikax/nekochat2linux
+> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
 ## Web version
 
