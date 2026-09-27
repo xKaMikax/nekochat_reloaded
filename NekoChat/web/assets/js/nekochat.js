@@ -71,8 +71,16 @@ Object.assign(translations.ru, { profileOnline: 'онлайн', online: 'В се
 Object.assign(translations.en, { profileOnline: 'online', online: 'Online', offline: 'Offline', noBio: 'Nothing has been written yet.', userNoBio: 'This user has not written anything yet.', nothingFound: 'Nothing found.' });
 Object.assign(translations.ru, { join: 'Присоединиться', roomJoin: 'Не удалось присоединиться к комнате' });
 Object.assign(translations.en, { join: 'Join', roomJoin: 'Could not join room' });
-Object.assign(translations.ru, { dndOn: 'Не беспокоить', dndOff: 'Снова в сети', statusOnline: 'В сети', statusAway: 'Неактивен', statusInvisible: 'Невидимый', statusTitle: 'Статус', themeEditor: 'Редактор тем' });
-Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online', statusOnline: 'Online', statusAway: 'Away', statusInvisible: 'Invisible', statusTitle: 'Status', themeEditor: 'Theme editor' });
+Object.assign(translations.ru, { dndOn: 'Не беспокоить', dndOff: 'Снова в сети', statusOnline: 'В сети', statusAway: 'Неактивен', statusInvisible: 'Невидимый', statusTitle: 'Статус', themeEditor: 'Редактор тем', clientLine: 'Клиент: {client}',
+  updateTitle: 'Обновление Nekochat Reloaded', updateFound: 'Доступна Nekochat Reloaded {version}. У вас {current}.', updateNone: 'У вас последняя версия ({version}).',
+  updateInstall: 'Обновить', updateDownload: 'Скачать', updateAltStore: 'Открыть AltStore', updateReload: 'Перезагрузить',
+  updateDownloading: 'Скачивается версия {version}. Когда загрузка закончится, программа предложит перезапуск.', updateReady: 'Версия {version} скачана. Перезапустить Nekochat Reloaded и установить её?', updateRestart: 'Перезапустить', updateDownloadingPhone: 'Скачивается версия {version}, затем откроется установщик Android.',
+  updatePermission: 'Разрешите Nekochat Reloaded устанавливать приложения (откроются настройки), затем нажмите «Обновить» ещё раз.', updateFailed: 'Не удалось обновиться: {error}' });
+Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online', statusOnline: 'Online', statusAway: 'Away', statusInvisible: 'Invisible', statusTitle: 'Status', themeEditor: 'Theme editor', clientLine: 'Client: {client}',
+  updateTitle: 'Nekochat Reloaded update', updateFound: 'Nekochat Reloaded {version} is available. You have {current}.', updateNone: 'You have the latest version ({version}).',
+  updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
+  updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
+  updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
 Object.assign(translations.ru, { adminPanel: 'Админ-панель сервера' });
 Object.assign(translations.en, { adminPanel: 'Server admin panel' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
@@ -167,15 +175,33 @@ let mutedChats = new Set();
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
 const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
-const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {} };
+let profileUser = null;
+const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
-function companionUrl() { try { return (localStorage.getItem('nk_reloaded_server') || '').trim().replace(/\/$/, ''); } catch { return ''; } }
+// The public Nekochat Reloaded server is used unless another address is set or it is turned off
+// (Display Properties → Settings); an address saved by 1.4 is kept as it is.
+const DEFAULT_COMPANION = 'https://nekochat-reloaded.kamika.is-cool.dev';
+function companionUrl() {
+  try {
+    if (localStorage.getItem('nk_reloaded_enabled') === '0') return '';
+    return ((localStorage.getItem('nk_reloaded_server') || '').trim() || DEFAULT_COMPANION).replace(/\/$/, '');
+  } catch { return ''; }
+}
+// Which app this is, shown to other Reloaded users next to the status ("Android 1.4.1").
+// The desktop app names its system: Windows, Linux or macOS.
+const CLIENT_NAME = (() => {
+  const script = name => document.querySelector(`script[src$="${name}"]`);
+  const desktop = /Win/i.test(navigator.platform) ? 'Windows' : /Mac/i.test(navigator.platform) ? 'macOS' : /Linux/i.test(navigator.platform) ? 'Linux' : 'PC';
+  return `${script('android-bridge.js') ? 'Android' : script('ios-bridge.js') ? 'iPhone' : script('web-bridge.js') ? 'Web' : desktop} ${window.NEKOCHAT_RELOADED_VERSION || ''}`.trim();
+})();
 const companionTokenKey = () => `nk_reloaded_token:${companion.url}|${API}|${me?.id}`;
-async function companionFetch(method, path, body) {
+// notFound = true: answer false for a 404 (an endpoint the server does not have yet).
+async function companionFetch(method, path, body, notFound = false) {
   if (!companion.url || !companion.token) return null;
   try {
     const response = await fetch(`${companion.url}${path}`, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${companion.token}` }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (response.status === 401) { companion.token = ''; try { localStorage.removeItem(companionTokenKey()); localStorage.removeItem('nk_reloaded_active'); } catch {} companionConnect(); return null; }
+    if (notFound && response.status === 404) return false;
     return response.ok ? response.json() : null;
   } catch { return null; }
 }
@@ -207,7 +233,7 @@ function setOwnStatus(status, send = true) {
   if (me) $('#profile-status').hidden = !!companion.token && !me.status;
   const button = $('#status-button');
   if (button) { button.hidden = !companion.token; button.querySelector('.status-dot').className = `status-dot ${companion.status}`; $('#status-label').textContent = statusLabel(companion.status); }
-  if (send) companionFetch('PUT', '/status', { status: companion.status });
+  if (send) companionFetch('PUT', '/status', { status: companion.status, client: CLIENT_NAME });
 }
 function chooseStatus(status) { autoAway = false; setOwnStatus(status); $('#status-menu').hidden = true; }
 // Automatic "away" only replaces a plain "online", and only it is cleared on activity.
@@ -222,13 +248,31 @@ setInterval(() => {
 async function refreshStatuses() {
   const ids = users.map(user => user.id).filter(Boolean).join(',');
   if (!ids) return;
-  const statuses = await companionFetch('GET', `/statuses?ids=${ids}`);
-  if (!statuses) return;
-  const changed = JSON.stringify(statuses) !== JSON.stringify(companion.statuses);
-  companion.statuses = statuses;
-  if (changed) renderList();
+  // /presence (server 0.5) also tells the client app; older servers only have /statuses.
+  let presence = companion.legacyStatuses ? null : await companionFetch('GET', `/presence?ids=${ids}`, undefined, true);
+  if (presence === false) { companion.legacyStatuses = true; presence = null; }
+  if (!presence) { const statuses = await companionFetch('GET', `/statuses?ids=${ids}`); if (!statuses) return; presence = Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, { status, client: '' }])); }
+  const statuses = {}; const clients = {};
+  for (const [id, item] of Object.entries(presence)) { if (item?.status && item.status !== 'online') statuses[id] = item.status; if (item?.client) clients[id] = item.client; }
+  const changed = JSON.stringify([statuses, clients]) !== JSON.stringify([companion.statuses, companion.clients]);
+  companion.statuses = statuses; companion.clients = clients;
+  if (changed) { renderList(); if ($('#user-profile-dialog')?.open && profileUser) showUserProfile(profileUser); }
 }
 const userStatus = id => companion.statuses[String(id)] || null;
+const userClient = id => companion.clients?.[String(id)] || '';
+// "Android 1.4.1" → a small badge with the platform's icon and the version in grey.
+const CLIENT_ICONS = {
+  Android: '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#3ddc84" d="M3 7a5 5 0 0 1 10 0v.5H3zm2.6-3.9-1-1.6.5-.3 1 1.6zm4.8 0 1-1.6.5.3-1 1.6zM6 5.2a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zm4 0a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zM3 8.3h10v4.2c0 .8-.6 1.5-1.4 1.5H4.4C3.6 14 3 13.3 3 12.5z"/></svg>',
+  iPhone: '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#333" d="M11.2 8.5c0-1.6 1.3-2.3 1.4-2.4-.8-1.1-1.9-1.3-2.3-1.3-1-.1-1.9.6-2.4.6s-1.3-.6-2.1-.5c-1.1 0-2.1.6-2.6 1.6-1.1 1.9-.3 4.8.8 6.3.5.8 1.1 1.6 1.9 1.6.8 0 1-.5 2-.5s1.2.5 2 .5 1.3-.8 1.8-1.5c.6-.9.8-1.7.8-1.7s-1.3-.6-1.3-2.2zM9.6 3.6c.4-.5.7-1.2.6-1.9-.6 0-1.3.4-1.8.9-.4.4-.7 1.1-.6 1.8.7.1 1.3-.3 1.8-.8z"/></svg>',
+  Web: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="#e8f1ff" stroke="#2a6fdb" stroke-width="1.2"/><path fill="none" stroke="#2a6fdb" stroke-width="1" d="M1.8 8h12.4M8 1.7c-2.2 2.3-2.2 10.3 0 12.6M8 1.7c2.2 2.3 2.2 10.3 0 12.6M2.8 4.8h10.4M2.8 11.2h10.4"/></svg>',
+  Windows: '<img src="assets/images/WindowsLogo-small.png" alt="">',
+  Linux: '<svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9.2" rx="4.4" ry="5.6" fill="#222"/><ellipse cx="8" cy="10.2" rx="3" ry="4.2" fill="#fff"/><circle cx="6.6" cy="5.4" r="1" fill="#fff"/><circle cx="9.4" cy="5.4" r="1" fill="#fff"/><circle cx="6.8" cy="5.5" r=".45" fill="#222"/><circle cx="9.2" cy="5.5" r=".45" fill="#222"/><path fill="#f5b700" d="M6.6 6.6h2.8L8 8.1zM3.2 14.4c.3-1.2 1.2-1.6 2.3-1.3l.7 1.4c-.9.6-2 .6-3 0zm9.6 0c-.3-1.2-1.2-1.6-2.3-1.3l-.7 1.4c.9.6 2 .6 3 0z"/></svg>',
+  PC: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2" width="13" height="9" rx="1" fill="#2a6fdb" stroke="#1b4c9c"/><rect x="3" y="3.5" width="10" height="6" fill="#9fd0ff"/><path fill="#6b7686" d="M6 11h4l.6 2H5.4zM4 13h8v1H4z"/></svg>',
+};
+function clientBadge(client) {
+  const [platform, ...rest] = String(client).split(' ');
+  return `${CLIENT_ICONS[platform] || (platform === 'macOS' ? CLIENT_ICONS.iPhone : CLIENT_ICONS.PC)}<b>${esc(platform)}</b>${rest.length ? `<small>${esc(rest.join(' '))}</small>` : ''}`;
+}
 // Online per Nekochat, unless the user is invisible (reported as "offline") on the companion.
 const userOnline = user => user.is_online === true && userStatus(user.id) !== 'offline';
 // A chat read on another device loses its unread counter here too.
@@ -243,7 +287,9 @@ function applyReadState(state) {
 async function companionConnect() {
   clearInterval(companion.timer);
   companion.url = companionUrl(); companion.token = '';
-  if (!companion.url || !token || !me) return;
+  // Turned off: forget the other users' statuses and hide the status menu.
+  if (!companion.url) { try { localStorage.removeItem('nk_reloaded_active'); } catch {} companion.statuses = {}; companion.clients = {}; if (me) { setOwnStatus('online', false); renderList(); } return; }
+  if (!token || !me) return;
   try { companion.token = localStorage.getItem(companionTokenKey()) || ''; } catch {}
   let bundle = companion.token ? await companionFetch('GET', '/me') : null;
   if (!bundle) {
@@ -257,6 +303,7 @@ async function companionConnect() {
   // Display Properties (backups) finds the session through this key.
   try { localStorage.setItem('nk_reloaded_active', companionTokenKey()); } catch {}
   applyCompanionBundle(bundle);
+  companionFetch('PUT', '/status', { status: companion.status, client: CLIENT_NAME });
   refreshStatuses();
   companion.timer = setInterval(async () => { const state = await companionFetch('GET', '/read-state'); if (state) applyReadState(state); refreshStatuses(); }, 30000);
 }
@@ -277,7 +324,7 @@ function markRead(chat, messageId) {
   companionFetch('PUT', '/read-state', { chats: { [chat]: messageId } });
 }
 window.addEventListener('storage', event => {
-  if (event.key === 'nk_reloaded_server') companionConnect();
+  if (event.key === 'nk_reloaded_server' || event.key === 'nk_reloaded_enabled') companionConnect();
   else if (SYNCED_KEYS.includes(event.key)) pushCompanionSettings();
 });
 function loadMuted() { try { mutedChats = new Set(JSON.parse(localStorage.getItem(`nk_muted:${API}|${me?.id}`) || '[]')); } catch { mutedChats = new Set(); } }
@@ -354,14 +401,14 @@ function showRoomMembers(room) {
 }
 function renderList() {
   const query = $('#search').value.trim().toLowerCase(); const list = $('#chat-list');
-  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, kind: 'dm', frame: avatarFrameAttributes(user) }));
+  const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, client: userClient(user.id), kind: 'dm', frame: avatarFrameAttributes(user) }));
   list.innerHTML = items.map(item => {
     const key = chatKey(item.kind, item.id); const count = unread.get(key) || 0; const muted = isMuted(key);
     // Rooms whose voice channel is on show a speaker and how many people are in it.
     const channel = item.kind === 'room' ? activeChannel(item.id) : null;
     const voice = channel ? `<span class="voice-badge" title="${esc(t('voiceNow', { count: channel.members.size }))}">${ICON_SPEAKER}${channel.members.size}</span>` : '';
     const badge = count ? `<span class="unread-count${muted ? ' muted' : ''}"> (${count > 99 ? '99+' : count})</span>` : '';
-    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline'))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}</b><small>${esc(item.sub)}${voice}</small></span></button>`;
+    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}</b><small>${esc(item.sub)}${voice}</small></span></button>`;
   }).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
@@ -374,6 +421,10 @@ function showUserProfile(user) {
   $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${user.status ? ` · ${user.status}` : ''}`;
   ['away', 'dnd'].forEach(item => $('#user-profile-status').classList.toggle(item, shown === item));
   $('#user-profile-status').classList.toggle('offline', !online);
+  // The app they use, from the Nekochat Reloaded server; nothing for offline or invisible users.
+  const client = online ? userClient(user.id) : '';
+  $('#user-profile-client').hidden = !client; $('#user-profile-client').innerHTML = client ? clientBadge(client) : ''; $('#user-profile-client').title = client ? t('clientLine', { client }) : '';
+  profileUser = user;
   $('#user-profile-bio').textContent = user.bio || t('userNoBio');
   const banner = $('#user-profile-banner');
   banner.style.backgroundImage = user.banner ? `url("${API}/avatars/${encodeURIComponent(user.banner)}")` : 'var(--xp-title-fill)';
@@ -1305,7 +1356,7 @@ desktopControls?.onSystemAction?.(async action => {
   } catch (error) { showSystemDialog(error.message, 'error', t('roomJoin')); }
 });
 $('#profile-button').onclick = () => $('#profile-dialog').showModal(); document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => document.querySelector(`#${button.dataset.close}`).close());
-function leaveAccount(forgetSession) { hadConnection = false; try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
+function leaveAccount(forgetSession) { hadConnection = false; try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; companion.clients = {}; companion.legacyStatuses = false; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
 function expireSession() {
   if (!token || !me) return;
   const username = me.username || '';
@@ -1430,4 +1481,72 @@ desktopControls?.getActiveTheme().then(theme => {
   if (link && theme?.cssUrl) link.href = theme.cssUrl;
 });
 desktopControls?.getDisplaySettings().then(applyDisplaySettings);
+// ---- Updates -------------------------------------------------------------------------------
+// Apps look for a newer GitHub release; the web version compares its version.js with the one
+// on the site. Installing is up to the platform (desktopControls.installUpdate): the Windows
+// installer and the AppImage update themselves, Android downloads the APK and opens the system
+// installer, iPhone opens AltStore, the portable exe and the .deb open the download.
+const UPDATE_API = 'https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases?per_page=20';
+const UPDATE_EVERY = 6 * 60 * 60 * 1000;
+let updateOffered = ''; let updateMode = null;
+function versionParts(text) {
+  const match = String(text || '').match(/(\d+(?:\.\d+)*)(?:[-.]?beta[-.]?(\d+))?/i); if (!match) return null;
+  return { numbers: match[1].split('.').map(Number), beta: match[2] === undefined ? null : Number(match[2]) };
+}
+function compareVersions(a, b) {
+  for (let i = 0; i < Math.max(a.numbers.length, b.numbers.length); i += 1) { const diff = (a.numbers[i] || 0) - (b.numbers[i] || 0); if (diff) return diff; }
+  if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
+}
+const storedFlag = (key, fallback) => { try { const value = localStorage.getItem(key); return value === null ? fallback : value === '1'; } catch { return fallback; } };
+async function checkForUpdates(manual = false) {
+  if (!manual && !storedFlag('nk_update_auto', true)) return;
+  try {
+    updateMode ||= (await desktopControls?.getUpdateInfo?.())?.mode || 'download';
+    const current = versionParts(window.NEKOCHAT_RELOADED_VERSION);
+    let found = null;
+    if (updateMode === 'reload') {
+      // Web: the site itself is the update; its version.js tells which version it serves.
+      const text = await (await fetch(`assets/js/version.js?t=${Date.now()}`, { cache: 'no-store' })).text();
+      const version = text.match(/NEKOCHAT_RELOADED_VERSION\s*=\s*'([^']+)'/)?.[1];
+      if (version && current && compareVersions(versionParts(version), current) > 0) found = { version, tag: version, assets: [] };
+    } else {
+      const releases = await (await fetch(UPDATE_API, { headers: { Accept: 'application/vnd.github+json' } })).json();
+      const beta = storedFlag('nk_update_beta', false);
+      for (const release of Array.isArray(releases) ? releases : []) {
+        if (release.draft || (release.prerelease && !beta)) continue;
+        const parts = versionParts(release.tag_name); if (!parts || !current || compareVersions(parts, current) <= 0) continue;
+        if (!found || compareVersions(parts, versionParts(found.version)) > 0) found = { version: release.tag_name.replace(/^build_v/i, ''), tag: release.tag_name, page: release.html_url, prerelease: release.prerelease, assets: (release.assets || []).map(asset => ({ name: asset.name, url: asset.browser_download_url, size: asset.size })) };
+      }
+    }
+    if (!found) { if (manual) showSystemDialog(t('updateNone', { version: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle')); return; }
+    if (!manual && updateOffered === found.version) return;
+    updateOffered = found.version;
+    const label = { install: 'updateInstall', download: 'updateDownload', altstore: 'updateAltStore', reload: 'updateReload' }[updateMode] || 'updateDownload';
+    showSystemDialog(t('updateFound', { version: found.version, current: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle'), { action: { type: 'update-install', release: found }, actionLabel: t(label) });
+  } catch (error) { if (manual) showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
+}
+async function installUpdate(release) {
+  try {
+    if (updateMode === 'reload') { await navigator.serviceWorker?.getRegistration().then(registration => registration?.update()).catch(() => {}); location.reload(); return; }
+    // Android answers only after the download; say that it is running.
+    if (updateMode === 'install' && !desktopControls?.onUpdateStatus) showSystemDialog(t('updateDownloadingPhone', { version: release.version }), 'info', t('updateTitle'));
+    const result = await desktopControls?.installUpdate?.(release);
+    if (result?.mode === 'install') showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
+    else if (result?.state === 'permission') showSystemDialog(t('updatePermission'), 'warning', t('updateTitle'));
+    else if (!result) window.open(release.page || 'https://github.com/xKaMikax/nekochat_reloaded/releases', '_blank');
+  } catch (error) { showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
+}
+desktopControls?.onSystemAction?.(action => {
+  if (action?.type === 'update-install' && action.release) installUpdate(action.release);
+  if (action?.type === 'update-restart') desktopControls.restartToUpdate?.();
+});
+desktopControls?.onUpdateStatus?.(status => {
+  if (status?.state === 'downloaded') showSystemDialog(t('updateReady', { version: status.version }), 'question', t('updateTitle'), { action: { type: 'update-restart' }, actionLabel: t('updateRestart') });
+  if (status?.state === 'error') showSystemDialog(t('updateFailed', { error: status.message }), 'error', t('updateTitle'));
+});
+// "Check now" in Display Properties → Settings.
+window.addEventListener('storage', event => { if (event.key === 'nk_update_check' && event.newValue) checkForUpdates(true); });
+setTimeout(() => checkForUpdates(false), 15000);
+setInterval(() => checkForUpdates(false), UPDATE_EVERY);
+
 if (token) boot(); else showAuthScreen();

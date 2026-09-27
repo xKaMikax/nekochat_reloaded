@@ -79,7 +79,7 @@ final class ThemeManager {
         }
         let user = (try? files.contentsOfDirectory(at: userThemesRoot, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
         for directory in user.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard (try? directory.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true, !Self.reservedIds.contains(directory.lastPathComponent) else { continue }
+            guard (try? directory.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true, !directory.lastPathComponent.hasPrefix("."), !Self.reservedIds.contains(directory.lastPathComponent) else { continue }
             let names = ((try? files.contentsOfDirectory(atPath: directory.path)) ?? []).sorted()
             guard let source = names.first(where: { $0.lowercased().hasSuffix(".theme") })
                     ?? names.first(where: { $0.lowercased().hasSuffix(".msstyles") })
@@ -101,7 +101,7 @@ final class ThemeManager {
         let source = theme.source!
         if theme.css {
             let metadata: [String: Any] = ["theme": id, "schemes": [["id": "default", "name": "Default"]], "defaultScheme": "default"]
-            return Prepared(theme: theme, baseUrl: "\(WebViewController.origin)/user-themes/\(Self.encode(id))", metadata: metadata, css: true)
+            return Prepared(theme: theme, baseUrl: try materializeCssTheme(id: id, source: source), metadata: metadata, css: true)
         }
         let output = runtimeThemesRoot.appendingPathComponent(id, isDirectory: true)
         let attributes = try files.attributesOfItem(atPath: source.path)
@@ -114,6 +114,66 @@ final class ThemeManager {
         }
         guard let metadata = readJSON(output.appendingPathComponent("theme.json")) as? [String: Any] else { throw ThemeError("Theme not found") }
         return Prepared(theme: theme, baseUrl: "\(WebViewController.origin)/runtime-themes/\(Self.encode(id))", metadata: metadata, css: false)
+    }
+
+    /// A url() inside a custom property resolves against the stylesheet that uses the variable,
+    /// not theme.css, so relative pictures (themes from the PC theme editor) are made absolute
+    /// in a runtime copy of theme.css.
+    private func materializeCssTheme(id: String, source: URL) throws -> String {
+        let base = "\(WebViewController.origin)/user-themes/\(Self.encode(id))"
+        let css = try String(contentsOf: source, encoding: .utf8)
+        let pattern = try NSRegularExpression(pattern: "url\\((['\"]?)([^'\")]+)\\1\\)")
+        let absolute = try NSRegularExpression(pattern: "^(data|file|https?|blob):", options: .caseInsensitive)
+        let whole = NSRange(css.startIndex..., in: css)
+        let matches = pattern.matches(in: css, range: whole)
+        let isAbsolute = { (url: String) in absolute.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)) != nil }
+        if matches.allSatisfy({ isAbsolute((css as NSString).substring(with: $0.range(at: 2))) }) { return base }
+        var output = css as NSString
+        for match in matches.reversed() {
+            let url = (css as NSString).substring(with: match.range(at: 2))
+            if isAbsolute(url) { continue }
+            let path = url.hasPrefix("./") ? String(url.dropFirst(2)) : url
+            output = output.replacingCharacters(in: match.range, with: "url(\"\(base)/\(path.split(separator: "/").map { Self.encode(String($0)) }.joined(separator: "/"))\")") as NSString
+        }
+        let folder = runtimeThemesRoot.appendingPathComponent("css-\(id)", isDirectory: true)
+        try files.createDirectory(at: folder, withIntermediateDirectories: true)
+        try (output as String).write(to: folder.appendingPathComponent("theme.css"), atomically: true, encoding: .utf8)
+        return "\(WebViewController.origin)/runtime-themes/\(Self.encode("css-\(id)"))"
+    }
+
+    // MARK: - Settings backups
+
+    /// Installed themes as backup entries ("themes/<id>/…", base64), like exportUserThemes() in main.js.
+    func exportThemeFiles() throws -> [[String: Any]] {
+        lock.lock(); defer { lock.unlock() }
+        var result: [[String: Any]] = []
+        let root = userThemesRoot.standardizedFileURL
+        guard let enumerator = files.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { return result }
+        for case let file as URL in enumerator {
+            guard (try? file.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { continue }
+            let relative = String(file.standardizedFileURL.path.dropFirst(root.path.count + 1))
+            if relative.hasPrefix(".") { continue }
+            result.append(["path": "themes/\(relative)", "data": try Data(contentsOf: file).base64EncodedString()])
+        }
+        return result
+    }
+
+    /// Adds the themes of a backup archive to the installed ones; nothing installed is removed.
+    func restoreThemeFiles(_ archiveBase64: String) throws -> [[String: Any]] {
+        guard let archive = Data(base64Encoded: archiveBase64) else { throw ThemeError("The backup could not be read.") }
+        lock.lock(); defer { lock.unlock() }
+        let temporary = files.temporaryDirectory.appendingPathComponent("backup-\(UUID().uuidString)", isDirectory: true)
+        defer { try? files.removeItem(at: temporary) }
+        try ZipReader.extract(archive, to: temporary)
+        let themesFolder = temporary.appendingPathComponent("themes", isDirectory: true)
+        try files.createDirectory(at: userThemesRoot, withIntermediateDirectories: true)
+        for theme in (try? files.contentsOfDirectory(at: themesFolder, includingPropertiesForKeys: [.isDirectoryKey])) ?? [] {
+            guard (try? theme.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true, !Self.reservedIds.contains(theme.lastPathComponent) else { continue }
+            let destination = userThemesRoot.appendingPathComponent(theme.lastPathComponent, isDirectory: true)
+            try? files.removeItem(at: destination)
+            try files.copyItem(at: theme, to: destination)
+        }
+        return listThemesLocked()
     }
 
     private func cssUrl(_ prepared: Prepared, scheme: String, revision: Int64) -> String {

@@ -243,6 +243,12 @@
       previewTheme: (id, scheme) => invoke('theme:preview', id, scheme),
       applyTheme: async (id, scheme) => { activeTheme = await invoke('theme:apply', id, scheme); notifyThemeChanged(activeTheme); return clone(activeTheme); },
       importTheme: () => invoke('theme:import'),
+      // Updates (nekochat.js): AltStore installs them from the Nekochat Reloaded source.
+      getUpdateInfo: () => Promise.resolve({ mode: 'altstore', platform: 'ios' }),
+      installUpdate: () => { window.open(`altstore://source?url=${encodeURIComponent('https://xkamikax.github.io/nekochat_reloaded/altstore.json')}`, '_blank'); return Promise.resolve({ mode: 'altstore' }); },
+      // Settings backups (backup.js): themes travel as base64 through the native bridge.
+      exportThemeFiles: async () => (await invoke('backup:export-themes')).map(file => ({ path: file.path, data: Uint8Array.from(atob(file.data), char => char.charCodeAt(0)) })),
+      restoreThemeFiles: archive => { let binary = ''; const bytes = new Uint8Array(archive); for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return invoke('backup:restore-themes', btoa(binary)); },
       listCatalogThemes: () => invoke('theme:browser-list'),
       getCatalogThemeDetails: id => invoke('theme:browser-details', String(id || '')),
       installCatalogTheme: id => invoke('theme:browser-install', String(id || '')),

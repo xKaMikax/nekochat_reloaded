@@ -57,9 +57,10 @@
   // ---- companion server (the chat window keeps the session) ----
   function session() {
     try {
-      const url = (localStorage.getItem('nk_reloaded_server') || '').replace(/\/$/, '');
+      // The chat window names its session key: nk_reloaded_token:<server>|<Nekochat server>|<user id>.
       const key = localStorage.getItem('nk_reloaded_active') || '';
-      const token = key.startsWith(`nk_reloaded_token:${url}|`) ? localStorage.getItem(key) : '';
+      const url = key.startsWith('nk_reloaded_token:') ? key.slice('nk_reloaded_token:'.length).split('|')[0] : '';
+      const token = url ? localStorage.getItem(key) : '';
       return url && token ? { url, token } : null;
     } catch { return null; }
   }
