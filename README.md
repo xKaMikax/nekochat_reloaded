@@ -1,8 +1,8 @@
-# NekoChat Reloaded — PC client
+# Nekochat Reloaded — PC client
 
-![NekoChat Reloaded desktop client](https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded/pc/screenshots/nekochat-pc.png)
+![Nekochat Reloaded desktop client](https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded/pc/screenshots/nekochat-pc.png)
 
-> **Warning:** this is a custom NekoChat client, not the official one. The official client is here: https://github.com/komdu/nekochat
+> **Warning:** this is a custom Nekochat client, not the official one. The official client is here: https://github.com/komdu/nekochat
 
 ## What the client includes
 

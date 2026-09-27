@@ -3,6 +3,9 @@ const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const fs = require('fs/promises');
 const { execFile } = require('child_process');
+// Settings, saved sessions and themes stay in the folder the app used before it was renamed
+// from "NekoChat Reloaded" to "Nekochat Reloaded" (Linux paths are case-sensitive).
+app.setPath('userData', path.join(app.getPath('appData'), 'NekoChat Reloaded'));
 const { promisify } = require('util');
 const zlib = require('zlib');
 
@@ -136,7 +139,7 @@ function openThemeSettings(owner) {
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
-    title: 'NekoChat Reloaded Theme Browser', width: 720, height: 540, minWidth: 520, minHeight: 360,
+    title: 'Nekochat Reloaded Theme Browser', width: 720, height: 540, minWidth: 520, minHeight: 360,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -148,7 +151,7 @@ function openEmojiBrowser(owner) {
   emojiBrowserOwner = owner;
   if (emojiBrowserWindow && !emojiBrowserWindow.isDestroyed()) { emojiBrowserWindow.focus(); return; }
   emojiBrowserWindow = new BrowserWindow({
-    title: 'NekoChat Reloaded Emoji', width: 520, height: 580, minWidth: 420, minHeight: 400,
+    title: 'Nekochat Reloaded Emoji', width: 520, height: 580, minWidth: 420, minHeight: 400,
     parent: owner, modal: false, frame: false, transparent: false, backgroundColor: '#ece9d8',
     icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
@@ -159,7 +162,7 @@ function openEmojiBrowser(owner) {
 
 function showSystemDialog(owner, data = {}) {
   const dialogWindow = new BrowserWindow({
-    title: data.title || 'NekoChat Reloaded', width: 380, height: 185, minWidth: 330, minHeight: 165, resizable: false,
+    title: data.title || 'Nekochat Reloaded', width: 380, height: 185, minWidth: 330, minHeight: 165, resizable: false,
     parent: owner, modal: false, frame: false, transparent: false, backgroundColor: '#ece9d8',
     icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'), webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -198,7 +201,7 @@ function openCallWindow(owner, state) {
   callOwner = owner;
   if (callWindow && !callWindow.isDestroyed()) { sendCallState(state); return; }
   callWindow = new BrowserWindow({
-    title: 'NekoChat Reloaded Call', width: 520, height: 430, minWidth: 380, minHeight: 300,
+    title: 'Nekochat Reloaded Call', width: 520, height: 430, minWidth: 380, minHeight: 300,
     resizable: true, parent: owner, modal: false, frame: false, transparent: false, backgroundColor: '#ece9d8',
     icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
@@ -226,7 +229,7 @@ function openDetachedChat(owner, chat) {
   const existing = detachedChatWindows.get(key);
   if (existing && !existing.isDestroyed()) { existing.focus(); return true; }
   const win = new BrowserWindow({
-    title: 'NekoChat Reloaded', icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
+    title: 'Nekochat Reloaded', icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
     width: 620, height: 480, minWidth: 400, minHeight: 260,
     frame: false, transparent: false, resizable: true, show: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
@@ -539,12 +542,12 @@ async function removeTheme(id) {
   return { themes: await listThemes(), activeTheme };
 }
 
-app.setName('NekoChat Reloaded');
+app.setName('Nekochat Reloaded');
 app.commandLine.appendSwitch('class', 'nekochat');
 
 function createWindow() {
   const win = new BrowserWindow({
-    title: 'NekoChat Reloaded',
+    title: 'Nekochat Reloaded',
     icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
     width: 807,
     height: 562,
@@ -574,8 +577,8 @@ function showMainWindow() {
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', 'nekochat_icon.png')).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip('NekoChat Reloaded');
-  tray.setContextMenu(Menu.buildFromTemplate([{ label: 'Open NekoChat Reloaded', click: showMainWindow }, { type: 'separator' }, { label: 'Quit', click: () => app.quit() }]));
+  tray.setToolTip('Nekochat Reloaded');
+  tray.setContextMenu(Menu.buildFromTemplate([{ label: 'Open Nekochat Reloaded', click: showMainWindow }, { type: 'separator' }, { label: 'Quit', click: () => app.quit() }]));
   tray.on('click', showMainWindow);
 }
 async function notificationIcon(avatarUrl) {
@@ -589,7 +592,7 @@ async function notificationIcon(avatarUrl) {
 }
 async function showMessageNotification({ sender, content, avatarUrl } = {}) {
   if (!Notification.isSupported()) return;
-  const notification = new Notification({ title: 'NekoChat Reloaded', body: `${sender || 'User'}\n${content || ''}`, icon: await notificationIcon(avatarUrl) });
+  const notification = new Notification({ title: 'Nekochat Reloaded', body: `${sender || 'User'}\n${content || ''}`, icon: await notificationIcon(avatarUrl) });
   notification.on('click', showMainWindow);
   notification.show();
 }
