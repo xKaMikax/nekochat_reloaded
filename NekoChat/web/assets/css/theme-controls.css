@@ -11,6 +11,9 @@
   background: var(--xp-button-background, transparent) !important;
   box-shadow: var(--xp-button-shadow, none) !important;
 }
+/* Touch screens keep :hover after a tap, which left the Luna 'hot' frame on the last tapped
+   button: the hover look applies only to devices that can really hover (mouse, touchpad). */
+@media (hover: hover) {
 .settings-window .inline-actions button:hover, .settings-window footer button:hover,
 .settings-window .appearance-actions button:hover, .settings-window .preview-window button:hover,
 .chat-app .tab:hover, .chat-app .add-button:hover, .chat-app .settings-button:hover, .chat-app .refresh-list:hover,
@@ -19,9 +22,10 @@
   background: var(--xp-button-background-hover, var(--xp-button-background, transparent)) !important;
   box-shadow: var(--xp-button-shadow-hover, var(--xp-button-shadow, none)) !important;
 }
+}
 .settings-window .inline-actions button:active, .settings-window footer button:active,
 .settings-window .appearance-actions button:active, .settings-window .preview-window button:active,
-.chat-app .tab:active, .chat-app .add-button:active, .chat-app .settings-button:active, .chat-app .refresh-list:active,
+.chat-app .tab:active, .chat-app .tab.active, .chat-app .add-button:active, .chat-app .settings-button:active, .chat-app .refresh-list:active,
 .chat-app .composer button:active, .chat-app .xp-button:active, .xp-dialog .xp-button:not(.icon-only):active, .call-window .call-actions button:active, .call-window .screen-switch:active, .call-window .screen-switch[aria-pressed="true"], .room-create-window .actions button:active, .room-members-actions .xp-button:active {
   border-image-source: var(--xp-button-frame-pressed, var(--xp-button-pressed)) !important;
   background: var(--xp-button-background-pressed, var(--xp-button-background, transparent)) !important;

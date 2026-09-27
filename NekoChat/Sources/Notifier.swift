@@ -10,7 +10,7 @@ enum Notifier {
             let notification = UNMutableNotificationContent()
             notification.title = sender.isEmpty ? "User" : sender
             notification.body = content
-            notification.subtitle = "NekoChat Reloaded"
+            notification.subtitle = "Nekochat Reloaded"
             notification.sound = .default
             if let attachment = avatarAttachment(avatarUrl) { notification.attachments = [attachment] }
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: notification, trigger: nil))

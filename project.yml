@@ -17,7 +17,7 @@ targets:
     info:
       path: NekoChat/Info.plist
       properties:
-        CFBundleDisplayName: NekoChat Reloaded
+        CFBundleDisplayName: Nekochat Reloaded
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -32,11 +32,11 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSMicrophoneUsageDescription: NekoChat Reloaded uses the microphone for voice calls.
+        NSMicrophoneUsageDescription: Nekochat Reloaded uses the microphone for voice calls.
         # Keeps a running voice call alive when the app goes to the background.
         UIBackgroundModes:
           - audio
-        # Users may point the client at their own http:// NekoChat server.
+        # Users may point the client at their own http:// Nekochat server.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
@@ -44,7 +44,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.kamika.nekochat-reloaded
         PRODUCT_NAME: NekoChatReloaded
         MARKETING_VERSION: "1.3.1"
-        CURRENT_PROJECT_VERSION: "5"
+        CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

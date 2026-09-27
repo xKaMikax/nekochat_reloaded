@@ -20,7 +20,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     // connection survives short trips to other apps (there is no tray on a phone).
     func applicationDidEnterBackground(_ application: UIApplication) {
         endBackgroundTask()
-        backgroundTask = application.beginBackgroundTask(withName: "NekoChat connection") { [weak self] in self?.endBackgroundTask() }
+        backgroundTask = application.beginBackgroundTask(withName: "Nekochat connection") { [weak self] in self?.endBackgroundTask() }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
