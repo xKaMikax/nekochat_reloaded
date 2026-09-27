@@ -8,6 +8,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.ZipInputStream
+import android.util.Base64
 
 /**
  * Android port of the theme system in main.js: built-in prebuilt themes (from the APK),
@@ -54,7 +55,7 @@ class ThemeManager(private val context: Context) {
         for (id in context.assets.list("web/prebuilt").orEmpty().sorted()) {
             if (context.assets.list("web/prebuilt/$id").orEmpty().contains("theme.json")) found[id] = Theme(id, prebuilt = true)
         }
-        for (directory in userThemesRoot.listFiles().orEmpty().filter { it.isDirectory && it.name !in RESERVED_IDS }.sortedBy { it.name }) {
+        for (directory in userThemesRoot.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name !in RESERVED_IDS }.sortedBy { it.name }) {
             val files = directory.listFiles().orEmpty().filter { it.isFile }
             val source = files.firstOrNull { it.name.endsWith(".theme", true) }
                 ?: files.firstOrNull { it.name.endsWith(".msstyles", true) }
@@ -75,7 +76,7 @@ class ThemeManager(private val context: Context) {
         val source = theme.source!!
         if (theme.css) {
             val metadata = JSONObject().put("theme", id).put("schemes", JSONArray().put(JSONObject().put("id", "default").put("name", "Default"))).put("defaultScheme", "default")
-            return Prepared(theme, "${WebContent.ORIGIN}/user-themes/${enc(id)}", metadata, css = true)
+            return Prepared(theme, materializeCssTheme(id, source), metadata, css = true)
         }
         val output = File(runtimeThemesRoot, id)
         val stamp = "${source.lastModified()}:${source.length()}:${MsStylesImporter.VERSION}"
@@ -87,6 +88,53 @@ class ThemeManager(private val context: Context) {
         }
         val metadata = JSONObject(File(output, "theme.json").readText())
         return Prepared(theme, "${WebContent.ORIGIN}/runtime-themes/${enc(id)}", metadata, css = false)
+    }
+
+    /**
+     * A url() inside a custom property resolves against the stylesheet that uses the variable,
+     * not theme.css, so relative pictures (themes from the PC theme editor) are made absolute
+     * in a runtime copy of theme.css.
+     */
+    private fun materializeCssTheme(id: String, source: File): String {
+        val base = "${WebContent.ORIGIN}/user-themes/${enc(id)}"
+        val css = source.readText()
+        val relative = Regex("url\\((['\"]?)([^'\")]+)\\1\\)")
+        if (relative.findAll(css).none { !Regex("^(data|file|https?|blob):", RegexOption.IGNORE_CASE).containsMatchIn(it.groupValues[2]) }) return base
+        val output = File(runtimeThemesRoot, "css-$id").apply { mkdirs() }
+        File(output, "theme.css").writeText(relative.replace(css) { match ->
+            val url = match.groupValues[2]
+            if (Regex("^(data|file|https?|blob):", RegexOption.IGNORE_CASE).containsMatchIn(url)) match.value
+            else "url(\"$base/${url.removePrefix("./").split('/').joinToString("/") { enc(it) }}\")"
+        })
+        return "${WebContent.ORIGIN}/runtime-themes/${enc("css-$id")}"
+    }
+
+    // ---- settings backups --------------------------------------------------------------
+
+    /** Installed themes as backup entries ("themes/<id>/…", base64), like main.js exportUserThemes(). */
+    fun exportThemeFiles(): JSONArray {
+        val files = JSONArray()
+        val root = userThemesRoot.canonicalFile
+        root.walkTopDown().filter { it.isFile && !it.relativeTo(root).path.startsWith(".") }.forEach { file ->
+            files.put(JSONObject().put("path", "themes/" + file.relativeTo(root).invariantSeparatorsPath).put("data", Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)))
+        }
+        return files
+    }
+
+    /** Adds the themes of a backup archive to the installed ones; nothing installed is removed. */
+    fun restoreThemeFiles(archiveBase64: String): JSONArray {
+        val temporary = File(context.cacheDir, "backup-${System.nanoTime()}")
+        try {
+            extractZip(Base64.decode(archiveBase64, Base64.DEFAULT), temporary)
+            val themesFolder = File(temporary, "themes")
+            if (themesFolder.isDirectory) {
+                userThemesRoot.mkdirs()
+                for (theme in themesFolder.listFiles().orEmpty().filter { it.isDirectory && it.name !in RESERVED_IDS }) theme.copyRecursively(File(userThemesRoot, theme.name), overwrite = true)
+            }
+        } finally {
+            temporary.deleteRecursively()
+        }
+        return listThemes()
     }
 
     private fun cssUrl(prepared: Prepared, scheme: String, revision: Long): String {

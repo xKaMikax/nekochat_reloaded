@@ -161,3 +161,9 @@ html[data-login-ui="classic"] .xp-logon-accounts { box-sizing: border-box; width
 #user-profile-status.away, #profile-status.away { color: #7a5c00; border-color: #e7cf7a; background: #fff8dd; }
 #user-profile-status.dnd, #profile-status.dnd { color: #b0281a; border-color: #e3a79f; background: #fdecea; }
 #profile-status.invisible { color: #5f6368; border-color: #c8cacd; background: #f1f2f3; }
+/* The app another Reloaded user is on, under their status. */
+.profile-client { display: inline-flex; align-items: center; gap: 4px; margin-left: 5px; padding: 1px 7px 1px 4px; border: 1px solid #a9bcd8; border-radius: 9px; background: linear-gradient(#fff, #e7eefa); color: #1d3f72; font-size: 11px; vertical-align: middle; box-shadow: inset 0 1px 0 #fff; }
+.profile-client[hidden] { display: none; }
+.profile-client svg { width: 13px; height: 13px; flex: none; }.profile-client img { width: 16px; height: 13px; flex: none; object-fit: contain; }
+.profile-client b { font-weight: bold; }
+.profile-client small { color: #6a7a92; font-size: 10px; }

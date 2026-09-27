@@ -54,6 +54,9 @@ class NativeBridge(private val activity: MainActivity, private val webView: WebV
                     "theme:browser-install" -> themes.installCatalogTheme(arg(0))
                     "display:current" -> themes.activeDisplay
                     "display:apply" -> themes.saveDisplaySettings(args.optJSONObject(0) ?: JSONObject())
+                    "backup:export-themes" -> themes.exportThemeFiles()
+                    "backup:restore-themes" -> themes.restoreThemeFiles(arg(0))
+                    "update:install" -> Updater.install(activity, arg(0))
                     else -> throw IllegalArgumentException("Unknown method $method")
                 }
             }

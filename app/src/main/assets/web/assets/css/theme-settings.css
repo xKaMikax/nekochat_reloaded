@@ -48,4 +48,5 @@ html:not(.xp-checkboxes) .backup-parts input[type="checkbox"], html:not(.xp-chec
 .backup-restore-panel { flex-direction: column; flex: 1; }.backup-restore-panel[hidden], .backup-list-wrap[hidden] { display: none; }
 .backup-restore-panel #backup-restore-parts { display: grid; gap: 6px; padding: 4px 0; }
 .backup-restore-panel small { color: #6d6d6d; }
-
+#update-check { min-width: 90px; height: 23px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; font: inherit; }
+#update-check:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }#update-check:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal)); }
