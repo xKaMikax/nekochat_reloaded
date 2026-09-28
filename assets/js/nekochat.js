@@ -81,8 +81,8 @@ Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online',
   updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
   updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
   updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
-Object.assign(translations.ru, { adminPanel: 'Админ-панель сервера' });
-Object.assign(translations.en, { adminPanel: 'Server admin panel' });
+Object.assign(translations.ru, { adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера' });
+Object.assign(translations.en, { adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
 Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
@@ -109,7 +109,7 @@ function applyDisplaySettings(settings) {
   $('#emoji-button').setAttribute('aria-label', text.emoji); $('#emoji-button').title = text.emoji;
   $('#auth-switch').textContent = registering ? text.backToLogin : text.createAccount;
   $('#auth-submit').setAttribute('aria-label', registering ? text.register : text.signIn);
-  if (me) { $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`; renderList(); renderConversationHeader(); }
+  if (me) { $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`; setOwnStatus(companion.status, false); renderList(); renderConversationHeader(); }
   updateCallWindow();
 }
 const api = async (path, options = {}) => {
