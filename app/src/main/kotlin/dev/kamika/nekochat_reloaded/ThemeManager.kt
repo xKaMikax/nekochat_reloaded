@@ -21,7 +21,7 @@ class ThemeManager(private val context: Context) {
     private val themeStateFile = File(context.filesDir, "theme-selection.json")
     private val displayStateFile = File(context.filesDir, "display-settings.json")
 
-    private data class Theme(val id: String, val prebuilt: Boolean, val source: File? = null, val css: Boolean = false, val userInstalled: Boolean = false, val catalogId: String? = null)
+    private data class Theme(val id: String, val prebuilt: Boolean, val source: File? = null, val css: Boolean = false, val userInstalled: Boolean = false, val catalogId: String? = null, val schemed: Boolean = false)
     private data class Prepared(val theme: Theme, val baseUrl: String, val metadata: JSONObject, val css: Boolean)
 
     var activeTheme: JSONObject? = null
@@ -57,12 +57,16 @@ class ThemeManager(private val context: Context) {
         }
         for (directory in userThemesRoot.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name !in RESERVED_IDS }.sortedBy { it.name }) {
             val files = directory.listFiles().orEmpty().filter { it.isFile }
+            // A CSS theme with colour schemes: schemes/<scheme>/theme.css (names in an optional theme.json).
+            val schemed = files.none { it.name.endsWith(".theme", true) || it.name.endsWith(".msstyles", true) || it.name.equals("theme.css", true) } &&
+                File(directory, "schemes").listFiles().orEmpty().any { File(it, "theme.css").isFile }
             val source = files.firstOrNull { it.name.endsWith(".theme", true) }
                 ?: files.firstOrNull { it.name.endsWith(".msstyles", true) }
                 ?: files.firstOrNull { it.name.equals("theme.css", true) }
+                ?: (if (schemed) File(directory, "theme.css") else null)
                 ?: continue
             val catalogId = try { JSONObject(File(directory, "catalog-theme.json").readText()).optString("id").ifEmpty { null } } catch (_: Exception) { null }
-            found[directory.name] = Theme(directory.name, prebuilt = false, source = source, css = source.name.equals("theme.css", true), userInstalled = true, catalogId = catalogId)
+            found[directory.name] = Theme(directory.name, prebuilt = false, source = source, css = source.name.equals("theme.css", true), userInstalled = true, catalogId = catalogId, schemed = schemed)
         }
         return found.values.toList()
     }
@@ -74,6 +78,7 @@ class ThemeManager(private val context: Context) {
             return Prepared(theme, "${WebContent.ORIGIN}/prebuilt/${enc(id)}", metadata, css = false)
         }
         val source = theme.source!!
+        if (theme.css && theme.schemed) return materializeSchemedCssTheme(theme, source.parentFile!!)
         if (theme.css) {
             val metadata = JSONObject().put("theme", id).put("schemes", JSONArray().put(JSONObject().put("id", "default").put("name", "Default"))).put("defaultScheme", "default")
             return Prepared(theme, materializeCssTheme(id, source), metadata, css = true)
@@ -107,6 +112,30 @@ class ThemeManager(private val context: Context) {
             else "url(\"$base/${url.removePrefix("./").split('/').joinToString("/") { enc(it) }}\")"
         })
         return "${WebContent.ORIGIN}/runtime-themes/${enc("css-$id")}"
+    }
+
+    /** Every scheme becomes runtime-themes/css-<id>/schemes/<scheme>/theme.css with absolute picture URLs. */
+    private fun materializeSchemedCssTheme(theme: Theme, root: File): Prepared {
+        val info = try { JSONObject(File(root, "theme.json").readText()) } catch (_: Exception) { JSONObject() }
+        val names = HashMap<String, String>()
+        info.optJSONArray("schemes")?.let { for (i in 0 until it.length()) it.optJSONObject(i)?.let { item -> names[item.optString("id")] = item.optString("name", item.optString("id")) } }
+        val output = File(runtimeThemesRoot, "css-${theme.id}")
+        val absolute = Regex("^(data|file|https?|blob):", RegexOption.IGNORE_CASE)
+        val schemes = JSONArray()
+        for (folder in File(root, "schemes").listFiles().orEmpty().filter { it.isDirectory && Regex("^[\\w.-]+$").matches(it.name) }.sortedBy { it.name }) {
+            val css = try { File(folder, "theme.css").readText() } catch (_: Exception) { continue }
+            val base = "${WebContent.ORIGIN}/user-themes/${enc(theme.id)}/schemes/${enc(folder.name)}"
+            val target = File(output, "schemes/${folder.name}").apply { mkdirs() }
+            File(target, "theme.css").writeText(Regex("url\\((['\"]?)([^'\")]+)\\1\\)").replace(css) { match ->
+                val url = match.groupValues[2]
+                if (absolute.containsMatchIn(url)) match.value else "url(\"$base/${url.removePrefix("./").split('/').joinToString("/") { enc(it) }}\")"
+            })
+            schemes.put(JSONObject().put("id", folder.name).put("name", names[folder.name] ?: folder.name))
+        }
+        if (schemes.length() == 0) throw IllegalArgumentException("The theme has no colour schemes.")
+        val ids = (0 until schemes.length()).map { schemes.getJSONObject(it).getString("id") }
+        val metadata = JSONObject().put("theme", info.optString("name", theme.id)).put("schemes", schemes).put("defaultScheme", info.optString("defaultScheme").takeIf { it in ids } ?: ids.first())
+        return Prepared(theme, "${WebContent.ORIGIN}/runtime-themes/${enc("css-${theme.id}")}", metadata, css = false)
     }
 
     // ---- settings backups --------------------------------------------------------------
@@ -293,7 +322,9 @@ class ThemeManager(private val context: Context) {
             extractZip(zip, temporary)
             val source = findThemeSource(temporary) ?: throw IllegalArgumentException("Theme.ZIP must contain a .theme, .msstyles, or theme.css file.")
             destination.mkdirs()
-            if (source.name.equals("theme.css", true)) source.parentFile!!.copyRecursively(destination, overwrite = true)
+            // A theme.css inside schemes/<scheme>/ belongs to a theme with colour schemes: copy its root.
+            val cssRoot = source.parentFile!!.let { folder -> if (folder.parentFile?.name == "schemes") folder.parentFile!!.parentFile!! else folder }
+            if (source.name.equals("theme.css", true)) cssRoot.copyRecursively(destination, overwrite = true)
             else copyThemeBundle(source, destination)
         } finally {
             temporary.deleteRecursively()
