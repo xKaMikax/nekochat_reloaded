@@ -393,7 +393,7 @@ final class ThemeManager {
             let id = entry["pack_id"] as? String ?? entry["id"] as? String ?? "pack-\(index + 1)"
             let directory = (entry["directory"] as? String ?? id).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let rawType = (entry["type"] as? String ?? entry["Type"] as? String ?? "").lowercased()
-            let type = ["cursors", "sounds", "icons", "wallpapers", "combo"].contains(rawType) ? rawType : "combo"
+            let type = ["cursors", "sounds", "icons", "wallpapers", "assistants", "combo"].contains(rawType) ? rawType : "combo"
             // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
             let fileList = (entry["Files"] as? [String] ?? entry["files"] as? [String] ?? []).filter { !$0.isEmpty && !$0.contains("/") && !$0.contains("\\") && $0 != "." && $0 != ".." }
             // A wallpapers pack without Preview.png shows its first picture.
@@ -420,7 +420,8 @@ final class ThemeManager {
         let fileList = item["files"] as? [String] ?? []
         if !fileList.isEmpty {
             // No Pack.ZIP: download the listed files into the folder of the pack's type.
-            let folder = temporary.appendingPathComponent(item["type"] as? String ?? "combo", isDirectory: true)
+            let typeName = item["type"] as? String ?? "combo"
+            let folder = temporary.appendingPathComponent(typeName == "assistants" ? "assistant" : typeName, isDirectory: true)
             try files.createDirectory(at: folder, withIntermediateDirectories: true)
             for name in fileList {
                 let (status, data) = try Self.download("\(Self.catalogRoot)/\(item["directory"] as? String ?? id)/\(Self.encode(name))")
@@ -434,7 +435,7 @@ final class ThemeManager {
         }
         lock.lock(); defer { lock.unlock() }
         let info = readJSON(temporary.appendingPathComponent("pack.json")) as? [String: Any] ?? [:]
-        let contains = ["sounds", "cursors", "icons", "wallpapers", "theme"].filter { var dir: ObjCBool = false; return files.fileExists(atPath: temporary.appendingPathComponent($0).path, isDirectory: &dir) && dir.boolValue }
+        let contains = ["sounds", "cursors", "icons", "wallpapers", "assistant", "theme"].filter { var dir: ObjCBool = false; return files.fileExists(atPath: temporary.appendingPathComponent($0).path, isDirectory: &dir) && dir.boolValue }
         // The theme of a combo goes to the installed themes, like a catalog theme.
         var themeId: Any = NSNull()
         if contains.contains("theme") {
@@ -461,7 +462,7 @@ final class ThemeManager {
             else { let installed = try installCatalogTheme(id: ref); themeId = installed["id"] ?? NSNull() }
         }
         var parts: [String] = []
-        for part in ["cursors", "sounds", "icons", "wallpapers"] {
+        for part in ["cursors", "sounds", "icons", "wallpapers", "assistants"] {
             guard let ref = includes[part], !ref.isEmpty else { continue }
             guard catalog.contains(where: { $0["id"] as? String == ref && $0["includes"] is NSNull }) else { throw ThemeError("The combo lists a missing \(part) pack: \(ref)") }
             if let existing = listPacks().first(where: { $0["catalogId"] as? String == ref }), let existingId = existing["id"] as? String { parts.append(existingId) }
@@ -520,9 +521,21 @@ final class ThemeManager {
                 for (name, file) in readJSON(partFolder.appendingPathComponent("icons/icons.json")) as? [String: String] ?? [:] where files.fileExists(atPath: partFolder.appendingPathComponent("icons/\(file)").path) { icons[name] = "\(partBase)/icons/\(Self.encode(file))" }
             }
             result.append(["id": folder.lastPathComponent, "catalogId": info["catalogId"] ?? NSNull(), "type": info["type"] ?? "combo", "name": info["name"] ?? folder.lastPathComponent,
-                           "author": info["author"] ?? "", "contains": info["contains"] ?? [], "theme": info["theme"] ?? NSNull(), "files": urls, "sounds": sounds, "cursors": cursors, "icons": icons, "wallpapers": wallpapers])
+                           "author": info["author"] ?? "", "contains": info["contains"] ?? [], "theme": info["theme"] ?? NSNull(), "files": urls, "sounds": sounds, "cursors": cursors, "icons": icons, "wallpapers": wallpapers, "assistant": (Self.assistant(urls) as Any?) ?? NSNull()])
         }
         return result
+    }
+
+    /// assistant/agent.json + frames.png + sound<N>.wav of a pack (a Microsoft Agent character).
+    private static func assistant(_ urls: [String: String]) -> [String: Any]? {
+        guard let json = urls["assistant/agent.json"], let frames = urls["assistant/frames.png"] else { return nil }
+        var sounds: [String: String] = [:]
+        for (name, url) in urls {
+            guard name.range(of: #"^assistant/sound\d+\.(wav|mp3|ogg)$"#, options: [.regularExpression, .caseInsensitive]) != nil else { continue }
+            let file = ((name as NSString).lastPathComponent as NSString).deletingPathExtension
+            sounds[String(file.dropFirst("sound".count))] = url
+        }
+        return ["json": json, "frames": frames, "sounds": sounds]
     }
 
     func removePack(id: String) throws -> [String: Any] {
