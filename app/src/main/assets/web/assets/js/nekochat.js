@@ -245,6 +245,25 @@ function noteActivity() {
 setInterval(() => {
   if (companion.token && companion.status === 'online' && Date.now() - lastActivity > AUTO_AWAY_AFTER) { autoAway = true; setOwnStatus('away'); }
 }, 30000);
+// Live status changes from the companion (server 0.6+): others see a new status at once instead
+// of on the next 30-second poll, which stays as the fallback.
+function closeCompanionEvents() { companion.events?.close(); companion.events = null; }
+function openCompanionEvents() {
+  closeCompanionEvents();
+  if (!companion.url || !companion.token || !window.EventSource) return;
+  const source = new EventSource(`${companion.url}/events?token=${encodeURIComponent(companion.token)}`);
+  companion.events = source;
+  source.addEventListener('status', event => {
+    let change; try { change = JSON.parse(event.data); } catch { return; }
+    const id = String(change.id);
+    if (change.status && change.status !== 'online') companion.statuses[id] = change.status; else delete companion.statuses[id];
+    if (change.client) companion.clients[id] = change.client; else if (change.status === 'offline') delete companion.clients[id];
+    renderList();
+    if ($('#user-profile-dialog')?.open && profileUser && String(profileUser.id) === id) showUserProfile(profileUser);
+  });
+  // A server without /events answers 404: EventSource gives up (CLOSED) and polling carries on.
+  source.onerror = () => { if (source.readyState === EventSource.CLOSED && companion.events === source) companion.events = null; };
+}
 async function refreshStatuses() {
   const ids = users.map(user => user.id).filter(Boolean).join(',');
   if (!ids) return;
@@ -288,7 +307,7 @@ async function companionConnect() {
   clearInterval(companion.timer);
   companion.url = companionUrl(); companion.token = '';
   // Turned off: forget the other users' statuses and hide the status menu.
-  if (!companion.url) { try { localStorage.removeItem('nk_reloaded_active'); } catch {} companion.statuses = {}; companion.clients = {}; if (me) { setOwnStatus('online', false); renderList(); } return; }
+  if (!companion.url) { closeCompanionEvents(); try { localStorage.removeItem('nk_reloaded_active'); } catch {} companion.statuses = {}; companion.clients = {}; if (me) { setOwnStatus('online', false); renderList(); } return; }
   if (!token || !me) return;
   try { companion.token = localStorage.getItem(companionTokenKey()) || ''; } catch {}
   let bundle = companion.token ? await companionFetch('GET', '/me') : null;
@@ -305,6 +324,7 @@ async function companionConnect() {
   applyCompanionBundle(bundle);
   companionFetch('PUT', '/status', { status: companion.status, client: CLIENT_NAME });
   refreshStatuses();
+  openCompanionEvents();
   companion.timer = setInterval(async () => { const state = await companionFetch('GET', '/read-state'); if (state) applyReadState(state); refreshStatuses(); }, 30000);
 }
 // Settings changes are sent a moment later, together.
@@ -1437,7 +1457,7 @@ desktopControls?.onSystemAction?.(async action => {
   } catch (error) { showSystemDialog(error.message, 'error', t('roomJoin')); }
 });
 $('#profile-button').onclick = () => $('#profile-dialog').showModal(); document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => document.querySelector(`#${button.dataset.close}`).close());
-function leaveAccount(forgetSession) { hadConnection = false; try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; companion.clients = {}; companion.legacyStatuses = false; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
+function leaveAccount(forgetSession) { hadConnection = false; closeCompanionEvents(); try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; companion.clients = {}; companion.legacyStatuses = false; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
 function expireSession() {
   if (!token || !me) return;
   const username = me.username || '';
