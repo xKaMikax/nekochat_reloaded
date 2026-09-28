@@ -81,8 +81,8 @@ Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online',
   updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
   updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
   updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
-Object.assign(translations.ru, { noMessagesYet: 'Сообщений пока нет. Напишите первым!', adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
-Object.assign(translations.en, { noMessagesYet: 'No messages yet. Say hello!', adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
+Object.assign(translations.ru, { noMessagesYet: 'Сообщений пока нет. Напишите первым!', archiveTitle: 'Архив', archiveHint: 'Скрытые чаты', archiveBack: 'Назад к чатам', seenJustNow: 'был(а) только что', seenMinutes: 'был(а) {n} мин. назад', seenHours: 'был(а) {n} ч. назад', seenToday: 'был(а) сегодня в {time}', seenYesterday: 'был(а) вчера в {time}', seenDate: 'был(а) {date}', adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
+Object.assign(translations.en, { noMessagesYet: 'No messages yet. Say hello!', archiveTitle: 'Archive', archiveHint: 'Hidden chats', archiveBack: 'Back to chats', seenJustNow: 'last seen just now', seenMinutes: 'last seen {n} min ago', seenHours: 'last seen {n} h ago', seenToday: 'last seen today at {time}', seenYesterday: 'last seen yesterday at {time}', seenDate: 'last seen {date}', adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
 Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
@@ -166,12 +166,20 @@ const chatKey = (kind, id) => `${kind}:${Number(id)}`;
 // Material-style icons, drawn like the other conversation header buttons (members, call).
 const ICON_BELL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>';
 const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 18.69 7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0-.01 0-.01.01L18 14.68z"/></svg>';
+const ICON_ARCHIVE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 2.5h13v3h-13zm1 4h11v7h-11zm3.5 2v1h4v-1z"/></svg>';
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
 const unread = new Map();
 let mutedChats = new Set();
 // Favourite chats stay at the top of the list; drafts keep unsent text per chat. Both are per
 // account and shared between devices through the companion (settings, /drafts).
 let favoriteChats = new Set(); let drafts = {};
+// Archived chats leave the list for an "Archive" entry; notes are private notes about people.
+let archivedChats = new Set(); let userNotes = {}; let showArchive = false;
+const isArchived = key => archivedChats.has(key);
+function saveArchive() { try { localStorage.setItem(`nk_archived:${API}|${me?.id}`, JSON.stringify([...archivedChats])); } catch {} }
+function toggleArchived(key) { if (archivedChats.has(key)) archivedChats.delete(key); else archivedChats.add(key); saveArchive(); renderList(); pushCompanionSettings(); }
+function saveNotes() { try { localStorage.setItem(`nk_notes:${API}|${me?.id}`, JSON.stringify(userNotes)); } catch {} }
+function setUserNote(id, text) { const value = String(text || '').slice(0, 1000); if (value.trim()) userNotes[String(id)] = value; else delete userNotes[String(id)]; saveNotes(); pushCompanionSettings(); }
 const isFavorite = key => favoriteChats.has(key);
 function saveFavorites() { try { localStorage.setItem(`nk_favorites:${API}|${me?.id}`, JSON.stringify([...favoriteChats])); } catch {} }
 function loadFavorites() { try { favoriteChats = new Set(JSON.parse(localStorage.getItem(`nk_favorites:${API}|${me?.id}`) || '[]')); } catch { favoriteChats = new Set(); } }
@@ -194,7 +202,7 @@ function setDraft(key, text, sync = true) {
 // session token is used. When the companion is unreachable the client works without it.
 const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
 let profileUser = null;
-const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, legacyStatuses: false };
+const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
 // The public Nekochat Reloaded server is used unless another address is set or it is turned off
 // (Display Properties → Settings); an address saved by 1.4 is kept as it is.
@@ -228,6 +236,9 @@ function applyCompanionBundle(bundle) {
   const settings = bundle.settings || {};
   if (Array.isArray(settings.muted)) { mutedChats = new Set(settings.muted.map(String)); saveMuted(); }
   if (Array.isArray(settings.favorites)) { favoriteChats = new Set(settings.favorites.map(String)); saveFavorites(); }
+  if (Array.isArray(settings.archived)) { archivedChats = new Set(settings.archived.map(String)); saveArchive(); }
+  if (settings.notes && typeof settings.notes === 'object') { userNotes = { ...settings.notes }; saveNotes(); }
+  if (typeof bundle.hide_last_seen === 'boolean') try { localStorage.setItem('nk_hide_last_seen', bundle.hide_last_seen ? '1' : '0'); } catch {}
   // Drafts from other devices; text typed here and not synced yet wins.
   if (bundle.drafts && typeof bundle.drafts === 'object') { drafts = { ...bundle.drafts, ...drafts }; saveDrafts(); }
   // Other windows (Display Properties) follow through the storage event.
@@ -293,13 +304,26 @@ async function refreshStatuses() {
   if (presence === false) { companion.legacyStatuses = true; presence = null; }
   if (!presence) { const statuses = await companionFetch('GET', `/statuses?ids=${ids}`); if (!statuses) return; presence = Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, { status, client: '' }])); }
   const statuses = {}; const clients = {};
-  for (const [id, item] of Object.entries(presence)) { if (item?.status && item.status !== 'online') statuses[id] = item.status; if (item?.client) clients[id] = item.client; }
+  for (const [id, item] of Object.entries(presence)) { if (item?.status && item.status !== 'online') statuses[id] = item.status; if (item?.client) clients[id] = item.client; if (item?.last_seen) companion.lastSeen[id] = item.last_seen; else delete companion.lastSeen[id]; }
   const changed = JSON.stringify([statuses, clients]) !== JSON.stringify([companion.statuses, companion.clients]);
   companion.statuses = statuses; companion.clients = clients;
   if (changed) { renderList(); if ($('#user-profile-dialog')?.open && profileUser) showUserProfile(profileUser); }
 }
 const userStatus = id => companion.statuses[String(id)] || null;
 const userClient = id => companion.clients?.[String(id)] || '';
+// "last seen 5 minutes ago" for offline Reloaded users who do not hide it.
+function lastSeenText(id) {
+  const seconds = Number(companion.lastSeen?.[String(id)]); if (!seconds) return '';
+  const diff = Math.max(0, Date.now() / 1000 - seconds); const date = new Date(seconds * 1000);
+  const time = date.toLocaleTimeString(displaySettings.language === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (diff < 60) return t('seenJustNow');
+  if (diff < 3600) return t('seenMinutes', { n: Math.floor(diff / 60) });
+  if (diff < 6 * 3600) return t('seenHours', { n: Math.floor(diff / 3600) });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (date >= today) return t('seenToday', { time });
+  if (date >= new Date(today - 86400000)) return t('seenYesterday', { time });
+  return t('seenDate', { date: date.toLocaleDateString(displaySettings.language === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long' }) });
+}
 // "Android 1.4.1" → a small badge with the platform's icon and the version in grey.
 const CLIENT_ICONS = {
   Android: '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#3ddc84" d="M3 7a5 5 0 0 1 10 0v.5H3zm2.6-3.9-1-1.6.5-.3 1 1.6zm4.8 0 1-1.6.5.3-1 1.6zM6 5.2a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zm4 0a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zM3 8.3h10v4.2c0 .8-.6 1.5-1.4 1.5H4.4C3.6 14 3 13.3 3 12.5z"/></svg>',
@@ -353,7 +377,7 @@ function pushCompanionSettings() {
   if (!companion.token) return;
   clearTimeout(companion.pushTimer);
   companion.pushTimer = setTimeout(() => {
-    const settings = { muted: [...mutedChats], favorites: [...favoriteChats] };
+    const settings = { muted: [...mutedChats], favorites: [...favoriteChats], archived: [...archivedChats], notes: userNotes };
     for (const key of SYNCED_KEYS) { try { const value = localStorage.getItem(key); if (value !== null) settings[key] = value; } catch {} }
     companionFetch('PUT', '/settings', settings);
   }, 800);
@@ -366,9 +390,14 @@ function markRead(chat, messageId) {
 }
 window.addEventListener('storage', event => {
   if (event.key === 'nk_reloaded_server' || event.key === 'nk_reloaded_enabled') companionConnect();
+  else if (event.key === 'nk_hide_last_seen') companionFetch('PUT', '/privacy', { hide_last_seen: event.newValue === '1' });
   else if (SYNCED_KEYS.includes(event.key)) pushCompanionSettings();
 });
-function loadMutedAndMore() { loadMuted(); loadFavorites(); loadDrafts(); }
+function loadMutedAndMore() {
+  loadMuted(); loadFavorites(); loadDrafts();
+  try { archivedChats = new Set(JSON.parse(localStorage.getItem(`nk_archived:${API}|${me?.id}`) || '[]')); } catch { archivedChats = new Set(); }
+  try { userNotes = JSON.parse(localStorage.getItem(`nk_notes:${API}|${me?.id}`) || '{}') || {}; } catch { userNotes = {}; }
+}
 function loadMuted() { try { mutedChats = new Set(JSON.parse(localStorage.getItem(`nk_muted:${API}|${me?.id}`) || '[]')); } catch { mutedChats = new Set(); } }
 function saveMuted() { try { localStorage.setItem(`nk_muted:${API}|${me?.id}`, JSON.stringify([...mutedChats])); } catch {} }
 const isMuted = key => mutedChats.has(key);
@@ -449,7 +478,15 @@ function renderList() {
   const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, client: userClient(user.id), kind: 'dm', frame: avatarFrameAttributes(user) }));
   // Favourites first, the rest keeps its order.
   items.sort((a, b) => Number(isFavorite(chatKey(b.kind, b.id))) - Number(isFavorite(chatKey(a.kind, a.id))));
-  list.innerHTML = items.map(item => {
+  // Archived chats live behind an "Archive" row at the end of the list.
+  const archived = items.filter(item => isArchived(chatKey(item.kind, item.id)));
+  if (showArchive && !archived.length) showArchive = false;
+  const shown = showArchive ? archived : items.filter(item => !isArchived(chatKey(item.kind, item.id)));
+  const archiveUnread = archived.reduce((sum, item) => sum + (unread.get(chatKey(item.kind, item.id)) || 0), 0);
+  const archiveRow = showArchive
+    ? `<button class="chat-item archive-row" type="button" data-archive="close"><span class="archive-icon">←</span><span class="chat-name"><b>${esc(t('archiveBack'))}</b><small>${esc(t('archiveTitle'))}</small></span></button>`
+    : archived.length ? `<button class="chat-item archive-row" type="button" data-archive="open"><span class="archive-icon">${ICON_ARCHIVE}</span><span class="chat-name"><b>${esc(t('archiveTitle'))} (${archived.length})${archiveUnread ? `<span class="unread-count"> (${archiveUnread > 99 ? '99+' : archiveUnread})</span>` : ''}</b><small>${esc(t('archiveHint'))}</small></span></button>` : '';
+  list.innerHTML = (showArchive ? archiveRow : '') + shown.map(item => {
     const key = chatKey(item.kind, item.id); const count = unread.get(key) || 0; const muted = isMuted(key);
     const draft = drafts[key] && !(current?.kind === item.kind && current?.data.id === item.id) ? drafts[key] : '';
     // Rooms whose voice channel is on show a speaker and how many people are in it.
@@ -457,7 +494,7 @@ function renderList() {
     const voice = channel ? `<span class="voice-badge" title="${esc(t('voiceNow', { count: channel.members.size }))}">${ICON_SPEAKER}${channel.members.size}</span>` : '';
     const badge = count ? `<span class="unread-count${muted ? ' muted' : ''}"> (${count > 99 ? '99+' : count})</span>` : '';
     return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}${isFavorite(key) ? ` <span class="favorite-icon" title="${esc(t('favorite'))}">★</span>` : ''}</b><small>${draft ? `<span class="draft-label">${esc(t('draft'))}:</span> ${esc(draft.split('\n')[0].slice(0, 60))}` : esc(item.sub)}${voice}</small></span></button>`;
-  }).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
+  }).join('') + (showArchive ? '' : archiveRow) || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
   const online = userOnline(user);
@@ -466,7 +503,8 @@ function showUserProfile(user) {
   $('#user-profile-name').textContent = displayName(user);
   $('#user-profile-handle').textContent = `@${user.username}`;
   const shown = !userOnline(user) ? 'offline' : ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : 'online';
-  $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${user.status ? ` · ${user.status}` : ''}`;
+  const seen = shown === 'offline' ? lastSeenText(user.id) : '';
+  $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${seen ? ` · ${seen}` : ''}${user.status ? ` · ${user.status}` : ''}`;
   ['away', 'dnd'].forEach(item => $('#user-profile-status').classList.toggle(item, shown === item));
   $('#user-profile-status').classList.toggle('offline', !online);
   // The app they use, from the Nekochat Reloaded server; nothing for offline or invisible users.
@@ -485,8 +523,37 @@ function showUserProfile(user) {
 function renderMessageContent(content) {
   const lines = String(content ?? '').split('\n'); const quote = [];
   while (lines.length > 1 && lines[0].startsWith('> ')) quote.push(lines.shift().slice(2));
-  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${esc(lines.join('\n'))}</p>`;
+  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${formatText(lines.join('\n'))}</p>`;
 }
+// Markdown-like formatting: ```code blocks```, `code`, **bold**, *italic* / _italic_, ~~strike~~,
+// clickable links and @mentions (yours highlighted). Everything is escaped first.
+const URL_PATTERN = /https?:\/\/[^\s<>"']+[^\s<>"'.,:;!?)\]]/g;
+function formatInline(raw) {
+  let out = ''; let at = 0;
+  for (const match of raw.matchAll(URL_PATTERN)) {
+    out += formatPlain(raw.slice(at, match.index));
+    out += `<a href="${esc(match[0])}" target="_blank" rel="noopener noreferrer">${esc(match[0])}</a>`;
+    at = match.index + match[0].length;
+  }
+  return out + formatPlain(raw.slice(at));
+}
+function formatPlain(raw) {
+  const me_ = String(me?.username || '').toLowerCase();
+  return esc(raw)
+    .replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<b>$1</b>')
+    .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<s>$1</s>')
+    .replace(/(^|[\s(])\*(?=\S)([^*\n]*?\S)\*(?=$|[\s).,!?:;])/g, '$1<i>$2</i>')
+    .replace(/(^|[\s(])_(?=\S)([^_\n]*?\S)_(?=$|[\s).,!?:;])/g, '$1<i>$2</i>')
+    .replace(/(^|[\s(])@([\w.-]{2,32})/g, (all, before, name) => `${before}<span class="mention${name.toLowerCase() === me_ ? ' me' : ''}" data-mention="${name}">@${name}</span>`);
+}
+function formatText(raw) {
+  return String(raw).split(/(```[\s\S]*?```)/g).map(part => {
+    if (part.startsWith('```') && part.endsWith('```') && part.length >= 6) return `<pre class="code-block"><code>${esc(part.slice(3, -3).replace(/^\w*\n/, ''))}</code></pre>`;
+    return part.split(/(`[^`\n]+`)/g).map(piece => piece.length > 2 && piece.startsWith('`') && piece.endsWith('`') ? `<code>${esc(piece.slice(1, -1))}</code>` : formatInline(piece)).join('');
+  }).join('');
+}
+// Does a message mention me (@username)?
+const mentionsMe = content => Boolean(me?.username) && new RegExp(`(^|[\\s(])@${String(me.username).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.-])`, 'i').test(String(content || ''));
 function messageKey(message) { return `${message.id ?? ''}:${message.created_at ?? ''}:${message.content ?? ''}`; }
 // "Today", "Yesterday" or the date, shown between messages of different days.
 function dayLabel(date) {
@@ -527,7 +594,7 @@ function hideNewMessages() { newMessagesCount = 0; const button = $('#new-messag
 function renderConversationHeader() {
   if (!current) return;
   const { kind, data } = current;
-  const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
+  const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const seen = kind === 'dm' && !userOnline(data) ? lastSeenText(data.id) : ''; const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : seen || `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
   const profileId = kind === 'dm' ? ` data-profile-id="${data.id}"` : '';
   $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
 }
@@ -620,7 +687,8 @@ function socketMessage(payload) {
   // A muted chat still counts unread messages, but never notifies or plays a sound.
   if (!mine && !seen) {
     unread.set(key, (unread.get(key) || 0) + 1); if (message.id !== undefined) latestIncoming.set(key, message.id); renderList(); updateUnread();
-    if (!isMuted(key) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
+    // A mention of you notifies even in a muted chat (Do not disturb still stays quiet).
+    if ((!isMuted(key) || mentionsMe(message.content)) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
   }
   if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playSound('notify'); return; }
   const messageId = messageKey(message);
@@ -1393,6 +1461,8 @@ document.addEventListener('change', event => {
 renderDnsControls();
 $('#auth-form').addEventListener('submit', async event => { event.preventDefault(); if (displaySettings.loginUi === 'classic' && !applyServerUrl($('#classic-server-url').value)) return; const username = $('#auth-username').value.trim(); const password = $('#auth-password').value; $('#auth-error').textContent = ''; showWelcome(); try { const body = registering ? { username, password, display_name: $('#auth-display').value.trim() || username } : { username, password }; const result = await api(registering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(body) }); token = result.access_token; localStorage.setItem('nk_token', token); rememberSession(result.user); setLoggedIn(result.user, true); await refresh(); } catch (error) { $('#welcome-screen').hidden = true; showSystemDialog(error.message, 'critical', t('loginError')); } });
 $('#chat-list').addEventListener('click', event => {
+  const archiveRow = event.target.closest('[data-archive]');
+  if (archiveRow) { showArchive = archiveRow.dataset.archive === 'open'; renderList(); return; }
   const button = event.target.closest('[data-kind]');
   if (!button) return;
   if (button.dataset.kind === 'dm' && event.target.closest('.avatar')) return showUserProfile(users.find(user => user.id === Number(button.dataset.id)));
