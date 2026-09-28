@@ -439,7 +439,8 @@ final class ThemeManager {
         var themeId: Any = NSNull()
         if let ref = includes["theme"], !ref.isEmpty {
             let existing = try listThemes().first(where: { $0["catalogId"] as? String == ref })
-            themeId = existing?["id"] as? String ?? (try installCatalogTheme(id: ref))["id"] ?? NSNull()
+            if let existingId = existing?["id"] as? String { themeId = existingId }
+            else { let installed = try installCatalogTheme(id: ref); themeId = installed["id"] ?? NSNull() }
         }
         var parts: [String] = []
         for part in ["cursors", "sounds", "icons"] {
