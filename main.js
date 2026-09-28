@@ -602,7 +602,7 @@ async function packContents(folder, files) {
   for (const [name, url] of Object.entries(files)) { const match = name.match(/^sounds\/([\w-]+)\.(wav|mp3|ogg)$/i); if (match) sounds[match[1].toLowerCase()] = url; }
   const readJson = async file => { try { return JSON.parse(await fs.readFile(path.join(folder, file), 'utf8')); } catch { return null; } };
   const cursors = {};
-  for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json') || {})) { const file = typeof value === 'string' ? value : value?.file; const url = files[`cursors/${file}`]; if (url) cursors[kind] = { url, x: Number(value?.x) || 0, y: Number(value?.y) || 0 }; }
+  for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json') || {})) { const file = typeof value === 'string' ? value : value?.file; const url = files[`cursors/${file}`]; if (url) cursors[kind] = { url, x: value?.x, y: value?.y }; }
   const icons = {};
   for (const [name, file] of Object.entries(await readJson('icons/icons.json') || {})) { const url = files[`icons/${file}`]; if (url) icons[name] = url; }
   return { sounds, cursors, icons };

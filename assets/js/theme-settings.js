@@ -75,16 +75,12 @@ async function refreshPacks() {
   fill($('#cursor-scheme'), '<option value="xp">Windows XP (default)</option><option value="system">System</option>', 'cursors', 'nk_cursor_scheme', 'xp');
   fill($('#icon-scheme'), '<option value="default">Nekochat Reloaded (default)</option>', 'icons', 'nk_icon_scheme', 'default');
 }
-// Built-in Windows XP cursors (assets/cursors/cursors.json) when the app ships them.
-async function builtInCursors() {
-  try { const map = await (await fetch('assets/cursors/cursors.json')).json(); return Object.fromEntries(Object.entries(map).map(([kind, value]) => [kind, { url: new URL(`assets/cursors/${typeof value === 'string' ? value : value.file}`, document.baseURI).href, x: Number(value?.x) || 0, y: Number(value?.y) || 0 }])); } catch { return {}; }
-}
 async function applyPackChoices() {
   const packFor = value => value.startsWith('pack:') ? packs.find(pack => pack.id === value.slice(5)) : null;
   const sound = $('#sound-scheme').value, cursor = $('#cursor-scheme').value, icon = $('#icon-scheme').value;
   localStorage.setItem('nk_sound_pack', JSON.stringify(packFor(sound)?.sounds || {}));
   localStorage.setItem('nk_cursor_scheme', cursor);
-  localStorage.setItem('nk_cursor_pack', JSON.stringify(cursor === 'system' ? {} : cursor === 'xp' ? await builtInCursors() : packFor(cursor)?.cursors || {}));
+  localStorage.setItem('nk_cursor_pack', JSON.stringify(cursor.startsWith('pack:') ? packFor(cursor)?.cursors || {} : {}));
   localStorage.setItem('nk_icon_scheme', icon);
   localStorage.setItem('nk_icon_pack', JSON.stringify(packFor(icon)?.icons || {}));
   window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();

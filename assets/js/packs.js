@@ -26,10 +26,15 @@
     notifications: ['#mute-chat svg', 'display: none;', '#mute-chat', 'background: {url} center / 20px 20px no-repeat !important;'],
   };
   function style(id) { let node = document.getElementById(id); if (!node) { node = document.createElement('style'); node.id = id; (document.head || document.documentElement).append(node); } return node; }
+  // Standard Windows XP cursors (assets/cursors) unless another scheme is chosen.
+  const XP_CURSORS = {"default": "default_arrow.cur", "pointer": "default_link.cur", "text": "default_ibeam.cur", "wait": "default_busy.cur", "progress": "default_wait.cur", "not-allowed": "default_no.cur", "help": "default_helpsel.cur", "move": "default_move.cur", "ew-resize": "default_size3.cur", "ns-resize": "default_size4.cur", "nwse-resize": "default_size2.cur", "nesw-resize": "default_size1.cur"};
   function applyCursors() {
-    const pack = read('nk_cursor_pack') || {};
+    let scheme = 'xp'; try { scheme = localStorage.getItem('nk_cursor_scheme') || 'xp'; } catch {}
+    let pack = scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, file]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href }])) : read('nk_cursor_pack') || {};
+    if (scheme === 'system') pack = {};
     style('nk-pack-cursors').textContent = Object.entries(CURSORS).filter(([kind]) => pack[kind]?.url)
-      .map(([kind, selector]) => `${selector} { cursor: ${quote(pack[kind].url)} ${Number(pack[kind].x) || 0} ${Number(pack[kind].y) || 0}, ${kind === 'not-allowed' ? 'not-allowed' : kind} !important; }`).join('\n');
+      // .cur files carry their own hot spot; x/y only when the pack gives them (PNG cursors).
+      .map(([kind, selector]) => { const { x, y } = pack[kind]; const spot = Number.isFinite(Number(x)) && Number.isFinite(Number(y)) && x !== null && y !== null && x !== undefined ? ` ${Number(x)} ${Number(y)}` : ''; return `${selector} { cursor: ${quote(pack[kind].url)}${spot}, ${kind} !important; }`; }).join('\n');
   }
   function applyIcons() {
     const pack = read('nk_icon_pack') || {};
@@ -39,7 +44,7 @@
   }
   const apply = () => { applyCursors(); applyIcons(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true }); else apply();
-  window.addEventListener('storage', event => { if (event.key === 'nk_cursor_pack') applyCursors(); if (event.key === 'nk_icon_pack') applyIcons(); });
+  window.addEventListener('storage', event => { if (event.key === 'nk_cursor_pack' || event.key === 'nk_cursor_scheme') applyCursors(); if (event.key === 'nk_icon_pack') applyIcons(); });
   // The file a sound plays from: the chosen sound pack, or the built-in Windows XP sounds.
   window.nkSoundUrl = (name, file) => { const pack = read('nk_sound_pack'); return pack?.[name] || `assets/sounds/${file || `${name}.wav`}`; };
   window.nkPacks = { applyCursors, applyIcons, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
