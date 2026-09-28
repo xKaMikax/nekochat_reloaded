@@ -283,7 +283,12 @@
     originalHeader();
     const actions = document.querySelector('#conversation-header .header-actions'); if (!actions || !current) return;
     const name = current.kind === 'room' ? `# ${current.data.name ?? ''}` : displayName(current.data);
-    actions.insertAdjacentHTML('afterbegin', `<label class="header-search" id="header-search" title="Ctrl+F"><input type="search" placeholder="${esc(t('searchIn', { name }))}" aria-label="${esc(t('searchChat'))}"><span class="search-count"></span>${ICONS.search}</label>${companion.token ? `<button class="header-icon-button" id="pins-button" type="button" aria-label="${esc(t('pinnedMessages'))}">${ICONS.pin}</button>` : ''}`);
+    // Like Discord: flat icons in a row — call, pinned messages, members (rooms only) — and the
+    // search field at the end.
+    actions.insertAdjacentHTML('beforeend', `${companion.token ? `<button class="header-icon-button" id="pins-button" type="button" aria-label="${esc(t('pinnedMessages'))}">${ICONS.pin}</button>` : ''}<label class="header-search" id="header-search" title="Ctrl+F"><input type="search" placeholder="${esc(t('searchIn', { name }))}" aria-label="${esc(t('searchChat'))}"><span class="search-count"></span>${ICONS.search}</label>`);
+    const call = $('#start-call'), members = $('#room-members'), pins = $('#pins-button'), search = $('#header-search');
+    [call, members].forEach(button => { if (button) { button.classList.remove('call-button', 'member-button'); button.classList.add('header-icon-button'); } });
+    [call, pins, members, search].filter(Boolean).forEach(node => actions.append(node));
     const input = $('#header-search input'); input.value = query;
     input.oninput = () => runSearch(input.value);
     input.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); stepSearch(event.shiftKey ? 1 : -1); } if (event.key === 'Escape') { event.stopPropagation(); closeSearch(); input.blur(); } };
