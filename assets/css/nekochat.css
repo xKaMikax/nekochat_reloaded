@@ -257,7 +257,6 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .pins-empty-icon { width: 46px; height: 46px; fill: #9aa9bd; }
 .pins-empty p { margin: 4px 0 0; }.pins-empty small { color: #2b8a3e; }
 @media (max-width: 700px) { .header-search { width: 120px; } .header-search.active, .header-search:focus-within { width: 160px; } }
-.header-actions { display: flex; align-items: center; gap: 2px; }
+.header-actions { display: flex; align-items: center; gap: 7px; }
 .header-actions .header-search { margin: 0 0 0 8px; }
-.header-icon-button#start-call svg, .header-icon-button#room-members svg { width: 20px; height: 20px; fill: #fff; stroke: none; }
-
+.pins-button svg { width: 17px; height: 17px; fill: #fff; }.pins-button.has-pins svg { fill: #ffd84d; }
