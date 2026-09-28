@@ -27,6 +27,7 @@ class WebContent(private val context: Context, private val themes: ThemeManager)
             when {
                 clean == "android-screen/frame.jpg" -> screenFrame()
                 clean.startsWith("user-themes/") -> fileResponse(File(themes.userThemesRoot, clean.removePrefix("user-themes/")), clean)
+                clean.startsWith("user-packs/") -> fileResponse(File(themes.userPacksRoot, clean.removePrefix("user-packs/")), clean)
                 clean.startsWith("runtime-themes/") -> fileResponse(File(themes.runtimeThemesRoot, clean.removePrefix("runtime-themes/")), clean)
                 else -> assetResponse(clean)
             }

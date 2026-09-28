@@ -1,7 +1,7 @@
 function playMinimizeSound(reverse = false) {
   try { if (localStorage.getItem('nk_sound_scheme') === 'none' || Number(localStorage.getItem('nk_sound_volume') ?? 72) <= 0) return; } catch {}
-  if (!reverse) { const audio = new Audio('assets/sounds/minimize.wav'); audio.play().catch(() => {}); return; }
-  fetch('assets/sounds/minimize.wav').then(response => response.arrayBuffer()).then(async buffer => {
+  if (!reverse) { const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('minimize') : 'assets/sounds/minimize.wav'); audio.play().catch(() => {}); return; }
+  fetch(window.nkSoundUrl ? window.nkSoundUrl('minimize') : 'assets/sounds/minimize.wav').then(response => response.arrayBuffer()).then(async buffer => {
     const context = new AudioContext(); const decoded = await context.decodeAudioData(buffer);
     for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) decoded.getChannelData(channel).reverse();
     const source = context.createBufferSource(); source.buffer = decoded; source.connect(context.destination); source.onended = () => context.close(); source.start();

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
   <title>Nekochat Reloaded</title><link rel="icon" href="assets/images/nekochat_icon.png"><link id="nekochat-style" rel="stylesheet" href="assets/css/nekochat.css"><link id="nekochat-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/theme-controls.css">
-<script src="assets/js/android-bridge.js"></script><link rel="stylesheet" href="assets/css/android.css"></head>
+<script src="assets/js/android-bridge.js"></script><link rel="stylesheet" href="assets/css/android.css">
+</head>
 <body>
   <section class="login-screen" id="auth-screen">
     <div class="xp-logon-main">
@@ -30,6 +31,7 @@
   <dialog id="theme-dialog" class="xp-dialog theme-dialog"><button class="dialog-close" data-close="theme-dialog" aria-label="Закрыть" data-i18n-label="close">×</button><h2 data-i18n="xpAppearance">Оформление Windows XP</h2><p><span data-i18n="themeDialogHint">Выберите установленную тему рамки или добавьте файл</span> <code>.msstyles</code>/<code>.theme</code>.</p><label><span data-i18n="installedThemes">Установленные темы</span><select id="theme-list"></select></label><p class="theme-error" id="theme-error" role="alert"></p><div class="theme-actions"><button class="xp-button" id="theme-apply" data-i18n="apply">Применить</button><button class="xp-button" id="theme-import" data-i18n="addTheme">Добавить тему…</button></div></dialog>
   <dialog id="room-members-dialog" class="xp-dialog room-members-dialog"><button class="dialog-close" data-close="room-members-dialog" aria-label="Закрыть" data-i18n-label="close">×</button><div class="dialog-title" id="room-members-title" data-i18n="roomMembers">Участники комнаты</div><div class="room-members-list" id="room-members-list"></div><form class="room-members-add" id="room-members-add" hidden><input id="room-members-username" autocomplete="off" placeholder="Имя пользователя" data-i18n-label="addMemberPlaceholder"><button class="xp-button" type="submit" data-i18n="addMember">Добавить</button><p class="room-members-error" id="room-members-error" role="alert"></p></form><div class="room-members-actions"><button class="xp-button" type="button" data-close="room-members-dialog" data-i18n="closeButton">Закрыть</button></div></dialog>
   <dialog id="system-dialog" class="xp-dialog system-dialog"><button class="dialog-close" id="system-close" type="button" aria-label="Закрыть" data-i18n-label="close">×</button><div class="dialog-title" id="system-title">Nekochat Reloaded</div><div class="system-dialog-content"><i class="system-dialog-icon" id="system-icon" aria-hidden="true"></i><p id="system-message"></p></div><div class="system-dialog-actions"><button class="xp-button" id="system-ok" type="button" data-i18n="ok">ОК</button></div></dialog>
+  <script src="assets/js/packs.js"></script>
   <script src="assets/js/nats-client.js"></script><script src="assets/js/version.js"></script><script src="assets/js/nekochat.js"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@ import android.util.Base64
 class ThemeManager(private val context: Context) {
     val userThemesRoot = File(context.filesDir, "themes")
     val runtimeThemesRoot = File(context.filesDir, "runtime-themes")
+    val userPacksRoot = File(context.filesDir, "packs")
     private val themeStateFile = File(context.filesDir, "theme-selection.json")
     private val displayStateFile = File(context.filesDir, "display-settings.json")
 
@@ -143,9 +144,12 @@ class ThemeManager(private val context: Context) {
     /** Installed themes as backup entries ("themes/<id>/…", base64), like main.js exportUserThemes(). */
     fun exportThemeFiles(): JSONArray {
         val files = JSONArray()
-        val root = userThemesRoot.canonicalFile
-        root.walkTopDown().filter { it.isFile && !it.relativeTo(root).path.startsWith(".") }.forEach { file ->
-            files.put(JSONObject().put("path", "themes/" + file.relativeTo(root).invariantSeparatorsPath).put("data", Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)))
+        // Installed packs (cursors, sounds, icons) travel with the themes, under packs/.
+        for ((prefix, folder) in listOf("themes" to userThemesRoot, "packs" to userPacksRoot)) {
+            val root = folder.canonicalFile
+            root.walkTopDown().filter { it.isFile && !it.relativeTo(root).path.startsWith(".") }.forEach { file ->
+                files.put(JSONObject().put("path", "$prefix/" + file.relativeTo(root).invariantSeparatorsPath).put("data", Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)))
+            }
         }
         return files
     }
@@ -159,6 +163,10 @@ class ThemeManager(private val context: Context) {
             if (themesFolder.isDirectory) {
                 userThemesRoot.mkdirs()
                 for (theme in themesFolder.listFiles().orEmpty().filter { it.isDirectory && it.name !in RESERVED_IDS }) theme.copyRecursively(File(userThemesRoot, theme.name), overwrite = true)
+            }
+            File(temporary, "packs").takeIf { it.isDirectory }?.let { packs ->
+                userPacksRoot.mkdirs()
+                for (pack in packs.listFiles().orEmpty().filter { it.isDirectory }) pack.copyRecursively(File(userPacksRoot, pack.name), overwrite = true)
             }
         } finally {
             temporary.deleteRecursively()
@@ -298,6 +306,97 @@ class ThemeManager(private val context: Context) {
             if (status in 200..299) description = body.toString(Charsets.UTF_8)
         } catch (_: Exception) {}
         return JSONObject(item.toString()).put("description", description)
+    }
+
+    // ---- Catalog packs: cursors, sounds, icons and combos (like main.js) -----------------------
+
+    fun fetchCatalogPacks(): JSONArray {
+        val (status, body) = download("$CATALOG_ROOT/packs.json")
+        if (status == 404) return JSONArray()
+        if (status !in 200..299) throw IllegalStateException("Unable to load the catalog ($status).")
+        val entries = JSONObject(body.toString(Charsets.UTF_8)).optJSONArray("packs") ?: JSONArray()
+        val result = JSONArray()
+        for (index in 0 until entries.length()) {
+            val entry = entries.optJSONObject(index) ?: continue
+            val details = entry.optJSONObject("Details") ?: entry.optJSONObject("details") ?: JSONObject()
+            val id = entry.optString("pack_id", entry.optString("id", "pack-${index + 1}"))
+            val directory = entry.optString("directory", id).trim('/')
+            val rawType = entry.optString("type", entry.optString("Type")).lowercase()
+            val type = if (rawType in listOf("cursors", "sounds", "icons", "combo")) rawType else "combo"
+            val contains = entry.optJSONArray("Contains") ?: entry.optJSONArray("contains") ?: JSONArray().put(type)
+            result.put(JSONObject().put("id", id).put("type", type).put("kind", "pack").put("directory", directory)
+                .put("displayName", entry.optString("DisplayName", entry.optString("displayName", id))).put("contains", contains)
+                .put("author", details.optString("Author", entry.optString("Author", "Unknown"))).put("added", details.optString("Added", entry.optString("Added", "")))
+                .put("version", details.optString("Version", "")).put("previewUrl", entry.optString("Preview", "$CATALOG_ROOT/$directory/Preview.png"))
+                .put("zipUrl", entry.optString("PackZIP", "$CATALOG_ROOT/$directory/Pack.ZIP")))
+        }
+        return result
+    }
+
+    fun installCatalogPack(id: String): JSONObject {
+        val catalog = fetchCatalogPacks()
+        val item = (0 until catalog.length()).map { catalog.getJSONObject(it) }.firstOrNull { it.getString("id") == id } ?: throw IllegalArgumentException("The pack no longer exists in the catalog.")
+        val (status, zip) = download(item.getString("zipUrl"))
+        if (status !in 200..299) throw IllegalStateException("Unable to download Pack.ZIP ($status).")
+        val safeId = id.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val temporary = File(context.cacheDir, "pack-${System.nanoTime()}")
+        try {
+            extractZip(zip, temporary)
+            val info = try { JSONObject(File(temporary, "pack.json").readText()) } catch (_: Exception) { JSONObject() }
+            val contains = listOf("sounds", "cursors", "icons", "theme").filter { File(temporary, it).isDirectory }
+            // The theme of a combo goes to the installed themes, like a catalog theme.
+            var themeId: String? = null
+            if ("theme" in contains) {
+                val source = findThemeSource(File(temporary, "theme"))
+                if (source != null) {
+                    val themeDestination = File(userThemesRoot, "$safeId-theme").apply { deleteRecursively(); mkdirs() }
+                    val cssRoot = source.parentFile!!.let { folder -> if (folder.parentFile?.name == "schemes") folder.parentFile!!.parentFile!! else folder }
+                    if (source.name.equals("theme.css", true)) cssRoot.copyRecursively(themeDestination, overwrite = true) else copyThemeBundle(source, themeDestination)
+                    File(themeDestination, "catalog-theme.json").writeText(JSONObject().put("id", "pack:$id").toString())
+                    themeId = themeDestination.name
+                }
+            }
+            val destination = File(userPacksRoot, safeId).apply { deleteRecursively(); mkdirs() }
+            for (part in contains.filter { it != "theme" }) File(temporary, part).copyRecursively(File(destination, part), overwrite = true)
+            File(destination, "pack.json").writeText(JSONObject().put("catalogId", id).put("type", item.getString("type")).put("name", info.optString("name", item.getString("displayName")))
+                .put("author", info.optString("author", item.getString("author"))).put("contains", JSONArray(contains)).put("theme", themeId ?: JSONObject.NULL).toString())
+            return JSONObject().put("id", safeId).put("packs", listPacks()).put("themes", listThemes())
+        } finally {
+            temporary.deleteRecursively()
+        }
+    }
+
+    /** Installed packs with every file as a URL, and their sounds, cursors and icons resolved. */
+    fun listPacks(): JSONArray {
+        val result = JSONArray()
+        for (folder in userPacksRoot.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") }.sortedBy { it.name }) {
+            val info = try { JSONObject(File(folder, "pack.json").readText()) } catch (_: Exception) { continue }
+            val base = "${WebContent.ORIGIN}/user-packs/${enc(folder.name)}"
+            val files = JSONObject()
+            folder.walkTopDown().filter { it.isFile && it.name != "pack.json" }.forEach { file ->
+                val relative = file.relativeTo(folder).invariantSeparatorsPath
+                files.put(relative, "$base/${relative.split('/').joinToString("/") { enc(it) }}")
+            }
+            val sounds = JSONObject()
+            files.keys().forEach { name -> Regex("^sounds/([\\w-]+)\\.(wav|mp3|ogg)$", RegexOption.IGNORE_CASE).find(name)?.let { sounds.put(it.groupValues[1].lowercase(), files.getString(name)) } }
+            val cursors = JSONObject()
+            try { val map = JSONObject(File(folder, "cursors/cursors.json").readText()); map.keys().forEach { kind -> val value = map.get(kind); val file = if (value is JSONObject) value.optString("file") else value.toString(); files.optString("cursors/$file").takeIf { it.isNotEmpty() }?.let { url -> cursors.put(kind, JSONObject().put("url", url).put("x", (value as? JSONObject)?.optInt("x") ?: 0).put("y", (value as? JSONObject)?.optInt("y") ?: 0)) } } } catch (_: Exception) {}
+            val icons = JSONObject()
+            try { val map = JSONObject(File(folder, "icons/icons.json").readText()); map.keys().forEach { name -> files.optString("icons/${map.optString(name)}").takeIf { it.isNotEmpty() }?.let { icons.put(name, it) } } } catch (_: Exception) {}
+            result.put(JSONObject().put("id", folder.name).put("catalogId", info.opt("catalogId") ?: JSONObject.NULL).put("type", info.optString("type", "combo"))
+                .put("name", info.optString("name", folder.name)).put("author", info.optString("author")).put("contains", info.optJSONArray("contains") ?: JSONArray())
+                .put("theme", info.opt("theme") ?: JSONObject.NULL).put("files", files).put("sounds", sounds).put("cursors", cursors).put("icons", icons))
+        }
+        return result
+    }
+
+    fun removePack(id: String): JSONObject {
+        val folder = File(userPacksRoot, id).canonicalFile
+        if (folder.parentFile != userPacksRoot.canonicalFile) throw IllegalArgumentException("Invalid pack.")
+        val info = try { JSONObject(File(folder, "pack.json").readText()) } catch (_: Exception) { JSONObject() }
+        info.optString("theme").takeIf { it.isNotEmpty() && it != "null" }?.let { try { removeTheme(it) } catch (_: Exception) {} }
+        folder.deleteRecursively()
+        return JSONObject().put("packs", listPacks()).put("themes", listThemes())
     }
 
     fun installCatalogTheme(id: String): JSONObject {

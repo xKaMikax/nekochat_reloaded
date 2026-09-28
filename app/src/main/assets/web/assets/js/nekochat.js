@@ -37,7 +37,7 @@ if (detachedChat) document.documentElement.classList.add('detached-chat');
 const sounds = Object.freeze({ navigation: 'navigation.wav', notify: 'notify.wav', logon: 'logon.wav', logoff: 'logoff.wav', ringin: 'ringin.wav', ringout: 'ringout.wav', exclamation: 'exclamation.wav', default: 'default.wav', error: 'error.wav', critical: 'critical-stop.wav' });
 // Sound scheme and volume from Display Properties (localStorage, shared by every window).
 function soundSettings() { let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} return { scheme, volume: Math.min(100, Math.max(0, Number.isFinite(volume) ? volume : 72)) }; }
-function playSound(name) { const audio = new Audio(`assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
+function playSound(name) { const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl(name, sounds[name]) : `assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
 function showSystemDialog(message, type = 'error', title = 'Nekochat Reloaded', options = {}) {
   if (desktopControls?.showSystemDialog) { desktopControls.showSystemDialog({ message: String(message || t('unknownError')), type, title, ...options }); return; }
   const dialog = $('#system-dialog'); if (!dialog) return;
@@ -1569,6 +1569,23 @@ function refreshStartPanelIcons() {
   [0, 150, 500, 1500].forEach(delay => setTimeout(() => document.documentElement.classList.toggle('xp-startpanel', getComputedStyle(document.documentElement).getPropertyValue('--xp-turnoff-icon').trim() !== ''), delay));
 }
 refreshStartPanelIcons();
+
+// Chosen packs are stored with their file URLs; the web version's blob URLs live only as long as
+// the page, so resolve them again at start.
+(async () => {
+  if (!desktopControls?.listPacks) return;
+  const chosen = key => { try { const value = localStorage.getItem(key) || ''; return value.startsWith('pack:') ? value.slice(5) : null; } catch { return null; } };
+  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme') };
+  if (!ids.sound && !ids.cursor && !ids.icon) return;
+  let packs = []; try { packs = await desktopControls.listPacks(); } catch { return; }
+  const find = id => packs.find(pack => pack.id === id);
+  try {
+    if (ids.sound) localStorage.setItem('nk_sound_pack', JSON.stringify(find(ids.sound)?.sounds || {}));
+    if (ids.cursor) localStorage.setItem('nk_cursor_pack', JSON.stringify(find(ids.cursor)?.cursors || {}));
+    if (ids.icon) localStorage.setItem('nk_icon_pack', JSON.stringify(find(ids.icon)?.icons || {}));
+  } catch {}
+  window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();
+})();
 
 // ---- Updates -------------------------------------------------------------------------------
 // Apps look for a newer GitHub release; the web version compares its version.js with the one
