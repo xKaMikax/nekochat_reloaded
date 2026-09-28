@@ -129,15 +129,30 @@ async function saveDisplaySettings(changes) {
   return activeDisplay;
 }
 
-function openThemeSettings(owner) {
-  if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.focus(); return; }
+// tab: the page of Display Properties to show (the Control Panel opens them one by one).
+function openThemeSettings(owner, tab) {
+  const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
+  if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.focus(); if (page) settingsWindow.webContents.send('settings:show-tab', page); return; }
   settingsWindow = new BrowserWindow({
     title: 'Display Properties', width: 520, height: 560, minWidth: 460, minHeight: 400, resizable: true,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
   settingsWindow.on('closed', () => { settingsWindow = null; });
-  settingsWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'));
+  settingsWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'), page ? { query: { tab: page } } : undefined);
+}
+let controlPanelWindow;
+// Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
+const windowOwner = event => { const win = BrowserWindow.fromWebContents(event.sender); return win && win === controlPanelWindow ? win.getParentWindow() || undefined : win; };
+function openControlPanel(owner) {
+  if (controlPanelWindow && !controlPanelWindow.isDestroyed()) { controlPanelWindow.focus(); return; }
+  controlPanelWindow = new BrowserWindow({
+    title: 'Control Panel', width: 680, height: 480, minWidth: 420, minHeight: 320, resizable: true,
+    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  controlPanelWindow.on('closed', () => { controlPanelWindow = null; });
+  controlPanelWindow.loadFile(path.join(__dirname, 'assets', 'html', 'control_panel.html'));
 }
 
 // Server admin panel (/admin/*). Its session is an HttpOnly SameSite=Lax cookie, which a page
@@ -183,7 +198,7 @@ function openThemeEditor(owner) {
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
-    title: 'Nekochat Reloaded Theme Browser', width: 720, height: 540, minWidth: 520, minHeight: 360,
+    title: 'Nekochat Reloaded Catalog', width: 720, height: 540, minWidth: 520, minHeight: 360,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -569,7 +584,8 @@ async function fetchCatalog() {
 // ---- Catalog packs: cursors, sounds, icons and combos (any of those plus a theme) -------------
 // packs.json lists them; each directory holds Pack.ZIP with pack.json and the folders sounds/,
 // cursors/ (cursors.json), icons/ (icons.json) and theme/.
-const PACK_TYPES = ['cursors', 'sounds', 'icons', 'combo'];
+const PACK_TYPES = ['cursors', 'sounds', 'icons', 'wallpapers', 'combo'];
+const packFileList = entry => (Array.isArray(entry.Files || entry.files) ? (entry.Files || entry.files) : []).map(String).filter(name => /^[^/\\]+$/.test(name) && name !== '.' && name !== '..');
 function packEntries(manifest) {
   const entries = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.packs) ? manifest.packs : [];
   return entries.map((entry, index) => {
@@ -580,12 +596,14 @@ function packEntries(manifest) {
     return {
       id, type, directory, kind: 'pack', displayName: entry.DisplayName || entry.displayName || id,
       // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
-      includes: type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? Object.fromEntries(Object.entries(entry.Includes || entry.includes).filter(([part, id]) => ['theme', 'cursors', 'sounds', 'icons'].includes(part) && id).map(([part, id]) => [part, String(id)])) : null,
+      includes: type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? Object.fromEntries(Object.entries(entry.Includes || entry.includes).filter(([part, id]) => ['theme', 'cursors', 'sounds', 'icons', 'wallpapers'].includes(part) && id).map(([part, id]) => [part, String(id)])) : null,
       contains: type === 'combo' && (entry.Includes || entry.includes) ? Object.keys(entry.Includes || entry.includes) : Array.isArray(entry.Contains || entry.contains) ? (entry.Contains || entry.contains).map(String) : [type],
       author: details.Author || details.author || entry.Author || entry.author || 'Unknown',
       added: String(details.Added || details.added || entry.Added || entry.added || ''),
       version: details.Version || details.version || entry.Version || entry.version || '',
-      previewUrl: entry.Preview || entry.preview || `${themeCatalogRoot}/${directory}/Preview.png`,
+      // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
+      files: packFileList(entry),
+      previewUrl: entry.Preview || entry.preview || (type === 'wallpapers' && packFileList(entry)[0] ? `${themeCatalogRoot}/${directory}/${encodeURIComponent(packFileList(entry)[0])}` : `${themeCatalogRoot}/${directory}/Preview.png`),
       descriptionUrl: entry.Description || entry.description || `${themeCatalogRoot}/${directory}/Description.md`,
       zipUrl: entry.PackZIP || entry.packZip || `${themeCatalogRoot}/${directory}/Pack.ZIP`,
     };
@@ -599,7 +617,8 @@ async function fetchCatalogPacks() {
 }
 const packFolder = id => { const folder = path.resolve(userPacksRoot, String(id)); if (!folder.startsWith(`${path.resolve(userPacksRoot)}${path.sep}`)) throw new Error('Invalid pack.'); return folder; };
 // sounds/<name>.wav|mp3|ogg → { name: url }; cursors/cursors.json → { kind: { url, x, y } };
-// icons/icons.json → { name: url }. Missing or broken parts are left out.
+// icons/icons.json → { name: url }; wallpapers/<name>.jpg|png → { name: url } (chat backgrounds).
+// Missing or broken parts are left out.
 async function packContents(folder, files) {
   const sounds = {};
   for (const [name, url] of Object.entries(files)) { const match = name.match(/^sounds\/([\w-]+)\.(wav|mp3|ogg)$/i); if (match) sounds[match[1].toLowerCase()] = url; }
@@ -608,7 +627,9 @@ async function packContents(folder, files) {
   for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json') || {})) { const file = typeof value === 'string' ? value : value?.file; const url = files[`cursors/${file}`]; if (url) cursors[kind] = { url, x: value?.x, y: value?.y }; }
   const icons = {};
   for (const [name, file] of Object.entries(await readJson('icons/icons.json') || {})) { const url = files[`icons/${file}`]; if (url) icons[name] = url; }
-  return { sounds, cursors, icons };
+  const wallpapers = {};
+  for (const [name, url] of Object.entries(files)) { const match = name.match(/^wallpapers\/([^/]+)\.(jpe?g|png|webp)$/i); if (match) wallpapers[match[1]] = url; }
+  return { sounds, cursors, icons, wallpapers };
 }
 async function listPacks() {
   const packs = [];
@@ -623,8 +644,8 @@ async function listPacks() {
     await walk(folder, '');
     // A combo's own folder has no files: it points at the packs it installed.
     const own = await packContents(folder, files);
-    const parts = Array.isArray(info.parts) ? await Promise.all(info.parts.map(async part => { try { const partFolder = packFolder(part); const partFiles = {}; const walkPart = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) await walkPart(path.join(dir, item.name), name); else partFiles[name] = pathToFileURL(path.join(dir, item.name)).href; } }; await walkPart(partFolder, ''); return packContents(partFolder, partFiles); } catch { return { sounds: {}, cursors: {}, icons: {} }; } })) : [];
-    const merged = parts.reduce((all, part) => ({ sounds: { ...all.sounds, ...part.sounds }, cursors: { ...all.cursors, ...part.cursors }, icons: { ...all.icons, ...part.icons } }), own);
+    const parts = Array.isArray(info.parts) ? await Promise.all(info.parts.map(async part => { try { const partFolder = packFolder(part); const partFiles = {}; const walkPart = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) await walkPart(path.join(dir, item.name), name); else partFiles[name] = pathToFileURL(path.join(dir, item.name)).href; } }; await walkPart(partFolder, ''); return packContents(partFolder, partFiles); } catch { return { sounds: {}, cursors: {}, icons: {}, wallpapers: {} }; } })) : [];
+    const merged = parts.reduce((all, part) => ({ sounds: { ...all.sounds, ...part.sounds }, cursors: { ...all.cursors, ...part.cursors }, icons: { ...all.icons, ...part.icons }, wallpapers: { ...all.wallpapers, ...part.wallpapers } }), own);
     packs.push({ id: entry.name, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || entry.name, author: info.author || '', contains: info.contains || [], theme: info.theme || null, parts: info.parts || [], files, ...merged });
   }
   return packs;
@@ -634,16 +655,26 @@ async function installCatalogPack(id) {
   const item = catalog.find(pack => pack.id === id);
   if (!item) throw new Error('The pack no longer exists in the catalog.');
   if (item.includes) return installCombo(item, catalog);
-  const response = await fetch(item.zipUrl);
-  if (!response.ok) throw new Error(`Unable to download Pack.ZIP (${response.status}).`);
   const temporary = await fs.mkdtemp(path.join(app.getPath('temp'), 'nekochat-pack-'));
   const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
   const destination = packFolder(safeId);
   try {
-    await extractZip(Buffer.from(await response.arrayBuffer()), temporary);
+    if (item.files.length) {
+      // No Pack.ZIP: download the listed files into the folder of the pack's type.
+      await fs.mkdir(path.join(temporary, item.type), { recursive: true });
+      for (const name of item.files) {
+        const response = await fetch(`${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`);
+        if (!response.ok) throw new Error(`Unable to download ${name} (${response.status}).`);
+        await fs.writeFile(path.join(temporary, item.type, name), Buffer.from(await response.arrayBuffer()));
+      }
+    } else {
+      const response = await fetch(item.zipUrl);
+      if (!response.ok) throw new Error(`Unable to download Pack.ZIP (${response.status}).`);
+      await extractZip(Buffer.from(await response.arrayBuffer()), temporary);
+    }
     let info = {}; try { info = JSON.parse(await fs.readFile(path.join(temporary, 'pack.json'), 'utf8')); } catch {}
     const contains = [];
-    for (const part of ['sounds', 'cursors', 'icons', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
+    for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
     // The theme of a combo goes to the installed themes, like a catalog theme.
     let themeId = null;
     if (contains.includes('theme')) {
@@ -673,7 +704,7 @@ async function installCombo(item, catalog) {
     installed.theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id;
   }
   const packs = await listPacks();
-  for (const part of ['cursors', 'sounds', 'icons']) {
+  for (const part of ['cursors', 'sounds', 'icons', 'wallpapers']) {
     const ref = item.includes[part]; if (!ref) continue;
     if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new Error(`The combo lists a missing ${part} pack: ${ref}`);
     const existing = packs.find(pack => pack.catalogId === ref);
@@ -987,9 +1018,10 @@ app.whenReady().then(async () => {
   });
   ipcMain.on('window:close', e => BrowserWindow.fromWebContents(e.sender).close());
   ipcMain.on('notification:message', (_, data) => { showMessageNotification(data); });
-  ipcMain.on('theme:open-settings', e => openThemeSettings(BrowserWindow.fromWebContents(e.sender)));
-  ipcMain.on('theme:open-browser', e => openThemeBrowser(BrowserWindow.fromWebContents(e.sender)));
-  ipcMain.on('theme:open-editor', e => openThemeEditor(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.on('theme:open-settings', (e, tab) => openThemeSettings(windowOwner(e), tab));
+  ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
+  ipcMain.on('theme:open-editor', e => openThemeEditor(windowOwner(e)));
   ipcMain.handle('theme-editor:load', (_, id, scheme) => loadThemeForEditor(String(id || ''), scheme ? String(scheme) : undefined));
   ipcMain.handle('theme-editor:save', (_, theme) => saveEditedTheme(theme || {}));
   ipcMain.on('emoji:open-browser', e => openEmojiBrowser(BrowserWindow.fromWebContents(e.sender)));
@@ -1033,7 +1065,7 @@ app.whenReady().then(async () => {
   ipcMain.on('update:restart', () => { if (!updater) return; quitting = true; updater.quitAndInstall(false, true); });
   ipcMain.on('balloon:click', () => { hideBalloon(); showMainWindow(); });
   ipcMain.on('balloon:close', hideBalloon);
-  ipcMain.on('admin:open', (event, server) => openAdminPanel(BrowserWindow.fromWebContents(event.sender), server));
+  ipcMain.on('admin:open', (event, server) => openAdminPanel(windowOwner(event), server));
   ipcMain.handle('admin:request', (_, request) => adminRequest(request));
   ipcMain.on('unread:set', (_, count) => setUnreadCount(count));
   ipcMain.handle('display:current', () => activeDisplay);

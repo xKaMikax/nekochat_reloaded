@@ -4,7 +4,8 @@ contextBridge.exposeInMainWorld('windowControls', {
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
   setWindowMeta: (title, icon) => ipcRenderer.send('window:set-meta', { title, icon }),
-  openThemeSettings: () => ipcRenderer.send('theme:open-settings'),
+  openThemeSettings: tab => ipcRenderer.send('theme:open-settings', typeof tab === 'string' ? tab : undefined),
+  openControlPanel: () => ipcRenderer.send('control-panel:open'),
   openThemeBrowser: () => ipcRenderer.send('theme:open-browser'),
   openThemeEditor: () => ipcRenderer.send('theme:open-editor'),
   loadThemeForEditor: (id, scheme) => ipcRenderer.invoke('theme-editor:load', id, scheme),
@@ -56,6 +57,7 @@ contextBridge.exposeInMainWorld('windowControls', {
   // Only the desktop app can choose the DNS resolver; phone WebViews use the system one.
   dnsSupported: true,
   onThemeChanged: callback => ipcRenderer.on('theme:changed', (_, data) => callback(data)),
+  onSettingsTab: callback => ipcRenderer.on('settings:show-tab', (_, tab) => callback(tab)),
   onDisplayChanged: callback => ipcRenderer.on('display:changed', (_, data) => callback(data)),
   onProfileChanged: callback => ipcRenderer.on('profile:changed', (_, data) => callback(data)),
   onRoomCreated: callback => ipcRenderer.on('room:created', (_, data) => callback(data)),

@@ -295,7 +295,7 @@ def source_scheme(source: Path, prefixes: list[str]) -> str:
     return prefixes[0]
 
 
-def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colours: dict[str, str], asset: str) -> None:
+def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colours: dict[str, str], asset: str, msstyles: Path | None = None) -> None:
     output.mkdir(parents=True, exist_ok=True)
     caption = find(images, '_FRAMECAPTION_BMP', prefix)
     cap_height = caption.height // 2
@@ -388,9 +388,85 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
             css.write(':root { --xp-logoff-icon: url("%s/logoff-normal.png"); --xp-logoff-icon-hover: url("%s/logoff-hover.png"); --xp-turnoff-icon: url("%s/turnoff-normal.png"); --xp-turnoff-icon-hover: url("%s/turnoff-hover.png"); }\n' % ((asset,) * 4))
         if slider:
             css.write(':root { --xp-slider-thumb: url("%s/slider-thumb-normal.png"); --xp-slider-thumb-hover: url("%s/slider-thumb-hover.png"); --xp-slider-thumb-pressed: url("%s/slider-thumb-pressed.png"); --xp-slider-track: url("%s/slider-track.png"); }\n' % ((asset,) * 4))
+        if msstyles:
+            css.write(write_shell(output, msstyles, prefix, asset))
         css.write(':root { --xp-title-fill-inactive: url("%s/title-fill-inactive.png"); --xp-title-left-inactive: url("%s/title-left-inactive.png"); --xp-title-right-inactive: url("%s/title-right-inactive.png"); }\n' % ((asset,) * 3))
         css.write(':root { --xp-checkbox-unchecked: url("%s/checkbox-unchecked-normal.png"); --xp-checkbox-unchecked-hover: url("%s/checkbox-unchecked-hover.png"); --xp-checkbox-unchecked-pressed: url("%s/checkbox-unchecked-pressed.png"); --xp-checkbox-checked: url("%s/checkbox-checked-normal.png"); --xp-checkbox-checked-hover: url("%s/checkbox-checked-hover.png"); --xp-checkbox-checked-pressed: url("%s/checkbox-checked-pressed.png"); --xp-groupbox: url("%s/groupbox.png"); --xp-field-outline: url("%s/field-outline.png"); }\n' % (asset, asset, asset, asset, asset, asset, asset, asset))
         css.write(':root { --xp-scroll-up: url("%s/scroll-up-normal.png"); --xp-scroll-up-hover: url("%s/scroll-up-hover.png"); --xp-scroll-up-pressed: url("%s/scroll-up-pressed.png"); --xp-scroll-down: url("%s/scroll-down-normal.png"); --xp-scroll-down-hover: url("%s/scroll-down-hover.png"); --xp-scroll-down-pressed: url("%s/scroll-down-pressed.png"); --xp-scroll-left: url("%s/scroll-left-normal.png"); --xp-scroll-left-hover: url("%s/scroll-left-hover.png"); --xp-scroll-left-pressed: url("%s/scroll-left-pressed.png"); --xp-scroll-right: url("%s/scroll-right-normal.png"); --xp-scroll-right-hover: url("%s/scroll-right-hover.png"); --xp-scroll-right-pressed: url("%s/scroll-right-pressed.png"); --xp-scroll-shaft-vertical: url("%s/scroll-shaft-vertical.png"); --xp-scroll-shaft-horizontal: url("%s/scroll-shaft-horizontal.png"); --xp-scroll-thumb-vertical: url("%s/scroll-thumb-vertical-normal.png"); --xp-scroll-thumb-vertical-hover: url("%s/scroll-thumb-vertical-hover.png"); --xp-scroll-thumb-vertical-pressed: url("%s/scroll-thumb-vertical-pressed.png"); --xp-scroll-thumb-horizontal: url("%s/scroll-thumb-horizontal-normal.png"); --xp-scroll-thumb-horizontal-hover: url("%s/scroll-thumb-horizontal-hover.png"); --xp-scroll-thumb-horizontal-pressed: url("%s/scroll-thumb-horizontal-pressed.png"); }\n' % ((asset,) * 20))
+
+
+def shellstyle_path(msstyles: Path, prefix: str) -> Path | None:
+    """Shell/<colour>/shellstyle.dll next to the msstyles: Explorer's task pane and Control Panel look."""
+    shell = msstyles.parent / 'Shell'
+    if not shell.is_dir():
+        return None
+    folders = [folder for folder in shell.iterdir() if (folder / 'shellstyle.dll').is_file()]
+    wanted = {'BLUE': 'NORMALCOLOR'}.get(prefix.upper(), prefix.upper())
+    for folder in folders:
+        if folder.name.upper() == wanted:
+            return folder / 'shellstyle.dll'
+    return folders[0] / 'shellstyle.dll' if len(folders) == 1 else None
+
+
+def write_shell(output: Path, msstyles: Path, prefix: str, asset: str) -> str:
+    """Task pane headers, chevrons and colours, and the Control Panel watermark, as CSS variables."""
+    dll = shellstyle_path(msstyles, prefix)
+    if not dll:
+        return ''
+    try:
+        pe = pefile.PE(str(dll))
+        resources = {}
+        for kind in pe.DIRECTORY_ENTRY_RESOURCE.entries:
+            for entry in kind.directory.entries:
+                data = entry.directory.entries[0].data.struct
+                key = (kind.name.string.decode() if kind.name else kind.struct.Id, entry.name.string.decode() if entry.name else entry.struct.Id)
+                resources[key] = pe.get_data(data.OffsetToData, data.Size)
+    except (pefile.PEFormatError, AttributeError, OSError):
+        return ''
+    ui = resources.get(('UIFILE', 1), b'').decode('latin-1')
+
+    def block(resid: str, selector: str) -> str:
+        section = ui.split(f'<style resid={resid}>', 1)[1].split('</style>', 1)[0] if f'<style resid={resid}>' in ui else ''
+        return section.split(selector, 1)[1].split('}', 1)[0] if selector in section else ''
+
+    def colour(text: str, prop: str) -> str | None:
+        import re
+        match = re.search(prop + r':\s*(?:a?rgb)\((?:\s*\d+\s*,)?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)', text)
+        return '#%02x%02x%02x' % tuple(int(value) for value in match.groups()) if match else None
+
+    def gradient(text: str) -> str | None:
+        import re
+        match = re.search(r'background:\s*gradient\(argb\(\d+,(\d+),(\d+),(\d+)\),\s*argb\(\d+,(\d+),(\d+),(\d+)\),\s*(\d)\)', text)
+        if not match:
+            return None
+        values = [int(value) for value in match.groups()]
+        return 'linear-gradient(%s#%02x%02x%02x, #%02x%02x%02x)' % ('' if values[6] else '90deg, ', *values[:6])
+
+    names = {110: 'taskpane-header-main', 112: 'taskpane-header', 104: 'taskpane-collapse-main', 105: 'taskpane-collapse-main-hover', 106: 'taskpane-expand-main', 107: 'taskpane-expand-main-hover',
+             100: 'taskpane-collapse', 101: 'taskpane-collapse-hover', 102: 'taskpane-expand', 103: 'taskpane-expand-hover', 26: 'cp-watermark'}
+    variables = {}
+    for resource_id, name in names.items():
+        raw = resources.get((2, resource_id))
+        if not raw:
+            continue
+        try:
+            save(decode_dib(raw, True), output, f'{name}.png')
+        except (OSError, ValueError, struct.error):
+            continue
+        variables[f'--xp-{name}'] = f'url("{asset}/{name}.png")'
+    pane = gradient(block('taskpane', 'element [id=atom(sectionlist)]'))
+    values = {
+        '--xp-taskpane-background': pane,
+        '--xp-taskpane-body-main': colour(block('mainsectionss', 'element [id=atom(watermark)]'), 'background'),
+        '--xp-taskpane-body': colour(block('sectionss', 'tasklist [id=atom(tasklist)]'), 'background'),
+        '--xp-taskpane-header-text': colour(block('sectionss', 'button\r\n{') or block('sectionss', 'button\n{'), 'foreground'),
+        '--xp-taskpane-link': colour(block('mainsectiontaskss', 'button\r\n{') or block('mainsectiontaskss', 'button\n{'), 'foreground'),
+        '--xp-taskpane-link-hover': colour(block('mainsectiontaskss', 'element [id=atom(title)][mousefocused]'), 'foreground'),
+        '--xp-cp-background': colour(block('main', 'Element [id=atom(blockade)]'), 'background'),
+        '--xp-cp-title': colour(block('main', 'Element [id=atom(blockadetitle)]'), 'foreground'),
+    }
+    variables.update({key: value for key, value in values.items() if value})
+    return ':root { %s }\n' % ' '.join(f'{key}: {value};' for key, value in variables.items()) if variables else ''
 
 
 def import_theme(source: Path, output: Path) -> None:
@@ -411,13 +487,13 @@ def import_theme(source: Path, output: Path) -> None:
     if not prefixes:
         raise KeyError('Theme has no frame resources')
     selected = source_scheme(source, prefixes)
-    write_scheme(output, images, selected, colours, output.resolve().as_uri())
+    write_scheme(output, images, selected, colours, output.resolve().as_uri(), msstyles)
     schemes = []
     for prefix in prefixes:
         scheme_id = prefix.lower()
         schemes.append({'id': scheme_id, 'name': scheme_label(prefix)})
         scheme_output = output / 'schemes' / scheme_id
-        write_scheme(scheme_output, images, prefix, colours, scheme_output.resolve().as_uri())
+        write_scheme(scheme_output, images, prefix, colours, scheme_output.resolve().as_uri(), msstyles)
     (output / 'theme.json').write_text(json.dumps({'theme': theme_display_name(source, msstyles), 'msstyles': msstyles.name, 'schemes': schemes, 'defaultScheme': selected.lower()}, indent=2), encoding='utf-8')
 
 
