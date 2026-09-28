@@ -51,12 +51,42 @@ async function applySelection() {
   localStorage.setItem('nk_update_auto', $('#update-auto').checked ? '1' : '0');
   localStorage.setItem('nk_update_beta', $('#update-beta').checked ? '1' : '0');
   localStorage.setItem('nk_sound_scheme', $('#sound-scheme').value);
+  applyPackChoices();
   localStorage.setItem('nk_sound_volume', $('#sound-volume').value);
   localStorage.setItem('nk_chat_wallpaper_opacity', $('#chat-wallpaper-opacity').value);
   saveWallpaper();
   localStorage.setItem('nk_active_theme', result.id);
   localStorage.setItem('nk_active_scheme', result.scheme || '');
   refreshFrame(result);
+}
+// ---- Packs (cursors, sounds, icons) from the catalog; the choice is stored with resolved URLs
+// so every window applies it (assets/js/packs.js).
+let packs = [];
+const packOption = pack => `<option value="pack:${esc(pack.id)}">${esc(pack.name)}${pack.author ? ` — ${esc(pack.author)}` : ''}</option>`;
+async function refreshPacks() {
+  try { packs = (await controls.listPacks?.()) || []; } catch { packs = []; }
+  const fill = (select, builtIn, part, stored, fallback) => {
+    select.innerHTML = builtIn + packs.filter(pack => Object.keys(pack[part] || {}).length).map(packOption).join('');
+    const value = localStorage.getItem(stored) || fallback;
+    select.value = [...select.options].some(option => option.value === value) ? value : fallback;
+  };
+  fill($('#sound-scheme'), '<option value="xp">Windows XP (default)</option><option value="none">No sounds</option>', 'sounds', 'nk_sound_scheme', 'xp');
+  fill($('#cursor-scheme'), '<option value="xp">Windows XP (default)</option><option value="system">System</option>', 'cursors', 'nk_cursor_scheme', 'xp');
+  fill($('#icon-scheme'), '<option value="default">Nekochat Reloaded (default)</option>', 'icons', 'nk_icon_scheme', 'default');
+}
+// Built-in Windows XP cursors (assets/cursors/cursors.json) when the app ships them.
+async function builtInCursors() {
+  try { const map = await (await fetch('assets/cursors/cursors.json')).json(); return Object.fromEntries(Object.entries(map).map(([kind, value]) => [kind, { url: new URL(`assets/cursors/${typeof value === 'string' ? value : value.file}`, document.baseURI).href, x: Number(value?.x) || 0, y: Number(value?.y) || 0 }])); } catch { return {}; }
+}
+async function applyPackChoices() {
+  const packFor = value => value.startsWith('pack:') ? packs.find(pack => pack.id === value.slice(5)) : null;
+  const sound = $('#sound-scheme').value, cursor = $('#cursor-scheme').value, icon = $('#icon-scheme').value;
+  localStorage.setItem('nk_sound_pack', JSON.stringify(packFor(sound)?.sounds || {}));
+  localStorage.setItem('nk_cursor_scheme', cursor);
+  localStorage.setItem('nk_cursor_pack', JSON.stringify(cursor === 'system' ? {} : cursor === 'xp' ? await builtInCursors() : packFor(cursor)?.cursors || {}));
+  localStorage.setItem('nk_icon_scheme', icon);
+  localStorage.setItem('nk_icon_pack', JSON.stringify(packFor(icon)?.icons || {}));
+  window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();
 }
 async function previewSelection() { refreshPreview(await controls.previewTheme($('#theme-list').value, $('#colour-scheme').value)); }
 $('#theme-list').onchange = async () => { try { refreshSchemes(); await previewSelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
@@ -93,6 +123,6 @@ function saveWallpaper() {
 $('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
 $('#advanced').onclick = () => alert('Advanced colour editing is available when the theme provides multiple colour schemes.');
 controls.onThemeChanged(theme => { refreshFrame(theme); refreshPreview(theme); });
-Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; $('#sound-scheme').value = localStorage.getItem('nk_sound_scheme') || 'xp'; $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
+Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; refreshPacks(); $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });

@@ -66,6 +66,7 @@ async function extractZip(buffer, destinationRoot, prefix = '') {
 const themesRoot = path.join(__dirname, 'themes');
 const prebuiltRoot = path.join(__dirname, 'prebuilt');
 const userThemesRoot = path.join(app.getPath('userData'), 'themes');
+const userPacksRoot = path.join(app.getPath('userData'), 'packs');
 const runtimeThemesRoot = path.join(app.getPath('temp'), 'nekochat-msstyles');
 const themeStatePath = path.join(app.getPath('userData'), 'theme-selection.json');
 const displayStatePath = path.join(app.getPath('userData'), 'display-settings.json');
@@ -348,7 +349,8 @@ async function scanThemes(root, userInstalled = false) {
 
 async function discoverThemes() {
   const found = new Map(builtInThemes.map(theme => [theme.id, theme]));
-  for (const theme of await scanThemes(themesRoot)) found.set(theme.id, theme);
+  // themes/classic and themes/luna are the sources of the built-in Classic and Luna, not extra themes.
+  for (const theme of await scanThemes(themesRoot)) if (!builtInThemes.some(item => item.id.toLowerCase() === theme.id.toLowerCase())) found.set(theme.id, theme);
   for (const theme of await scanThemes(userThemesRoot, true)) found.set(theme.id, theme);
   return [...found.values()];
 }
@@ -428,8 +430,12 @@ async function prebuiltFor(id) {
 
 async function materializePrebuiltTheme(id, source, metadata) {
   const output = path.join(runtimeThemesRoot, id);
-  const sourceStat = await fs.stat(path.join(source, 'theme.json'));
-  const stamp = `${sourceStat.mtimeMs}:${sourceStat.size}`;
+  // The stamp covers every stylesheet and the app version, so an update of the app (or of a
+  // built-in theme.css) replaces the copy in tmp; before, only theme.json was compared.
+  const stats = [await fs.stat(path.join(source, 'theme.json'))];
+  for (const scheme of metadata.schemes || []) try { stats.push(await fs.stat(path.join(source, 'schemes', scheme.id, 'theme.css'))); } catch {}
+  try { stats.push(await fs.stat(path.join(source, 'theme.css'))); } catch {}
+  const stamp = `${app.getVersion()}:${stats.map(stat => `${stat.mtimeMs}:${stat.size}`).join('|')}`;
   let cached = false;
   try { cached = JSON.parse(await fs.readFile(path.join(output, '.prebuilt-cache.json'), 'utf8')).stamp === stamp; } catch {}
   if (!cached) {
@@ -442,6 +448,7 @@ async function materializePrebuiltTheme(id, source, metadata) {
       const cssPath = path.join(directory, 'theme.css');
       let css = await fs.readFile(cssPath, 'utf8');
       css = css.replace(/url\("[^"]+"\)/g, match => {
+        if (/^url\("(data|https?|blob):/i.test(match)) return match;
         const asset = path.basename(match.slice(5, -2));
         return `url("${pathToFileURL(path.join(directory, asset)).href}")`;
       });
@@ -558,6 +565,104 @@ async function fetchCatalog() {
   if (!response.ok) throw new Error(response.status === 404 ? 'Theme catalog has not been published yet.' : `Unable to load theme catalog (${response.status}).`);
   return catalogEntries(await response.json());
 }
+// ---- Catalog packs: cursors, sounds, icons and combos (any of those plus a theme) -------------
+// packs.json lists them; each directory holds Pack.ZIP with pack.json and the folders sounds/,
+// cursors/ (cursors.json), icons/ (icons.json) and theme/.
+const PACK_TYPES = ['cursors', 'sounds', 'icons', 'combo'];
+function packEntries(manifest) {
+  const entries = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.packs) ? manifest.packs : [];
+  return entries.map((entry, index) => {
+    const id = String(entry.pack_id || entry.id || `pack-${index + 1}`);
+    const directory = String(entry.directory || id).replace(/^\/+|\/+$/g, '');
+    const details = entry.Details || entry.details || {};
+    const type = PACK_TYPES.includes(String(entry.type || entry.Type).toLowerCase()) ? String(entry.type || entry.Type).toLowerCase() : 'combo';
+    return {
+      id, type, directory, kind: 'pack', displayName: entry.DisplayName || entry.displayName || id,
+      contains: Array.isArray(entry.Contains || entry.contains) ? (entry.Contains || entry.contains).map(String) : [type],
+      author: details.Author || details.author || entry.Author || entry.author || 'Unknown',
+      added: String(details.Added || details.added || entry.Added || entry.added || ''),
+      version: details.Version || details.version || entry.Version || entry.version || '',
+      previewUrl: entry.Preview || entry.preview || `${themeCatalogRoot}/${directory}/Preview.png`,
+      descriptionUrl: entry.Description || entry.description || `${themeCatalogRoot}/${directory}/Description.md`,
+      zipUrl: entry.PackZIP || entry.packZip || `${themeCatalogRoot}/${directory}/Pack.ZIP`,
+    };
+  });
+}
+async function fetchCatalogPacks() {
+  const response = await fetch(`${themeCatalogRoot}/packs.json`);
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error(`Unable to load the catalog (${response.status}).`);
+  return packEntries(await response.json());
+}
+const packFolder = id => { const folder = path.resolve(userPacksRoot, String(id)); if (!folder.startsWith(`${path.resolve(userPacksRoot)}${path.sep}`)) throw new Error('Invalid pack.'); return folder; };
+// sounds/<name>.wav|mp3|ogg → { name: url }; cursors/cursors.json → { kind: { url, x, y } };
+// icons/icons.json → { name: url }. Missing or broken parts are left out.
+async function packContents(folder, files) {
+  const sounds = {};
+  for (const [name, url] of Object.entries(files)) { const match = name.match(/^sounds\/([\w-]+)\.(wav|mp3|ogg)$/i); if (match) sounds[match[1].toLowerCase()] = url; }
+  const readJson = async file => { try { return JSON.parse(await fs.readFile(path.join(folder, file), 'utf8')); } catch { return null; } };
+  const cursors = {};
+  for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json') || {})) { const file = typeof value === 'string' ? value : value?.file; const url = files[`cursors/${file}`]; if (url) cursors[kind] = { url, x: Number(value?.x) || 0, y: Number(value?.y) || 0 }; }
+  const icons = {};
+  for (const [name, file] of Object.entries(await readJson('icons/icons.json') || {})) { const url = files[`icons/${file}`]; if (url) icons[name] = url; }
+  return { sounds, cursors, icons };
+}
+async function listPacks() {
+  const packs = [];
+  let entries = []; try { entries = await fs.readdir(userPacksRoot, { withFileTypes: true }); } catch {}
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const folder = path.join(userPacksRoot, entry.name);
+    let info; try { info = JSON.parse(await fs.readFile(path.join(folder, 'pack.json'), 'utf8')); } catch { continue; }
+    // Every file as a URL the windows can load (sounds/notify.wav → file:///…).
+    const files = {};
+    const walk = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) { if (name !== 'theme') await walk(path.join(dir, item.name), name); } else files[name] = pathToFileURL(path.join(dir, item.name)).href; } };
+    await walk(folder, '');
+    packs.push({ id: entry.name, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || entry.name, author: info.author || '', contains: info.contains || [], theme: info.theme || null, files, ...(await packContents(folder, files)) });
+  }
+  return packs;
+}
+async function installCatalogPack(id) {
+  const item = (await fetchCatalogPacks()).find(pack => pack.id === id);
+  if (!item) throw new Error('The pack no longer exists in the catalog.');
+  const response = await fetch(item.zipUrl);
+  if (!response.ok) throw new Error(`Unable to download Pack.ZIP (${response.status}).`);
+  const temporary = await fs.mkdtemp(path.join(app.getPath('temp'), 'nekochat-pack-'));
+  const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const destination = packFolder(safeId);
+  try {
+    await extractZip(Buffer.from(await response.arrayBuffer()), temporary);
+    let info = {}; try { info = JSON.parse(await fs.readFile(path.join(temporary, 'pack.json'), 'utf8')); } catch {}
+    const contains = [];
+    for (const part of ['sounds', 'cursors', 'icons', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
+    // The theme of a combo goes to the installed themes, like a catalog theme.
+    let themeId = null;
+    if (contains.includes('theme')) {
+      const source = await findThemeSource(path.join(temporary, 'theme'));
+      if (source) {
+        const themeDestination = path.join(userThemesRoot, `${safeId}-theme`);
+        await fs.rm(themeDestination, { recursive: true, force: true });
+        await fs.mkdir(themeDestination, { recursive: true });
+        const cssRoot = path.basename(path.dirname(path.dirname(source))) === 'schemes' ? path.dirname(path.dirname(path.dirname(source))) : path.dirname(source);
+        if (path.basename(source).toLowerCase() === 'theme.css') await copyDirectory(cssRoot, themeDestination); else await copyThemeBundle(source, themeDestination);
+        await fs.writeFile(path.join(themeDestination, 'catalog-theme.json'), JSON.stringify({ id: `pack:${item.id}` }));
+        themeId = path.basename(themeDestination);
+      }
+    }
+    await fs.rm(destination, { recursive: true, force: true });
+    await fs.mkdir(destination, { recursive: true });
+    for (const part of contains.filter(part => part !== 'theme')) await copyDirectory(path.join(temporary, part), path.join(destination, part));
+    await fs.writeFile(path.join(destination, 'pack.json'), JSON.stringify({ catalogId: item.id, type: item.type, name: info.name || item.displayName, author: info.author || item.author, contains, theme: themeId }, null, 1));
+    return { id: safeId, packs: await listPacks(), themes: await listThemes() };
+  } finally { await fs.rm(temporary, { recursive: true, force: true }).catch(() => {}); }
+}
+async function removePack(id) {
+  const folder = packFolder(id);
+  let info = {}; try { info = JSON.parse(await fs.readFile(path.join(folder, 'pack.json'), 'utf8')); } catch {}
+  if (info.theme) await removeTheme(info.theme).catch(() => {});
+  await fs.rm(folder, { recursive: true, force: true });
+  return { packs: await listPacks(), themes: await listThemes() };
+}
 async function fetchCatalogThemeDetails(id) {
   const item = (await fetchCatalog()).find(theme => theme.id === id);
   if (!item) throw new Error('Theme no longer exists in the catalog.');
@@ -605,16 +710,18 @@ async function installCatalogTheme(id) {
 // ---- Settings backups: installed themes go into the archive the Display Properties window builds.
 async function exportUserThemes() {
   const files = [];
-  const walk = async (folder, relative) => {
+  // Installed packs (cursors, sounds, icons) travel with the themes, under packs/.
+  const walk = async (folder, relative, prefix) => {
     let entries = [];
     try { entries = await fs.readdir(folder, { withFileTypes: true }); } catch { return; }
     for (const entry of entries) {
       const name = relative ? `${relative}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) await walk(path.join(folder, entry.name), name);
-      else if (entry.isFile()) files.push({ path: `themes/${name}`, data: await fs.readFile(path.join(folder, entry.name)) });
+      if (entry.isDirectory()) { if (!entry.name.startsWith('.')) await walk(path.join(folder, entry.name), name, prefix); }
+      else if (entry.isFile()) files.push({ path: `${prefix}/${name}`, data: await fs.readFile(path.join(folder, entry.name)) });
     }
   };
-  await walk(userThemesRoot, '');
+  await walk(userThemesRoot, '', 'themes');
+  await walk(userPacksRoot, '', 'packs');
   return files;
 }
 // Adds the backup's themes next to the installed ones; nothing installed is removed.
@@ -622,6 +729,8 @@ async function restoreUserThemes(archive) {
   const buffer = Buffer.from(archive);
   await fs.mkdir(userThemesRoot, { recursive: true });
   await extractZip(buffer, userThemesRoot, 'themes/');
+  await fs.mkdir(userPacksRoot, { recursive: true });
+  await extractZip(buffer, userPacksRoot, 'packs/');
   return listThemes();
 }
 // ---- Theme editor: a theme is edited as its theme.css (variables); saving writes a user theme
@@ -873,6 +982,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('theme:browser-list', () => fetchCatalog());
   ipcMain.handle('theme:browser-details', (_, id) => fetchCatalogThemeDetails(String(id || '')));
   ipcMain.handle('theme:browser-install', (_, id) => installCatalogTheme(String(id || '')));
+  ipcMain.handle('pack:catalog', () => fetchCatalogPacks());
+  ipcMain.handle('pack:install', (_, id) => installCatalogPack(String(id || '')));
+  ipcMain.handle('pack:list', () => listPacks());
+  ipcMain.handle('pack:remove', (_, id) => removePack(String(id || '')));
   ipcMain.handle('theme:remove', (_, id) => removeTheme(String(id || '')));
   ipcMain.handle('theme:current', () => activeTheme);
   ipcMain.handle('backup:export-themes', () => exportUserThemes());
