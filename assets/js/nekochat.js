@@ -252,7 +252,8 @@ function applyCompanionBundle(bundle) {
 // silences notifications and sounds here) and invisible (other Reloaded users see you offline).
 // "Away" is also set automatically after 10 minutes without activity and cleared on return.
 const STATUSES = ['online', 'away', 'dnd', 'invisible'];
-const AUTO_AWAY_AFTER = 10 * 60 * 1000;
+// "Away" after this many minutes without activity (User Accounts → Privacy; 0 turns it off).
+function autoAwayAfter() { let minutes = 10; try { const stored = localStorage.getItem('nk_auto_away_minutes'); if (stored !== null && stored !== '') minutes = Number(stored); } catch {} return minutes > 0 ? minutes * 60 * 1000 : Infinity; }
 let autoAway = false; let lastActivity = Date.now();
 const isDnd = () => companion.status === 'dnd';
 const statusLabel = status => t({ online: 'statusOnline', away: 'statusAway', dnd: 'dndOn', invisible: 'statusInvisible', offline: 'offline' }[status] || 'statusOnline');
@@ -275,7 +276,7 @@ function noteActivity() {
 }
 ['pointerdown', 'keydown', 'pointermove', 'wheel', 'touchstart'].forEach(name => window.addEventListener(name, noteActivity, { passive: true }));
 setInterval(() => {
-  if (companion.token && companion.status === 'online' && Date.now() - lastActivity > AUTO_AWAY_AFTER) { autoAway = true; setOwnStatus('away'); }
+  if (companion.token && companion.status === 'online' && Date.now() - lastActivity > autoAwayAfter()) { autoAway = true; setOwnStatus('away'); }
 }, 30000);
 // Live status changes from the companion (server 0.6+): others see a new status at once instead
 // of on the next 30-second poll, which stays as the fallback.
