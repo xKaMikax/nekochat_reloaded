@@ -1,0 +1,38 @@
+{
+ "default": {
+  "file": "default_arrow.cur"
+ },
+ "pointer": {
+  "file": "default_link.cur"
+ },
+ "text": {
+  "file": "default_ibeam.cur"
+ },
+ "wait": {
+  "file": "default_busy.cur"
+ },
+ "progress": {
+  "file": "default_wait.cur"
+ },
+ "not-allowed": {
+  "file": "default_no.cur"
+ },
+ "help": {
+  "file": "default_helpsel.cur"
+ },
+ "move": {
+  "file": "default_move.cur"
+ },
+ "ew-resize": {
+  "file": "default_size3.cur"
+ },
+ "ns-resize": {
+  "file": "default_size4.cur"
+ },
+ "nwse-resize": {
+  "file": "default_size2.cur"
+ },
+ "nesw-resize": {
+  "file": "default_size1.cur"
+ }
+}
