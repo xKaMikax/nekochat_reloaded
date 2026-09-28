@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
+import ipaddress
+import re
 import json
 import os
 import secrets
@@ -17,6 +20,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -25,7 +29,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.7.0"
+VERSION = "0.8.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -152,8 +156,13 @@ def migrate() -> None:
             """
         )
         # Backups made by server 0.4.0 have no client column yet.
-        if "client" not in [row["name"] for row in db.execute("PRAGMA table_info(user_status)")]:
+        columns = [row["name"] for row in db.execute("PRAGMA table_info(user_status)")]
+        if "client" not in columns:
             db.execute("ALTER TABLE user_status ADD COLUMN client TEXT NOT NULL DEFAULT ''")
+        if "last_seen" not in columns:
+            db.execute("ALTER TABLE user_status ADD COLUMN last_seen INTEGER NOT NULL DEFAULT 0")
+        if "hide_last_seen" not in columns:
+            db.execute("ALTER TABLE user_status ADD COLUMN hide_last_seen INTEGER NOT NULL DEFAULT 0")
         if "client" not in [row["name"] for row in db.execute("PRAGMA table_info(backups)")]:
             db.execute("ALTER TABLE backups ADD COLUMN client TEXT NOT NULL DEFAULT ''")
 
@@ -189,11 +198,12 @@ def account_for_token(token: str) -> sqlite3.Row:
 
 def account_view(row: sqlite3.Row, db: sqlite3.Connection) -> dict[str, Any]:
     read = {r["chat"]: r["last_read"] for r in db.execute("SELECT chat, last_read FROM read_state WHERE account_id = ?", (row["id"],))}
-    status = db.execute("SELECT status FROM user_status WHERE account_id = ?", (row["id"],)).fetchone()
+    status = db.execute("SELECT status, hide_last_seen FROM user_status WHERE account_id = ?", (row["id"],)).fetchone()
     return {
         "server": row["server"],
         "user": json.loads(row["profile"]),
         "status": status["status"] if status else "online",
+        "hide_last_seen": bool(status["hide_last_seen"]) if status else False,
         "settings": json.loads(row["settings"]),
         "read_state": read,
         "drafts": {r["chat"]: r["text"] for r in db.execute("SELECT chat, text FROM drafts WHERE account_id = ?", (row["id"],))},
@@ -344,6 +354,7 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
             (account["id"], payload.status, client, now()),
         )
         stored = db.execute("SELECT client FROM user_status WHERE account_id = ?", (account["id"],)).fetchone()
+        touch_last_seen(db, account["id"])
     invisible = payload.status == "invisible"
     publish(account["server"], {"type": "status", "id": account["nekochat_id"], "status": "offline" if invisible else payload.status, "client": "" if invisible else (stored["client"] if stored else "")})
     return {"ok": True, "status": payload.status}
@@ -408,6 +419,8 @@ async def events(request: Request, token: str = ""):
     queue: asyncio.Queue = asyncio.Queue(maxsize=200)
     listener = (queue, account["nekochat_id"])
     _listeners.setdefault(server, set()).add(listener)
+    with database() as db:
+        touch_last_seen(db, account["id"])
 
     async def stream():
         try:
@@ -421,6 +434,8 @@ async def events(request: Request, token: str = ""):
                     yield ": ping\n\n"  # keeps proxies and the tunnel from closing the stream
         finally:
             _listeners.get(server, set()).discard(listener)
+            with database() as db:
+                touch_last_seen(db, account["id"])
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
@@ -445,6 +460,96 @@ def shared_chat(chat: str, account: sqlite3.Row) -> str:
 def is_invisible(db: sqlite3.Connection, account_id: int) -> bool:
     row = db.execute("SELECT status FROM user_status WHERE account_id = ?", (account_id,)).fetchone()
     return bool(row and row["status"] == "invisible")
+
+
+def touch_last_seen(db: sqlite3.Connection, account_id: int) -> None:
+    """Remembers when the account was last active; not while it is invisible."""
+    if is_invisible(db, account_id):
+        return
+    db.execute("INSERT INTO user_status (account_id, status, updated_at, last_seen) VALUES (?, 'online', ?, ?) "
+               "ON CONFLICT (account_id) DO UPDATE SET last_seen = excluded.last_seen", (account_id, now(), now()))
+
+
+class PrivacyIn(BaseModel):
+    hide_last_seen: bool
+
+
+@app.put("/privacy", tags=["status"])
+def put_privacy(payload: PrivacyIn, account: sqlite3.Row = Depends(current_account)):
+    """hide_last_seen: others do not see when you were last online."""
+    with database() as db:
+        db.execute("INSERT INTO user_status (account_id, status, updated_at, hide_last_seen) VALUES (?, 'online', ?, ?) "
+                   "ON CONFLICT (account_id) DO UPDATE SET hide_last_seen = excluded.hide_last_seen", (account["id"], now(), int(payload.hide_last_seen)))
+    return {"ok": True, "hide_last_seen": payload.hide_last_seen}
+
+
+# ---- link previews ---------------------------------------------------------------------------
+# The companion fetches the page (browsers cannot, because of CORS) and returns its Open Graph
+# title, description and picture. Only public addresses are fetched, never the local network.
+_previews: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
+async def public_address(host: str, port: int) -> str:
+    try:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, port, type=0)
+    except OSError:
+        raise HTTPException(400, "Unknown host")
+    addresses = {info[4][0] for info in infos}
+    if not addresses or not all(ipaddress.ip_address(address.split("%")[0]).is_global for address in addresses):
+        raise HTTPException(400, "Only public addresses")
+    return sorted(addresses)[0]
+
+
+def meta(page: str, *names: str) -> str:
+    for name in names:
+        for pattern in (rf'<meta[^>]+(?:property|name)=["\']{re.escape(name)}["\'][^>]*content=["\']([^"\']*)["\']', rf'<meta[^>]+content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']{re.escape(name)}["\']'):
+            found = re.search(pattern, page, re.I)
+            if found and found.group(1).strip():
+                return html.unescape(found.group(1).strip())
+    return ""
+
+
+@app.get("/preview", tags=["chats"])
+async def link_preview(url: str, account: sqlite3.Row = Depends(current_account)):
+    """{url, title, description, image, site} of a public web page, cached for an hour."""
+    cached = _previews.get(url)
+    if cached and cached[0] > time.time():
+        return cached[1]
+    target = url
+    async with httpx.AsyncClient(timeout=6, follow_redirects=False, headers={"User-Agent": "NekochatReloadedPreview/1.0 (+https://github.com/xKaMikax/nekochat_reloaded)"}) as client:
+        for _ in range(4):
+            parsed = urlparse(target)
+            if parsed.scheme not in ("http", "https") or not parsed.hostname or len(target) > 2000:
+                raise HTTPException(400, "Only http and https links")
+            address = await public_address(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+            # Plain http goes to the checked address itself, so DNS cannot change it in between;
+            # https keeps the name (a certificate would not match a private service anyway).
+            request_url = target if parsed.scheme == "https" else parsed._replace(netloc=f"[{address}]:{parsed.port or 80}" if ":" in address else f"{address}:{parsed.port or 80}").geturl()
+            async with client.stream("GET", request_url, headers={"Host": parsed.netloc} if parsed.scheme == "http" else {}) as response:
+                if response.status_code in (301, 302, 303, 307, 308) and response.headers.get("location"):
+                    target = urljoin(target, response.headers["location"])
+                    continue
+                if response.status_code != 200 or "html" not in response.headers.get("content-type", ""):
+                    raise HTTPException(422, "No preview for this link")
+                body = b""
+                async for chunk in response.aiter_bytes():
+                    body += chunk
+                    if len(body) > 512 * 1024:
+                        break
+                break
+        else:
+            raise HTTPException(422, "Too many redirects")
+    page = body.decode(response.encoding or "utf-8", errors="replace")
+    title_tag = re.search(r"<title[^>]*>(.*?)</title>", page, re.I | re.S)
+    image = meta(page, "og:image", "twitter:image")
+    image = urljoin(target, image) if image else ""
+    result = {"url": target, "title": (meta(page, "og:title", "twitter:title") or (html.unescape(title_tag.group(1).strip()) if title_tag else ""))[:200],
+              "description": meta(page, "og:description", "twitter:description", "description")[:300],
+              "image": image if urlparse(image).scheme in ("http", "https") else "", "site": meta(page, "og:site_name")[:80] or urlparse(target).hostname or ""}
+    if len(_previews) > 500:
+        _previews.clear()
+    _previews[url] = (time.time() + 3600, result)
+    return result
 
 
 @app.get("/chat", tags=["chats"])
@@ -565,11 +670,12 @@ def get_presence(ids: str = "", account: sqlite3.Row = Depends(current_account))
     marks = ",".join("?" * len(wanted))
     with database() as db:
         rows = db.execute(
-            f"SELECT accounts.nekochat_id, user_status.status, user_status.client FROM user_status JOIN accounts ON accounts.id = user_status.account_id "
+            f"SELECT accounts.nekochat_id, user_status.status, user_status.client, user_status.last_seen, user_status.hide_last_seen FROM user_status JOIN accounts ON accounts.id = user_status.account_id "
             f"WHERE accounts.server = ? AND accounts.nekochat_id IN ({marks})",
             (account["server"], *wanted),
         ).fetchall()
-    return {str(row["nekochat_id"]): {"status": "offline", "client": ""} if row["status"] == "invisible" else {"status": row["status"], "client": row["client"]} for row in rows}
+    seen = lambda row: 0 if row["hide_last_seen"] else row["last_seen"]
+    return {str(row["nekochat_id"]): {"status": "offline", "client": "", "last_seen": seen(row)} if row["status"] == "invisible" else {"status": row["status"], "client": row["client"], "last_seen": seen(row)} for row in rows}
 
 
 # ---- backups ---------------------------------------------------------------------------------
