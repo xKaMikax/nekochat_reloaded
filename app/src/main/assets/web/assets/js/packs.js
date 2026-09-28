@@ -26,11 +26,12 @@
     notifications: ['#mute-chat svg', 'display: none;', '#mute-chat', 'background: {url} center / 20px 20px no-repeat !important;'],
   };
   function style(id) { let node = document.getElementById(id); if (!node) { node = document.createElement('style'); node.id = id; (document.head || document.documentElement).append(node); } return node; }
-  // Standard Windows XP cursors (assets/cursors) unless another scheme is chosen.
-  const XP_CURSORS = {"default": "default_arrow.cur", "pointer": "default_link.cur", "text": "default_ibeam.cur", "wait": "default_busy.cur", "progress": "default_wait.cur", "not-allowed": "default_no.cur", "help": "default_helpsel.cur", "move": "default_move.cur", "ew-resize": "default_size3.cur", "ns-resize": "default_size4.cur", "nwse-resize": "default_size2.cur", "nesw-resize": "default_size1.cur"};
+  // Standard Windows XP cursors (assets/cursors, PNG + hot spot) unless another scheme is chosen.
+  // PNG, because Chromium mis-draws old 1-bit .cur files and falls back to the system cursor.
+  const XP_CURSORS = {"default": ["default_arrow.png", 10, 10], "pointer": ["default_link.png", 10, 10], "text": ["default_ibeam.png", 6, 10], "wait": ["default_busy.png", 10, 10], "progress": ["default_wait.png", 10, 10], "not-allowed": ["default_no.png", 10, 10], "help": ["default_helpsel.png", 10, 10], "move": ["default_move.png", 10, 10], "ew-resize": ["default_size3.png", 10, 10], "ns-resize": ["default_size4.png", 10, 10], "nwse-resize": ["default_size2.png", 10, 10], "nesw-resize": ["default_size1.png", 10, 10]};
   function applyCursors() {
     let scheme = 'xp'; try { scheme = localStorage.getItem('nk_cursor_scheme') || 'xp'; } catch {}
-    let pack = scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, file]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href }])) : read('nk_cursor_pack') || {};
+    let pack = scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, [file, x, y]]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href, x, y }])) : read('nk_cursor_pack') || {};
     if (scheme === 'system') pack = {};
     style('nk-pack-cursors').textContent = Object.entries(CURSORS).filter(([kind]) => pack[kind]?.url)
       // .cur files carry their own hot spot; x/y only when the pack gives them (PNG cursors).
