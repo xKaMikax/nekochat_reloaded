@@ -7,6 +7,7 @@ GET /api/me during /link, to learn who the owner of a Nekochat token is.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -19,12 +20,12 @@ from typing import Any
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -143,7 +144,10 @@ def token_hash(token: str) -> str:
 
 # ---- sessions --------------------------------------------------------------------------------
 def current_account(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> sqlite3.Row:
-    token = credentials.credentials.strip() if credentials else ""
+    return account_for_token(credentials.credentials.strip() if credentials else "")
+
+
+def account_for_token(token: str) -> sqlite3.Row:
     if not token:
         raise HTTPException(401, "Missing session token")
     with database() as db:
@@ -305,6 +309,9 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
             + (", client = excluded.client" if client else ""),
             (account["id"], payload.status, client, now()),
         )
+        stored = db.execute("SELECT client FROM user_status WHERE account_id = ?", (account["id"],)).fetchone()
+    invisible = payload.status == "invisible"
+    publish(account["server"], {"id": account["nekochat_id"], "status": "offline" if invisible else payload.status, "client": "" if invisible else (stored["client"] if stored else "")})
     return {"ok": True, "status": payload.status}
 
 
@@ -325,6 +332,52 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
             (account["server"], *wanted),
         ).fetchall()
     return {str(row["nekochat_id"]): "offline" if row["status"] == "invisible" else row["status"] for row in rows}
+
+
+# ---- live status events ----------------------------------------------------------------------
+# Clients keep GET /events open (Server-Sent Events) and learn about status changes at once
+# instead of on their next /presence poll. Listeners are grouped by Nekochat server.
+_listeners: dict[str, set[asyncio.Queue]] = {}
+_loop: asyncio.AbstractEventLoop | None = None
+
+
+@app.on_event("startup")
+async def remember_loop() -> None:
+    global _loop
+    _loop = asyncio.get_running_loop()
+
+
+def publish(server: str, event: dict[str, Any]) -> None:
+    """Called from request threads; hands the event to the listeners' event loop."""
+    if _loop is None:
+        return
+    for queue in list(_listeners.get(server, ())):
+        _loop.call_soon_threadsafe(lambda q=queue: q.full() or q.put_nowait(event))
+
+
+@app.get("/events", tags=["status"], response_class=StreamingResponse,
+         responses={200: {"content": {"text/event-stream": {}}, "description": "`event: status` with `{id, status, client}` for every status change on your Nekochat server"}})
+async def events(request: Request, token: str = ""):
+    """Live status changes (Server-Sent Events). EventSource cannot send headers, so the session
+    token goes in `?token=`. Invisible users are reported as `offline` without a client."""
+    account = account_for_token(token.strip())
+    server = account["server"]
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+    _listeners.setdefault(server, set()).add(queue)
+
+    async def stream():
+        try:
+            yield "retry: 3000\n\n"
+            while not await request.is_disconnected():
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield f"event: status\ndata: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"  # keeps proxies and the tunnel from closing the stream
+        finally:
+            _listeners.get(server, set()).discard(queue)
+
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.get("/presence", tags=["status"])
