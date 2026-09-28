@@ -322,7 +322,7 @@ class ThemeManager(private val context: Context) {
             val id = entry.optString("pack_id", entry.optString("id", "pack-${index + 1}"))
             val directory = entry.optString("directory", id).trim('/')
             val rawType = entry.optString("type", entry.optString("Type")).lowercase()
-            val type = if (rawType in listOf("cursors", "sounds", "icons", "wallpapers", "combo")) rawType else "combo"
+            val type = if (rawType in listOf("cursors", "sounds", "icons", "wallpapers", "assistants", "combo")) rawType else "combo"
             // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
             val includes = if (type == "combo") (entry.optJSONObject("Includes") ?: entry.optJSONObject("includes")) else null
             // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
@@ -348,7 +348,7 @@ class ThemeManager(private val context: Context) {
             val fileList = item.optJSONArray("files")?.let { list -> (0 until list.length()).map { list.getString(it) } }.orEmpty()
             if (fileList.isNotEmpty()) {
                 // No Pack.ZIP: download the listed files into the folder of the pack's type.
-                val folder = File(temporary, item.getString("type")).apply { mkdirs() }
+                val folder = File(temporary, item.getString("type").let { if (it == "assistants") "assistant" else it }).apply { mkdirs() }
                 for (name in fileList) {
                     val (status, bytes) = download("$CATALOG_ROOT/${item.getString("directory")}/${enc(name)}")
                     if (status !in 200..299) throw IllegalStateException("Unable to download $name ($status).")
@@ -360,7 +360,7 @@ class ThemeManager(private val context: Context) {
                 extractZip(zip, temporary)
             }
             val info = try { JSONObject(File(temporary, "pack.json").readText()) } catch (_: Exception) { JSONObject() }
-            val contains = listOf("sounds", "cursors", "icons", "wallpapers", "theme").filter { File(temporary, it).isDirectory }
+            val contains = listOf("sounds", "cursors", "icons", "wallpapers", "assistant", "theme").filter { File(temporary, it).isDirectory }
             // The theme of a combo goes to the installed themes, like a catalog theme.
             var themeId: String? = null
             if ("theme" in contains) {
@@ -391,7 +391,7 @@ class ThemeManager(private val context: Context) {
             themeId = existing?.getString("id") ?: installCatalogTheme(ref).getString("id")
         }
         val parts = JSONArray()
-        for (part in listOf("cursors", "sounds", "icons", "wallpapers")) {
+        for (part in listOf("cursors", "sounds", "icons", "wallpapers", "assistants")) {
             val ref = includes.optString(part).takeIf { it.isNotEmpty() } ?: continue
             if (catalog.none { it.getString("id") == ref && it.isNull("includes") }) throw IllegalArgumentException("The combo lists a missing $part pack: $ref")
             val packs = listPacks(); val existing = (0 until packs.length()).map { packs.getJSONObject(it) }.firstOrNull { it.optString("catalogId") == ref }
@@ -402,6 +402,25 @@ class ThemeManager(private val context: Context) {
         File(destination, "pack.json").writeText(JSONObject().put("catalogId", item.getString("id")).put("type", "combo").put("name", item.getString("displayName")).put("author", item.getString("author"))
             .put("contains", JSONArray(includes.keys().asSequence().toList())).put("theme", themeId ?: JSONObject.NULL).put("parts", parts).toString())
         return JSONObject().put("id", safeId).put("packs", listPacks()).put("themes", listThemes())
+    }
+
+    /** assistant/agent.json + frames.png + sound<N>.wav of a pack, or of the first of its parts that has one. */
+    private fun assistantOf(files: JSONObject, info: JSONObject, folder: File): Any {
+        fun of(urls: Map<String, String>): JSONObject? {
+            val json = urls["assistant/agent.json"] ?: return null; val frames = urls["assistant/frames.png"] ?: return null
+            val sounds = JSONObject(); urls.forEach { (name, url) -> Regex("^assistant/sound(\\d+)\\.(wav|mp3|ogg)$", RegexOption.IGNORE_CASE).find(name)?.let { sounds.put(it.groupValues[1], url) } }
+            return JSONObject().put("json", json).put("frames", frames).put("sounds", sounds)
+        }
+        of(files.keys().asSequence().associateWith { files.getString(it) })?.let { return it }
+        info.optJSONArray("parts")?.let { list ->
+            for (index in 0 until list.length()) {
+                val partFolder = File(userPacksRoot, list.optString(index)); if (!partFolder.isDirectory) continue
+                val partBase = "${WebContent.ORIGIN}/user-packs/${enc(partFolder.name)}"
+                val urls = partFolder.walkTopDown().filter { it.isFile }.associate { file -> val relative = file.relativeTo(partFolder).invariantSeparatorsPath; relative to "$partBase/${relative.split('/').joinToString("/") { enc(it) }}" }
+                of(urls)?.let { return it }
+            }
+        }
+        return JSONObject.NULL
     }
 
     /** Installed packs with every file as a URL, and their sounds, cursors and icons resolved. */
@@ -439,7 +458,7 @@ class ThemeManager(private val context: Context) {
             }
             result.put(JSONObject().put("id", folder.name).put("catalogId", info.opt("catalogId") ?: JSONObject.NULL).put("type", info.optString("type", "combo"))
                 .put("name", info.optString("name", folder.name)).put("author", info.optString("author")).put("contains", info.optJSONArray("contains") ?: JSONArray())
-                .put("theme", info.opt("theme") ?: JSONObject.NULL).put("files", files).put("sounds", sounds).put("cursors", cursors).put("icons", icons).put("wallpapers", wallpapers))
+                .put("theme", info.opt("theme") ?: JSONObject.NULL).put("files", files).put("sounds", sounds).put("cursors", cursors).put("icons", icons).put("wallpapers", wallpapers).put("assistant", assistantOf(files, info, folder)))
         }
         return result
     }

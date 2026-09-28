@@ -87,6 +87,7 @@ async function refreshPacks() {
   const stored = localStorage.getItem('nk_chat_wallpaper') || 'none';
   wallpaper.value = [...wallpaper.options].some(option => option.value === stored) ? stored : 'none';
   renderDesktopList();
+  refreshAssistantChoice();
   renderPointers();
 }
 async function applyPackChoices() {
@@ -97,6 +98,8 @@ async function applyPackChoices() {
   localStorage.setItem('nk_cursor_pack', JSON.stringify(cursor.startsWith('pack:') ? packFor(cursor)?.cursors || {} : {}));
   localStorage.setItem('nk_icon_scheme', icon);
   localStorage.setItem('nk_icon_pack', JSON.stringify(packFor(icon)?.icons || {}));
+  const assistant = $('#assistant-choice')?.value;
+  if (assistant) { localStorage.setItem('nk_assistant_pack', JSON.stringify(assistantPack(assistant) || null)); localStorage.setItem('nk_assistant', assistant); }
   window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();
 }
 async function previewSelection() { refreshPreview(await controls.previewTheme($('#theme-list').value, $('#colour-scheme').value)); }
@@ -116,6 +119,7 @@ const APPLETS = {
   updates: { title: 'Automatic Updates', icon: 'updates', pages: [{ id: 'updates', label: 'Automatic Updates', build: buildUpdatesPage }] },
   backups: { title: 'Backup', icon: 'backups', pages: [{ page: 'backups' }] },
   privacy: { title: 'User Accounts', icon: 'users', pages: [{ id: 'privacy', label: 'Privacy', rows: ['#show-last-seen', '#show-admin-button'] }] },
+  assistant: { title: 'Assistant', icon: 'assistant', pages: [{ id: 'assistant', label: 'Assistant', build: buildAssistantPage }] },
 };
 // Mouse Properties → Pointers, like XP's: the scheme, a preview and every pointer of the scheme.
 const POINTER_NAMES = [['default', 'Normal Select'], ['help', 'Help Select'], ['progress', 'Working In Background'], ['wait', 'Busy'], ['crosshair', 'Precision Select'], ['text', 'Text Select'],
@@ -134,6 +138,31 @@ function renderPointers() {
   const set = pointerSet(), selected = list.querySelector('.selected')?.dataset.kind || 'default';
   list.innerHTML = POINTER_NAMES.map(([kind, name]) => `<div class="pointer-row${kind === selected ? ' selected' : ''}" data-kind="${kind}"><span>${esc(name)}</span>${set[kind]?.url ? `<img src="${esc(set[kind].url)}" alt="">` : '<i></i>'}</div>`).join('');
   renderPointerPreview(selected);
+}
+// Assistant: Rover (built in), an assistant pack from the Catalog, or none; a preview of the first
+// frame. Saved on Apply as nk_assistant (+ nk_assistant_pack with the pack's files).
+function buildAssistantPage(section) {
+  section.classList.add('assistant-page');
+  section.innerHTML = '<h2>Assistant</h2><p>The assistant sits in the chat window. Click him to search all your chats, see unread chats, change your status or get a tip.</p><div class="assistant-choice"><canvas id="assistant-preview" width="80" height="80"></canvas><label>Character:<select id="assistant-choice"></select></label></div><p>More assistants are in the Catalog.</p>';
+  section.querySelector('#assistant-choice').addEventListener('change', previewAssistant);
+}
+const assistantPack = value => value.startsWith('pack:') ? packs.find(pack => `pack:${pack.id}` === value)?.assistant : null;
+function refreshAssistantChoice() {
+  const select = $('#assistant-choice'); if (!select) return;
+  select.innerHTML = '<option value="rover">Rover (Windows XP)</option>' + packs.filter(pack => pack.assistant).map(pack => `<option value="pack:${esc(pack.id)}">${esc(pack.name)}${pack.author ? ` — ${esc(pack.author)}` : ''}</option>`).join('') + '<option value="none">(None)</option>';
+  const stored = localStorage.getItem('nk_assistant') || 'rover';
+  select.value = [...select.options].some(option => option.value === stored) ? stored : 'rover';
+  previewAssistant();
+}
+async function previewAssistant() {
+  const value = $('#assistant-choice').value, canvas = $('#assistant-preview'), context = canvas.getContext('2d');
+  context.clearRect(0, 0, 80, 80); if (value === 'none') return;
+  const files = assistantPack(value) || { json: 'assets/agent/rover/agent.json', frames: 'assets/agent/rover/frames.png' };
+  try {
+    const [agent, image] = await Promise.all([fetch(files.json).then(response => response.json()), new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = files.frames; })]);
+    const frame = (agent.animations.RestPose || Object.values(agent.animations)[0]).frames[0];
+    for (const [index, x, y] of [...frame.images].reverse()) context.drawImage(image, (index % agent.columns) * agent.width, Math.floor(index / agent.columns) * agent.height, agent.width, agent.height, x * 80 / agent.width, y * 80 / agent.height, 80, 80);
+  } catch {}
 }
 // Automatic Updates, like XP's: a banner and the four choices, plus the beta channel and Check now.
 // Automatic and Download work on the desktop app; phones and the web ask before installing anyway.

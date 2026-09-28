@@ -17,11 +17,11 @@ const words = {
     tasks: {
       theme: 'Изменить тему', colours: 'Изменить цветовую схему', wallpaper: 'Изменить фон чата', cursors: 'Изменить указатели мыши', server: 'Выбрать сервер Nekochat Reloaded',
       catalogInstall: 'Установить темы, курсоры, звуки и обои из каталога', catalogRemove: 'Удалить установленные темы и пакеты', soundScheme: 'Изменить звуковую схему', microphone: 'Настроить микрофон',
-      backup: 'Сделать резервную копию настроек', updates: 'Проверить обновления', profile: 'Изменить профиль', privacy: 'Настроить конфиденциальность', language: 'Изменить язык интерфейса',
+      backup: 'Сделать резервную копию настроек', updates: 'Проверить обновления', profile: 'Изменить профиль', privacy: 'Настроить конфиденциальность', language: 'Изменить язык интерфейса', assistant: 'Выбрать помощника',
     },
     icons: {
       display: 'Экран', mouse: 'Мышь', catalog: 'Каталог', editor: 'Редактор тем', sounds: 'Звуки и аудиоустройства', network: 'Сетевые подключения', backups: 'Архивация',
-      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', regional: 'Язык и региональные стандарты',
+      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', regional: 'Язык и региональные стандарты', assistant: 'Помощник',
     },
     troubles: { display: 'Экран', sound: 'Звук', network: 'Сеть', updates: 'Обновления' },
   },
@@ -37,11 +37,11 @@ const words = {
     tasks: {
       theme: 'Change the theme', colours: 'Change the colour scheme', wallpaper: 'Change the chat background', cursors: 'Change the mouse pointers', server: 'Choose the Nekochat Reloaded server',
       catalogInstall: 'Install themes, cursors, sounds and wallpapers from the catalog', catalogRemove: 'Remove installed themes and packs', soundScheme: 'Change the sound scheme', microphone: 'Set up the microphone',
-      backup: 'Back up your settings', updates: 'Check for updates', profile: 'Change your profile', privacy: 'Change privacy options', language: 'Change the display language',
+      backup: 'Back up your settings', updates: 'Check for updates', profile: 'Change your profile', privacy: 'Change privacy options', language: 'Change the display language', assistant: 'Choose an assistant',
     },
     icons: {
       display: 'Display', mouse: 'Mouse', catalog: 'Catalog', editor: 'Theme Editor', sounds: 'Sounds and Audio Devices', network: 'Network Connections', backups: 'Backup',
-      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', regional: 'Regional and Language Options',
+      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', regional: 'Regional and Language Options', assistant: 'Assistant',
     },
     troubles: { display: 'Display', sound: 'Sound', network: 'Networking', updates: 'Updates' },
   },
@@ -55,7 +55,7 @@ const applet = (name, tab) => (controls.openApplet ? controls.openApplet(name, t
 const ACTIONS = {
   themes: () => applet('display', 'themes'), appearance: () => applet('display', 'appearance'), desktop: () => applet('display', 'desktop'),
   sounds: () => applet('sounds', 'sounds'), audio: () => applet('sounds', 'audio'), mouse: () => applet('mouse'), regional: () => applet('regional'),
-  network: () => applet('network'), backups: () => applet('backups'), updates: () => applet('updates'), privacy: () => applet('privacy'),
+  network: () => applet('network'), assistant: () => applet('assistant'), backups: () => applet('backups'), updates: () => applet('updates'), privacy: () => applet('privacy'),
   catalog: () => controls.openThemeBrowser(), editor: () => controls.openThemeEditor(), profile: () => controls.openProfileSettings(),
   admin: () => controls.openAdminPanel(stored('nk_server_url') || 'https://nekochat.komdu.is-cool.dev'),
   update: () => { try { localStorage.setItem('nk_update_check', String(Date.now())); } catch {} applet('updates'); },
@@ -76,10 +76,11 @@ const ICONS = [
   { id: 'users', icon: 'users', action: 'profile' },
   { id: 'admin', icon: 'admin', action: 'admin', available: () => Boolean(controls.openAdminPanel) && stored('nk_show_admin_button') === '1' },
   { id: 'regional', icon: 'regional', action: 'regional' },
+  { id: 'assistant', icon: 'assistant', action: 'assistant' },
 ];
 // A category page's task pane: See Also ([icon, icon name, action]) and Troubleshooters (help topics).
 const CATEGORIES = [
-  { id: 'appearance', icon: 'appearance', tasks: [['theme', 'themes'], ['colours', 'appearance'], ['wallpaper', 'desktop'], ['cursors', 'mouse']], icons: ['display', 'mouse', 'catalog', 'editor'], seeAlso: [['mouse', 'mouse', 'mouse'], ['catalog', 'catalog', 'catalog']], troubles: ['display', 'sound'] },
+  { id: 'appearance', icon: 'appearance', tasks: [['theme', 'themes'], ['colours', 'appearance'], ['wallpaper', 'desktop'], ['cursors', 'mouse'], ['assistant', 'assistant']], icons: ['display', 'mouse', 'assistant', 'catalog', 'editor'], seeAlso: [['mouse', 'mouse', 'mouse'], ['catalog', 'catalog', 'catalog']], troubles: ['display', 'sound'] },
   { id: 'network', icon: 'network', tasks: [['server', 'network']], icons: ['network'], seeAlso: [['users', 'users', 'profile']], troubles: ['network'] },
   { id: 'programs', icon: 'programs', tasks: [['catalogInstall', 'catalog'], ['catalogRemove', 'catalog']], icons: ['catalog'], seeAlso: [['updates', 'updates', 'update']], troubles: [] },
   { id: 'users', icon: 'users', tasks: [['profile', 'profile'], ['privacy', 'privacy']], icons: ['users', 'admin'], seeAlso: [['network-connections', 'network', 'network']], troubles: [] },

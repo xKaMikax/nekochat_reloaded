@@ -136,7 +136,7 @@
     const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
     const existing = appletWindows.get(name);
     if (!isDestroyed(existing)) { focus(existing); if (page) send(existing, 'settings:show-tab', page); return; }
-    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520], assistant: [420, 360] }[name] || [440, 420];
     const win = createWindow({ url: `/assets/html/theme_settings_frame.html?applet=${name}${page ? `&tab=${page}` : ''}`, width, height, minWidth: 380, minHeight: 320, parent: owner });
     appletWindows.set(name, win);
     win.onClosed = () => { if (appletWindows.get(name) === win) appletWindows.delete(name); };
