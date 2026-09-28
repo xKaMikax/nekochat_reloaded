@@ -289,6 +289,9 @@
     const call = $('#start-call'), members = $('#room-members'), pins = $('#pins-button'), search = $('#header-search');
     [call, pins, members, search].filter(Boolean).forEach(node => actions.append(node));
     const input = $('#header-search input'); input.value = query;
+    // Narrow windows show the field as a round button; a click opens it over the header.
+    $('#header-search').addEventListener('click', () => { $('#header-search').classList.add('open'); input.focus(); });
+    input.addEventListener('blur', () => { if (!input.value) $('#header-search')?.classList.remove('open'); });
     input.oninput = () => runSearch(input.value);
     input.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); stepSearch(event.shiftKey ? 1 : -1); } if (event.key === 'Escape') { event.stopPropagation(); closeSearch(); input.blur(); } };
     $('#pins-button')?.addEventListener('click', event => { event.stopPropagation(); togglePinsPopover(); });

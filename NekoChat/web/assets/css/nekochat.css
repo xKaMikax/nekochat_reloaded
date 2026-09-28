@@ -256,7 +256,23 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .pins-empty { display: grid; justify-items: center; gap: 4px; padding: 22px 16px; color: #555; text-align: center; }
 .pins-empty-icon { width: 46px; height: 46px; fill: #9aa9bd; }
 .pins-empty p { margin: 4px 0 0; }.pins-empty small { color: #2b8a3e; }
-@media (max-width: 700px) { .header-search { width: 120px; } .header-search.active, .header-search:focus-within { width: 160px; } }
+
 .header-actions { display: flex; align-items: center; gap: 7px; }
 .header-actions .header-search { margin: 0 0 0 8px; }
 .pins-button svg { width: 17px; height: 17px; fill: #fff; }.pins-button.has-pins svg { fill: #ffd84d; }
+.messages-empty { margin: auto; color: #6a7a92; font: 12px Tahoma, sans-serif; text-align: center; }
+/* The name stays on one line; the header never wraps. */
+.conversation-header > span:not(.avatar):not(.header-actions) { flex: 1; min-width: 0; }
+.conversation-header h1, .conversation-header small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-actions { flex: none; position: relative; }
+/* Narrow windows: the search field becomes a round button like the others and opens over the header. */
+@media (max-width: 900px) {
+  .header-search { width: 34px; height: 34px; margin-left: 0; border: 1px solid #0d6d26; border-radius: 50%; background: linear-gradient(#5bd26c, #13852b); justify-content: center; cursor: pointer; }
+  .header-search input, .header-search .search-count { display: none; }
+  .header-search svg { margin: 0; fill: #fff; }
+  .header-search.open, .header-search.active { position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 6; width: min(260px, 70vw); height: 26px; border: 1px solid #7f9db9; border-radius: 0; background: #fff; box-shadow: 2px 2px 4px rgba(0,0,0,.3); justify-content: flex-start; cursor: text; }
+  .header-search.open input, .header-search.active input, .header-search.open .search-count, .header-search.active .search-count { display: block; }
+  .header-search.open svg, .header-search.active svg { margin: 0 5px; fill: #5a6b82; }
+  .header-actions .header-search { margin-left: 0; }
+}
+
