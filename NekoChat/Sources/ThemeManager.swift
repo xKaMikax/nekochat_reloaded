@@ -31,6 +31,7 @@ final class ThemeManager {
         var css = false
         var userInstalled = false
         var catalogId: String?
+        var schemed = false
     }
 
     private struct Prepared {
@@ -81,13 +82,18 @@ final class ThemeManager {
         for directory in user.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
             guard (try? directory.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true, !directory.lastPathComponent.hasPrefix("."), !Self.reservedIds.contains(directory.lastPathComponent) else { continue }
             let names = ((try? files.contentsOfDirectory(atPath: directory.path)) ?? []).sorted()
+            // A CSS theme with colour schemes: schemes/<scheme>/theme.css (names in an optional theme.json).
+            let schemeFolders = (try? files.contentsOfDirectory(atPath: directory.appendingPathComponent("schemes").path)) ?? []
+            let schemed = !names.contains(where: { $0.lowercased().hasSuffix(".theme") || $0.lowercased().hasSuffix(".msstyles") || $0.lowercased() == "theme.css" })
+                && schemeFolders.contains(where: { files.fileExists(atPath: directory.appendingPathComponent("schemes/\($0)/theme.css").path) })
             guard let source = names.first(where: { $0.lowercased().hasSuffix(".theme") })
                     ?? names.first(where: { $0.lowercased().hasSuffix(".msstyles") })
-                    ?? names.first(where: { $0.lowercased() == "theme.css" }) else { continue }
+                    ?? names.first(where: { $0.lowercased() == "theme.css" })
+                    ?? (schemed ? "theme.css" : nil) else { continue }
             let catalogId = (readJSON(directory.appendingPathComponent("catalog-theme.json")) as? [String: Any])?["id"] as? String
             let id = directory.lastPathComponent
             found.removeAll { $0.id == id }
-            found.append(Theme(id: id, prebuilt: false, source: directory.appendingPathComponent(source), css: source.lowercased() == "theme.css", userInstalled: true, catalogId: catalogId))
+            found.append(Theme(id: id, prebuilt: false, source: directory.appendingPathComponent(source), css: source.lowercased() == "theme.css", userInstalled: true, catalogId: catalogId, schemed: schemed))
         }
         return found
     }
@@ -99,6 +105,7 @@ final class ThemeManager {
             return Prepared(theme: theme, baseUrl: "\(WebViewController.origin)/prebuilt/\(Self.encode(id))", metadata: metadata, css: false)
         }
         let source = theme.source!
+        if theme.css && theme.schemed { return try materializeSchemedCssTheme(theme, root: source.deletingLastPathComponent()) }
         if theme.css {
             let metadata: [String: Any] = ["theme": id, "schemes": [["id": "default", "name": "Default"]], "defaultScheme": "default"]
             return Prepared(theme: theme, baseUrl: try materializeCssTheme(id: id, source: source), metadata: metadata, css: true)
@@ -139,6 +146,38 @@ final class ThemeManager {
         try files.createDirectory(at: folder, withIntermediateDirectories: true)
         try (output as String).write(to: folder.appendingPathComponent("theme.css"), atomically: true, encoding: .utf8)
         return "\(WebViewController.origin)/runtime-themes/\(Self.encode("css-\(id)"))"
+    }
+
+    /// Every scheme becomes runtime-themes/css-<id>/schemes/<scheme>/theme.css with absolute picture URLs.
+    private func materializeSchemedCssTheme(_ theme: Theme, root: URL) throws -> Prepared {
+        let info = readJSON(root.appendingPathComponent("theme.json")) as? [String: Any] ?? [:]
+        var names: [String: String] = [:]
+        for item in info["schemes"] as? [[String: Any]] ?? [] { if let id = item["id"] as? String { names[id] = item["name"] as? String ?? id } }
+        let output = runtimeThemesRoot.appendingPathComponent("css-\(theme.id)", isDirectory: true)
+        let pattern = try NSRegularExpression(pattern: "url\\((['\"]?)([^'\")]+)\\1\\)")
+        let absolute = try NSRegularExpression(pattern: "^(data|file|https?|blob):", options: .caseInsensitive)
+        var schemes: [[String: Any]] = []
+        let folders = ((try? files.contentsOfDirectory(atPath: root.appendingPathComponent("schemes").path)) ?? []).sorted()
+        for folder in folders where folder.range(of: "^[\\w.-]+$", options: .regularExpression) != nil {
+            guard let css = try? String(contentsOf: root.appendingPathComponent("schemes/\(folder)/theme.css"), encoding: .utf8) else { continue }
+            let base = "\(WebViewController.origin)/user-themes/\(Self.encode(theme.id))/schemes/\(Self.encode(folder))"
+            var result = css as NSString
+            for match in pattern.matches(in: css, range: NSRange(css.startIndex..., in: css)).reversed() {
+                let url = (css as NSString).substring(with: match.range(at: 2))
+                if absolute.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)) != nil { continue }
+                let path = url.hasPrefix("./") ? String(url.dropFirst(2)) : url
+                result = result.replacingCharacters(in: match.range, with: "url(\"\(base)/\(path.split(separator: "/").map { Self.encode(String($0)) }.joined(separator: "/"))\")") as NSString
+            }
+            let target = output.appendingPathComponent("schemes/\(folder)", isDirectory: true)
+            try files.createDirectory(at: target, withIntermediateDirectories: true)
+            try (result as String).write(to: target.appendingPathComponent("theme.css"), atomically: true, encoding: .utf8)
+            schemes.append(["id": folder, "name": names[folder] ?? folder])
+        }
+        guard let first = schemes.first?["id"] as? String else { throw ThemeError("The theme has no colour schemes.") }
+        let wanted = info["defaultScheme"] as? String
+        let defaultScheme = schemes.contains(where: { $0["id"] as? String == wanted }) ? wanted! : first
+        let metadata: [String: Any] = ["theme": info["name"] as? String ?? theme.id, "schemes": schemes, "defaultScheme": defaultScheme]
+        return Prepared(theme: theme, baseUrl: "\(WebViewController.origin)/runtime-themes/\(Self.encode("css-\(theme.id)"))", metadata: metadata, css: false)
     }
 
     // MARK: - Settings backups
@@ -355,7 +394,9 @@ final class ThemeManager {
         try ZipReader.extract(zip, to: temporary)
         guard let source = findThemeSource(temporary) else { throw ThemeError("Theme.ZIP must contain a .theme, .msstyles, or theme.css file.") }
         try files.createDirectory(at: destination, withIntermediateDirectories: true)
-        let sourceRoot = source.deletingLastPathComponent()
+        // A theme.css inside schemes/<scheme>/ belongs to a theme with colour schemes: copy its root.
+        let parent = source.deletingLastPathComponent()
+        let sourceRoot = parent.deletingLastPathComponent().lastPathComponent == "schemes" ? parent.deletingLastPathComponent().deletingLastPathComponent() : parent
         let copyAll = source.lastPathComponent.lowercased() == "theme.css"
         let enumerator = files.enumerator(at: sourceRoot, includingPropertiesForKeys: [.isRegularFileKey])
         while let file = enumerator?.nextObject() as? URL {
