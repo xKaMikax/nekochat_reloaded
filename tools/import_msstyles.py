@@ -371,7 +371,21 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
         slider = True
     except KeyError:
         pass
+    # Start menu footer icons (STARTPANEL LOGOFFBUTTONS: undock | log off key | turn off power,
+    # 24x24 each, plus the highlighted "HOT" strip): used for Change user and Sign out.
+    startpanel = False
+    try:
+        for suffix, state_name in (('_STARTPANELLOGOFFBUTTONS_BMP', 'normal'), ('_STARTPANELLOGOFFBUTTONSHOT_BMP', 'hover')):
+            strip = find(images, suffix, prefix)
+            size = strip.width // 3
+            save(strip.crop((size, 0, size * 2, strip.height)), output, f'logoff-{state_name}.png')
+            save(strip.crop((size * 2, 0, size * 3, strip.height)), output, f'turnoff-{state_name}.png')
+        startpanel = True
+    except KeyError:
+        pass
     with (output / 'theme.css').open('a', encoding='utf-8') as css:
+        if startpanel:
+            css.write(':root { --xp-logoff-icon: url("%s/logoff-normal.png"); --xp-logoff-icon-hover: url("%s/logoff-hover.png"); --xp-turnoff-icon: url("%s/turnoff-normal.png"); --xp-turnoff-icon-hover: url("%s/turnoff-hover.png"); }\n' % ((asset,) * 4))
         if slider:
             css.write(':root { --xp-slider-thumb: url("%s/slider-thumb-normal.png"); --xp-slider-thumb-hover: url("%s/slider-thumb-hover.png"); --xp-slider-thumb-pressed: url("%s/slider-thumb-pressed.png"); --xp-slider-track: url("%s/slider-track.png"); }\n' % ((asset,) * 4))
         css.write(':root { --xp-title-fill-inactive: url("%s/title-fill-inactive.png"); --xp-title-left-inactive: url("%s/title-left-inactive.png"); --xp-title-right-inactive: url("%s/title-right-inactive.png"); }\n' % ((asset,) * 3))
