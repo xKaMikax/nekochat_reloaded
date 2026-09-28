@@ -45,3 +45,9 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .editor-footer { display: flex; align-items: center; gap: 6px; }
 .editor-status { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-status.error { color: #b0281a; white-space: normal; }
+/* Picture rows: the name on its own line, then thumbnail, size and the buttons in one line. */
+.editor-row.image-row { grid-template-columns: 1fr; gap: 3px; padding: 5px 6px; }
+.editor-row.image-row .editor-control { flex-wrap: nowrap; }
+.editor-row.image-row .editor-size { min-width: 44px; }
+.theme-editor .editor-row.image-row .editor-control button { flex: none; height: 22px; }
+
