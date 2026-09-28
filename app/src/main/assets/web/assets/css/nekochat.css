@@ -177,4 +177,12 @@ html[data-login-ui="classic"] .xp-logon-accounts { box-sizing: border-box; width
 .profile-actions .profile-bottom-row #change-user, .profile-actions .profile-bottom-row #admin-panel-button { flex: 1 1 0; width: auto; min-width: 0; padding: 0 6px; }
 /* With the admin panel shown the two share the row by their labels, a little smaller. */
 .profile-actions .profile-bottom-row:has(#admin-panel-button:not([hidden])) .account-action:not(.icon-only) { flex: 1 1 auto; padding: 0 4px; font-size: 12px; }
+/* Start menu footer icons from the theme (STARTPANEL LOGOFFBUTTONS): Sign out is the red
+   "Turn off" icon itself, as in the XP Start menu, and Change user shows the "Log off" key. */
+.xp-startpanel .profile-actions #logout.icon-only { width: 29px; height: 29px; padding: 0; border: 0; border-image: none; box-shadow: none; background: var(--xp-turnoff-icon) center / 100% 100% no-repeat; }
+.xp-startpanel .profile-actions #logout.icon-only:hover, .xp-startpanel .profile-actions #logout.icon-only:focus-visible { background-image: var(--xp-turnoff-icon-hover, var(--xp-turnoff-icon)); }
+.xp-startpanel .profile-actions #logout.icon-only:active { filter: brightness(.88); }
+.xp-startpanel .profile-actions #logout .profile-action-icon { display: none; }
+.xp-startpanel #change-user .profile-action-icon { width: 18px; height: 18px; background: var(--xp-logoff-icon) center / 18px 18px no-repeat; }
+.xp-startpanel #change-user:hover .profile-action-icon { background-image: var(--xp-logoff-icon-hover, var(--xp-logoff-icon)); }
 

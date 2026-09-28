@@ -1555,13 +1555,21 @@ applyWallpaper();
 window.addEventListener('storage', event => { if (event.key?.startsWith('nk_chat_wallpaper')) applyWallpaper(); });
 window.addEventListener('message', event => {
   if (event.data?.type === 'xp-display-settings') applyDisplaySettings(event.data.settings || {});
-  if (event.data?.type === 'xp-theme-refresh') { const link = document.querySelector('#nekochat-style'); if (link) link.href = `assets/css/nekochat.css?theme=${event.data.revision}`; const theme = document.querySelector('#nekochat-theme'); if (theme && event.data.cssUrl) theme.href = event.data.cssUrl; }
+  if (event.data?.type === 'xp-theme-refresh') { const link = document.querySelector('#nekochat-style'); if (link) link.href = `assets/css/nekochat.css?theme=${event.data.revision}`; const theme = document.querySelector('#nekochat-theme'); if (theme && event.data.cssUrl) theme.href = event.data.cssUrl; refreshStartPanelIcons(); }
 });
 desktopControls?.getActiveTheme().then(theme => {
   const link = document.querySelector('#nekochat-theme');
   if (link && theme?.cssUrl) link.href = theme.cssUrl;
 });
 desktopControls?.getDisplaySettings().then(applyDisplaySettings);
+// Themes from .msstyles bring the Start menu footer icons (Turn off, Log off): Sign out and
+// Change user use them; Classic keeps the app's own icons. The stylesheet has no reliable load
+// event for file:// links, so look again shortly after a change.
+function refreshStartPanelIcons() {
+  [0, 150, 500, 1500].forEach(delay => setTimeout(() => document.documentElement.classList.toggle('xp-startpanel', getComputedStyle(document.documentElement).getPropertyValue('--xp-turnoff-icon').trim() !== ''), delay));
+}
+refreshStartPanelIcons();
+
 // ---- Updates -------------------------------------------------------------------------------
 // Apps look for a newer GitHub release; the web version compares its version.js with the one
 // on the site. Installing is up to the platform (desktopControls.installUpdate): the Windows
