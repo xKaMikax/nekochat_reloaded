@@ -1,0 +1,99 @@
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.control-panel-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.control-panel-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.control-panel-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.control-panel-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.control-panel { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; background: var(--xp-theme-window, #ece9d8); color: #000; }
+.control-panel button { font: inherit; color: inherit; }
+
+/* Address bar with the Back button, like Explorer's. */
+.cp-address { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-bottom: 1px solid #d6d2c2; background: var(--xp-theme-buttonface, #ece9d8); }
+.cp-back { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 2px; border: 1px solid transparent; border-radius: 3px; background: transparent; }
+.cp-back:not(:disabled):hover { border-color: #cecec3; background: #f4f3ee; }
+.cp-back:disabled { color: #a0a0a0; }
+.cp-back-arrow { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8fe58f, #2f9a2f 70%); box-shadow: inset 0 0 0 1px #2b7b2b; position: relative; }
+.cp-back-arrow::after { content: ''; position: absolute; left: 5px; top: 6px; border: 4px solid transparent; border-right: 6px solid #fff; border-left: 0; }
+.cp-back-arrow::before { content: ''; position: absolute; left: 9px; top: 8px; width: 5px; height: 4px; background: #fff; }
+.cp-back:disabled .cp-back-arrow { filter: grayscale(1) opacity(.6); }
+.cp-address-label { color: #6d6d6d; }
+.cp-address-box { display: flex; flex: 1; min-width: 0; align-items: center; gap: 4px; height: 20px; padding: 0 4px; border: 1px solid #7f9db9; background: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cp-address-box img { width: 16px; height: 16px; }
+
+.cp-body { display: flex; flex: 1; min-height: 0; }
+/* Left task pane: Explorer's bar from the theme's shellstyle.dll (Luna's when it has none). */
+.cp-taskpane { flex: none; width: 210px; box-sizing: border-box; padding: 12px; overflow-y: auto; background: var(--xp-taskpane-background, linear-gradient(#7ba2e7, #6375d6)); }
+.cp-box { margin-bottom: 15px; }
+.cp-box h2 { display: flex; align-items: center; gap: 6px; height: 25px; margin: 0; padding: 0 0 0 12px; background: var(--xp-taskpane-header, url('../images/control-panel/header.png')) 0 0 / 100% 100% no-repeat; color: var(--xp-taskpane-header-text, #215dc6); font: bold 11px Tahoma, Arial, sans-serif; cursor: pointer; }
+.cp-box-main h2 { background-image: var(--xp-taskpane-header-main, url('../images/control-panel/header-main.png')); color: #fff; }
+.cp-box h2:hover > span { color: var(--xp-taskpane-link-hover, #428eff); }
+.cp-box h2 img { width: 32px; height: 32px; margin: -8px -2px 0 -8px; }
+.cp-box h2 > span { flex: 1; }
+.cp-chevron { flex: none; width: 21px; height: 23px; margin-right: 1px; border: 0; padding: 0; background: var(--xp-taskpane-collapse, url('../images/control-panel/collapse.png')) center no-repeat; }
+.cp-box h2:hover .cp-chevron { background-image: var(--xp-taskpane-collapse-hover, url('../images/control-panel/collapse-hover.png')); }
+.cp-box.collapsed .cp-chevron { background-image: var(--xp-taskpane-expand, url('../images/control-panel/expand.png')); }
+.cp-box.collapsed h2:hover .cp-chevron { background-image: var(--xp-taskpane-expand-hover, url('../images/control-panel/expand-hover.png')); }
+.cp-box-main .cp-chevron { background-image: var(--xp-taskpane-collapse-main, url('../images/control-panel/collapse-main.png')); }
+.cp-box-main h2:hover .cp-chevron { background-image: var(--xp-taskpane-collapse-main-hover, url('../images/control-panel/collapse-main-hover.png')); }
+.cp-box-main.collapsed .cp-chevron { background-image: var(--xp-taskpane-expand-main, url('../images/control-panel/expand-main.png')); }
+.cp-box-main.collapsed h2:hover .cp-chevron { background-image: var(--xp-taskpane-expand-main-hover, url('../images/control-panel/expand-main-hover.png')); }
+.cp-box.collapsed .cp-box-body { display: none; }
+.cp-box-body { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid #fff; border-top: 0; background: var(--xp-taskpane-body, #d6dff7); }
+.cp-box-main .cp-box-body { background: var(--xp-taskpane-body-main, #eff3ff); }
+.cp-link { display: flex; align-items: flex-start; gap: 6px; padding: 0; border: 0; background: none; color: var(--xp-taskpane-link, #215dc6) !important; text-align: left; }
+.cp-link:hover { color: var(--xp-taskpane-link-hover, #428eff) !important; text-decoration: underline; }
+.cp-link img { flex: none; width: 16px; height: 16px; }
+
+.cp-content { flex: 1; min-width: 0; overflow-y: auto; }
+/* Category view: white headings and links on blue. */
+.cp-content.cp-view-category { padding: 14px 22px; background: var(--xp-cp-watermark, url('../images/control-panel/watermark.png')) right bottom no-repeat, var(--xp-cp-background, #6375d6); }
+.cp-pick { margin: 4px 0 18px; color: var(--xp-cp-title, #d6dff5); font: bold 22px 'Trebuchet MS', Tahoma, sans-serif; }
+.cp-categories { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 18px; }
+.cp-category { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 2px; border: 0; background: none; color: #fff !important; font-size: 12px !important; text-align: left; }
+.cp-category img { flex: none; width: 40px; height: 40px; }
+.cp-category:hover span { text-decoration: underline; }
+/* A category page: its tasks and icons on white. */
+.cp-content.cp-view-page { padding: 12px 22px; background: #fff; }
+.cp-page-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #b4c4ec; }
+.cp-page-header img { width: 40px; height: 40px; }
+.cp-page-header h1 { margin: 0; color: var(--xp-taskpane-link, #215dc6); font: bold 18px 'Trebuchet MS', Tahoma, sans-serif; }
+.cp-section { margin: 10px 0 8px; color: #4d6185; font: bold 13px 'Trebuchet MS', Tahoma, sans-serif; }
+.cp-tasks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.cp-task { display: flex; align-items: center; gap: 8px; padding: 1px 0; border: 0; background: none; color: var(--xp-taskpane-link, #215dc6) !important; font-size: 12px !important; text-align: left; }
+.cp-task:hover { text-decoration: underline; }
+.cp-task-arrow { flex: none; width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8fe58f, #2f9a2f 70%); position: relative; }
+.cp-task-arrow::after { content: ''; position: absolute; left: 5px; top: 3px; border: 3.5px solid transparent; border-left: 4px solid #fff; border-right: 0; }
+/* Classic view and the icons of a category page: a grid of large icons. */
+.cp-content.cp-view-classic { padding: 10px; background: #fff; }
+.cp-icons { display: grid; grid-template-columns: repeat(auto-fill, 104px); gap: 8px 6px; }
+.cp-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 104px; padding: 4px 2px; border: 1px solid transparent; background: none; text-align: center; }
+.cp-icon img { width: 32px; height: 32px; }
+.cp-icon span { max-width: 100%; padding: 0 2px; line-height: 1.25; overflow-wrap: break-word; }
+.cp-icon:hover span, .cp-icon:focus span { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.cp-icon:focus { outline: none; }
+.cp-icons-row .cp-icon { color: #000; }
+
+/* Classic theme: the grey look of Windows Classic, no Luna blue. */
+.cp-classic-look .cp-taskpane { background: var(--xp-theme-buttonface, #d4d0c8); border-right: 1px solid #808080; }
+.cp-classic-look .cp-box h2, .cp-classic-look .cp-box-main h2 { background: var(--xp-theme-highlight, #0a246a); color: #fff; }
+.cp-classic-look .cp-chevron { display: none; }
+.cp-classic-look .cp-box-body, .cp-classic-look .cp-box-main .cp-box-body { border: 1px solid #808080; border-top: 0; background: #fff; }
+.cp-classic-look .cp-content.cp-view-category { background: #fff; }
+.cp-classic-look .cp-pick { color: #000; }
+.cp-classic-look .cp-category { color: #000 !important; }
+.cp-classic-look .cp-page-header h1, .cp-classic-look .cp-task, .cp-classic-look .cp-link { color: #000080 !important; }
+.cp-classic-look .cp-back-arrow { background: #d4d0c8; box-shadow: inset 0 0 0 1px #808080; }
+.cp-classic-look .cp-back-arrow::after { border-right-color: #000; } .cp-classic-look .cp-back-arrow::before { background: #000; }
+
+/* Narrow windows (phones): the task pane becomes a strip above the content. */
+@media (max-width: 560px) {
+  .cp-body { flex-direction: column; }
+  .cp-taskpane { display: flex; gap: 8px; width: auto; padding: 6px 8px; overflow-x: auto; }
+  .cp-box { flex: none; margin: 0; }
+  .cp-box h2 { display: none; }
+  .cp-box-body { flex-direction: row; gap: 10px; padding: 5px 8px; border: 1px solid #fff; border-radius: 3px; }
+  .cp-content.cp-view-category { padding: 10px 12px; }
+  .cp-pick { font-size: 18px; margin-bottom: 12px; }
+  .cp-categories { grid-template-columns: 1fr; }
+  .cp-content.cp-view-page { padding: 10px 12px; }
+  .cp-address-label { display: none; }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Control Panel</title><link id="frame-style" rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/control-panel.css">
+<script src="assets/js/android-bridge.js"></script><link rel="stylesheet" href="assets/css/android.css">
+</head>
+<body>
+  <div class="xp-window control-panel-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/control-panel/control-panel.png')"></span><span class="xp-title">Панель управления</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="control-panel">
+      <div class="cp-address"><button class="cp-back" id="cp-back" type="button" disabled><span class="cp-back-arrow"></span><span id="cp-back-text">Назад</span></button><span class="cp-address-label" id="cp-address-label">Адрес</span><span class="cp-address-box"><img src="assets/images/control-panel/control-panel.png" alt=""><span id="cp-address"></span></span></div>
+      <div class="cp-body">
+        <aside class="cp-taskpane">
+          <section class="cp-box cp-box-main"><h2><img src="assets/images/control-panel/control-panel.png" alt=""><span id="cp-pane-title"></span><button class="cp-chevron" type="button" tabindex="-1" aria-hidden="true"></button></h2><div class="cp-box-body"><button class="cp-link" id="cp-switch" type="button"><img src="assets/images/control-panel/control-panel.png" alt=""><span></span></button></div></section>
+          <section class="cp-box"><h2><span id="cp-see-also"></span><button class="cp-chevron" type="button" tabindex="-1" aria-hidden="true"></button></h2><div class="cp-box-body"><button class="cp-link" id="cp-update" type="button"><img src="assets/images/control-panel/updates.png" alt=""><span></span></button><button class="cp-link" id="cp-help" type="button"><img src="assets/images/control-panel/help.png" alt=""><span></span></button></div></section>
+        </aside>
+        <section class="cp-content" id="cp-content"></section>
+      </div>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <script src="assets/js/packs.js"></script>
+  <script src="assets/js/control-panel.js"></script>
+</body>
+</html>

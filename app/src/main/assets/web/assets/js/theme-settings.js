@@ -74,6 +74,14 @@ async function refreshPacks() {
   fill($('#sound-scheme'), '<option value="xp">Windows XP (default)</option><option value="none">No sounds</option>', 'sounds', 'nk_sound_scheme', 'xp');
   fill($('#cursor-scheme'), '<option value="xp">Windows XP (default)</option><option value="system">System</option>', 'cursors', 'nk_cursor_scheme', 'xp');
   fill($('#icon-scheme'), '<option value="default">Nekochat Reloaded (default)</option>', 'icons', 'nk_icon_scheme', 'default');
+  // Chat backgrounds from wallpaper packs: one option per picture, pack:<id>/<name>.
+  const wallpaper = $('#chat-wallpaper'); wallpaper.querySelectorAll('.pack-wallpaper').forEach(option => option.remove());
+  const custom = wallpaper.querySelector('option[value="custom"]');
+  for (const pack of packs) for (const name of Object.keys(pack.wallpapers || {}).sort()) {
+    const option = document.createElement('option'); option.className = 'pack-wallpaper'; option.value = `pack:${pack.id}/${name}`; option.textContent = name; wallpaper.insertBefore(option, custom);
+  }
+  const stored = localStorage.getItem('nk_chat_wallpaper') || 'none';
+  wallpaper.value = [...wallpaper.options].some(option => option.value === stored) ? stored : 'none';
 }
 async function applyPackChoices() {
   const packFor = value => value.startsWith('pack:') ? packs.find(pack => pack.id === value.slice(5)) : null;
@@ -88,7 +96,11 @@ async function applyPackChoices() {
 async function previewSelection() { refreshPreview(await controls.previewTheme($('#theme-list').value, $('#colour-scheme').value)); }
 $('#theme-list').onchange = async () => { try { refreshSchemes(); await previewSelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
 $('#colour-scheme').onchange = async () => { try { await previewSelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
-document.querySelectorAll('.property-tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.property-tab').forEach(item => item.classList.toggle('active', item === tab)); document.querySelectorAll('.property-page').forEach(page => { page.hidden = page.id !== `${tab.dataset.page}-page`; }); });
+function showTab(name) { const tab = document.querySelector(`.property-tab[data-page="${CSS.escape(String(name))}"]`); if (!tab) return; document.querySelectorAll('.property-tab').forEach(item => item.classList.toggle('active', item === tab)); document.querySelectorAll('.property-page').forEach(page => { page.hidden = page.id !== `${tab.dataset.page}-page`; }); }
+document.querySelectorAll('.property-tab').forEach(tab => tab.onclick = () => showTab(tab.dataset.page));
+// The Control Panel opens Display Properties at a page: ?tab= at start, then the event.
+showTab(new URLSearchParams(location.search).get('tab') || 'themes');
+controls.onSettingsTab?.(showTab);
 $('#close').onclick = () => controls.close(); $('#cancel').onclick = () => controls.close(); $('#ok').onclick = () => controls.close();
 $('#apply').onclick = async () => { try { $('#theme-error').textContent = ''; await applySelection(); } catch (error) { $('#theme-error').textContent = error.message; } };
 $('#theme-import').onclick = async () => { try { $('#theme-error').textContent = 'Importing theme…'; const result = await controls.importTheme(); if (!result) { $('#theme-error').textContent = ''; return; } themeMetadata = result.themes; $('#theme-list').innerHTML = themeMetadata.map(theme => `<option value="${esc(theme.id)}">${esc(theme.name)}</option>`).join(''); $('#theme-list').value = result.id; refreshSchemes(result.scheme); await previewSelection(); $('#theme-error').textContent = 'Theme added. Click Apply to use it.'; } catch (error) { $('#theme-error').textContent = error.message; } };
@@ -115,6 +127,7 @@ function saveWallpaper() {
   const choice = $('#chat-wallpaper').value;
   if (choice === 'custom' && pendingWallpaper) { try { localStorage.setItem('nk_chat_wallpaper_image', pendingWallpaper); } catch { $('#theme-error').textContent = 'The picture is too large.'; return; } }
   if (choice === 'custom' && !localStorage.getItem('nk_chat_wallpaper_image')) return;
+  if (choice.startsWith('pack:')) { const [id, ...name] = choice.slice(5).split('/'); localStorage.setItem('nk_chat_wallpaper_pack', packs.find(pack => pack.id === id)?.wallpapers?.[name.join('/')] || ''); }
   localStorage.setItem('nk_chat_wallpaper', choice); pendingWallpaper = null;
 }
 $('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
