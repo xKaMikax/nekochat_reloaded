@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Control Panel</title><link id="frame-style" rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/control-panel.css">
+<script src="assets/js/ios-bridge.js"></script><link rel="stylesheet" href="assets/css/ios.css">
+</head>
+<body>
+  <div class="xp-window control-panel-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/control-panel/control-panel-16.png')"></span><span class="xp-title">Панель управления</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="control-panel">
+      <nav class="cp-menu" id="cp-menu"><button type="button" data-menu="file"></button><button type="button" data-menu="edit"></button><button type="button" data-menu="view"></button><button type="button" data-menu="favorites"></button><button type="button" data-menu="tools"></button><button type="button" data-menu="help"></button></nav>
+      <div class="cp-toolbar">
+        <button class="cp-tool cp-tool-labeled" id="cp-back" type="button" disabled><img src="assets/images/control-panel/tb-back.png" alt=""><span id="cp-back-text"></span></button>
+        <button class="cp-tool" id="cp-forward" type="button" disabled><img src="assets/images/control-panel/tb-forward.png" alt=""></button>
+        <button class="cp-tool" id="cp-up" type="button" disabled><img src="assets/images/control-panel/tb-up.png" alt=""></button>
+        <i class="cp-tool-separator"></i>
+        <button class="cp-tool cp-tool-labeled" id="cp-search" type="button" disabled><img src="assets/images/control-panel/tb-search.png" alt=""><span id="cp-search-text"></span></button>
+        <button class="cp-tool cp-tool-labeled" id="cp-folders" type="button" disabled><img src="assets/images/control-panel/tb-folders.png" alt=""><span id="cp-folders-text"></span></button>
+        <i class="cp-tool-separator"></i>
+        <button class="cp-tool" id="cp-views" type="button"><img src="assets/images/control-panel/tb-views.png" alt=""></button>
+      </div>
+      <div class="cp-address"><span class="cp-address-label" id="cp-address-label"></span><span class="cp-address-box"><img id="cp-address-icon" src="assets/images/control-panel/control-panel-16.png" alt=""><span id="cp-address"></span><i class="cp-address-drop"></i></span><button class="cp-go" id="cp-go" type="button"><img src="assets/images/control-panel/go.png" alt=""><span id="cp-go-text"></span></button></div>
+      <div class="cp-body">
+        <aside class="cp-taskpane" id="cp-taskpane"></aside>
+        <section class="cp-content" id="cp-content"></section>
+      </div>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <script src="assets/js/packs.js"></script>
+  <script src="assets/js/control-panel.js"></script>
+</body>
+</html>

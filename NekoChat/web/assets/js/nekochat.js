@@ -60,8 +60,8 @@ function playServerSound(kind, status = 0) {
   return playSound('default');
 }
 const translations = {
-  ru: { loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', themeBrowser: 'Каталог тем', personalize: 'Персонализация', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
-  en: { loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', themeBrowser: 'Theme Browser', personalize: 'Personalization', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
+  ru: { loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', themeBrowser: 'Каталог', personalize: 'Панель управления', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
+  en: { loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', themeBrowser: 'Catalog', personalize: 'Control Panel', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
 };
 function t(key, values = {}) { return String((translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru)[key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? ''); }
 // Call states are keys, so the call window follows the chosen language.
@@ -200,7 +200,7 @@ function setDraft(key, text, sync = true) {
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
-const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
+const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
 let profileUser = null;
 const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
@@ -1655,7 +1655,7 @@ $('#theme-browser-profile').onclick = () => { $('#profile-dialog').close(); desk
 // The theme editor needs the desktop app (it writes theme folders).
 $('#theme-editor-profile').hidden = !desktopControls?.openThemeEditor;
 $('#theme-editor-profile').onclick = () => { $('#profile-dialog').close(); desktopControls.openThemeEditor(); };
-$('#personalize').onclick = () => { $('#profile-dialog').close(); desktopControls?.openThemeSettings(); };
+$('#personalize').onclick = () => { $('#profile-dialog').close(); (desktopControls?.openControlPanel || desktopControls?.openThemeSettings)?.(); };
 document.querySelectorAll('[data-profile-task]').forEach(button => button.onclick = () => openProfileTask(button.dataset.profileTask));
 $('#profile-back').onclick = () => openProfileTask(); $('#profile-cancel').onclick = () => $('#profile-editor').close();
 desktopControls?.onProfileChanged(user => { if (!user?.id || user.id !== me?.id) return; setLoggedIn(user); renderList(); });
@@ -1678,12 +1678,19 @@ window.addEventListener('resize', fitXpLogonBackground);
 // Chat background from Display Properties; the storage event updates open windows at once.
 function applyWallpaper() {
   let choice = 'none', image = ''; try { choice = localStorage.getItem('nk_chat_wallpaper') || 'none'; image = localStorage.getItem('nk_chat_wallpaper_image') || ''; } catch {}
-  const url = { bliss: 'assets/images/Bliss.jpg', logon: 'assets/images/xp_1920x1200.jpg', custom: image }[choice] || '';
+  let packUrl = ''; try { packUrl = localStorage.getItem('nk_chat_wallpaper_pack') || ''; } catch {}
+  const url = choice.startsWith('pack:') ? packUrl : { bliss: 'assets/images/Bliss.jpg', logon: 'assets/images/xp_1920x1200.jpg', custom: image }[choice] || '';
   let visibility = 35; try { visibility = Number(localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35); } catch {}
   const veil = 100 - Math.min(100, Math.max(5, Number.isFinite(visibility) ? visibility : 35));
   // A veil of the window colour over the picture keeps the messages readable.
-  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url));
+  // Position and colour, like XP's Desktop tab: stretch (cover), center or tile, on the colour.
+  let position = 'stretch', colour = ''; try { position = localStorage.getItem('nk_chat_wallpaper_position') || 'stretch'; colour = localStorage.getItem('nk_chat_wallpaper_color') || ''; } catch {}
+  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url || colour));
   list.style.backgroundImage = url ? `linear-gradient(color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent), color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent)), url("${url}")` : '';
+  list.style.backgroundSize = url ? `100% 100%, ${position === 'stretch' ? 'cover' : 'auto'}` : '';
+  list.style.backgroundRepeat = url ? `no-repeat, ${position === 'tile' ? 'repeat' : 'no-repeat'}` : '';
+  list.style.backgroundPosition = url ? `0 0, ${position === 'tile' ? '0 0' : 'center'}` : '';
+  list.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(colour) ? `color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, ${colour})` : '';
 }
 applyWallpaper();
 window.addEventListener('storage', event => { if (event.key?.startsWith('nk_chat_wallpaper')) applyWallpaper(); });
@@ -1709,16 +1716,18 @@ refreshStartPanelIcons();
 (async () => {
   if (!desktopControls?.listPacks) return;
   const chosen = key => { try { const value = localStorage.getItem(key) || ''; return value.startsWith('pack:') ? value.slice(5) : null; } catch { return null; } };
-  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme') };
-  if (!ids.sound && !ids.cursor && !ids.icon) return;
+  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper') };
+  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper) return;
   let packs = []; try { packs = await desktopControls.listPacks(); } catch { return; }
   const find = id => packs.find(pack => pack.id === id);
   try {
     if (ids.sound) localStorage.setItem('nk_sound_pack', JSON.stringify(find(ids.sound)?.sounds || {}));
     if (ids.cursor) localStorage.setItem('nk_cursor_pack', JSON.stringify(find(ids.cursor)?.cursors || {}));
     if (ids.icon) localStorage.setItem('nk_icon_pack', JSON.stringify(find(ids.icon)?.icons || {}));
+    // pack:<id>/<name>; the choice is synced, so on another device the pack may be missing.
+    if (ids.wallpaper) { const [id, ...name] = ids.wallpaper.split('/'); localStorage.setItem('nk_chat_wallpaper_pack', find(id)?.wallpapers?.[name.join('/')] || ''); }
   } catch {}
-  window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();
+  window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons(); applyWallpaper();
 })();
 
 // ---- Updates -------------------------------------------------------------------------------
@@ -1738,8 +1747,16 @@ function compareVersions(a, b) {
   if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
 }
 const storedFlag = (key, fallback) => { try { const value = localStorage.getItem(key); return value === null ? fallback : value === '1'; } catch { return fallback; } };
+// Automatic Updates (Control Panel): auto (download, install on quit), download (download, ask to
+// restart), notify (ask first) or off. Downloading by itself works where the app installs itself.
+function updatePolicy() {
+  let mode = ''; try { mode = localStorage.getItem('nk_update_mode') || ''; } catch {}
+  if (['auto', 'download', 'notify', 'off'].includes(mode)) return mode;
+  return storedFlag('nk_update_auto', true) ? 'notify' : 'off';
+}
 async function checkForUpdates(manual = false) {
-  if (!manual && !storedFlag('nk_update_auto', true)) return;
+  const policy = updatePolicy();
+  if (!manual && policy === 'off') return;
   try {
     updateMode ||= (await desktopControls?.getUpdateInfo?.())?.mode || 'download';
     const current = versionParts(window.NEKOCHAT_RELOADED_VERSION);
@@ -1761,17 +1778,18 @@ async function checkForUpdates(manual = false) {
     if (!found) { if (manual) showSystemDialog(t('updateNone', { version: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle')); return; }
     if (!manual && updateOffered === found.version) return;
     updateOffered = found.version;
+    if (!manual && (policy === 'auto' || policy === 'download') && updateMode === 'install' && desktopControls?.onUpdateStatus) { installUpdate(found, { quiet: true, installOnQuit: policy === 'auto' }); return; }
     const label = { install: 'updateInstall', download: 'updateDownload', altstore: 'updateAltStore', reload: 'updateReload' }[updateMode] || 'updateDownload';
     showSystemDialog(t('updateFound', { version: found.version, current: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle'), { action: { type: 'update-install', release: found }, actionLabel: t(label) });
   } catch (error) { if (manual) showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
 }
-async function installUpdate(release) {
+async function installUpdate(release, options = {}) {
   try {
     if (updateMode === 'reload') { await navigator.serviceWorker?.getRegistration().then(registration => registration?.update()).catch(() => {}); location.reload(); return; }
     // Android answers only after the download; say that it is running.
     if (updateMode === 'install' && !desktopControls?.onUpdateStatus) showSystemDialog(t('updateDownloadingPhone', { version: release.version }), 'info', t('updateTitle'));
-    const result = await desktopControls?.installUpdate?.(release);
-    if (result?.mode === 'install') showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
+    const result = await desktopControls?.installUpdate?.(release, options);
+    if (result?.mode === 'install' && !options.quiet) showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
     else if (result?.state === 'permission') showSystemDialog(t('updatePermission'), 'warning', t('updateTitle'));
     else if (!result) window.open(release.page || 'https://github.com/xKaMikax/nekochat_reloaded/releases', '_blank');
   } catch (error) { showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }

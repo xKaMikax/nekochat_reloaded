@@ -25,7 +25,7 @@
   // ---- state (same names as main.js) -------------------------------------------------
   let activeTheme;
   let activeDisplay = { language: 'ru', loginUi: 'xp', micDeviceId: '' };
-  let mainWindow, settingsWindow, themeBrowserWindow, emojiBrowserWindow, emojiBrowserOwner;
+  let mainWindow, settingsWindow, themeBrowserWindow, emojiBrowserWindow, emojiBrowserOwner, controlPanelWindow;
   let profileWindow, roomCreateWindow, callWindow, callOwner, closingCallWindow = false;
   const detachedChatWindows = new Map();
   const windows = new Set();
@@ -112,9 +112,11 @@
   }
 
   // ---- window openers (main.js) ------------------------------------------------------
-  function openThemeSettings(owner) {
-    if (!isDestroyed(settingsWindow)) { focus(settingsWindow); return; }
-    settingsWindow = createWindow({ url: '/assets/html/theme_settings_frame.html', width: 520, height: 560, minWidth: 460, minHeight: 400, parent: owner });
+  // tab: the page of Display Properties to show (the Control Panel opens them one by one).
+  function openThemeSettings(owner, tab) {
+    const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
+    if (!isDestroyed(settingsWindow)) { focus(settingsWindow); if (page) send(settingsWindow, 'settings:show-tab', page); return; }
+    settingsWindow = createWindow({ url: `/assets/html/theme_settings_frame.html${page ? `?tab=${page}` : ''}`, width: 520, height: 560, minWidth: 460, minHeight: 400, parent: owner });
     settingsWindow.onClosed = () => { settingsWindow = null; };
   }
   function openThemeBrowser(owner) {
@@ -122,6 +124,25 @@
     themeBrowserWindow = createWindow({ url: '/assets/html/theme_browser.html', width: 720, height: 540, minWidth: 520, minHeight: 360, parent: owner });
     themeBrowserWindow.onClosed = () => { themeBrowserWindow = null; };
   }
+  function openControlPanel(owner) {
+    if (!isDestroyed(controlPanelWindow)) { focus(controlPanelWindow); return; }
+    controlPanelWindow = createWindow({ url: '/assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
+    controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
+  }
+  // Control Panel applets (Display, Sounds, Mouse…): Display Properties showing only their pages.
+  const appletWindows = new Map();
+  function openApplet(owner, applet, tab) {
+    const name = typeof applet === 'string' && /^[a-z]+$/.test(applet) ? applet : 'display';
+    const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
+    const existing = appletWindows.get(name);
+    if (!isDestroyed(existing)) { focus(existing); if (page) send(existing, 'settings:show-tab', page); return; }
+    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+    const win = createWindow({ url: `/assets/html/theme_settings_frame.html?applet=${name}${page ? `&tab=${page}` : ''}`, width, height, minWidth: 380, minHeight: 320, parent: owner });
+    appletWindows.set(name, win);
+    win.onClosed = () => { if (appletWindows.get(name) === win) appletWindows.delete(name); };
+  }
+  // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
+  const windowOwner = win => win === controlPanelWindow ? win.parent : win;
   function openEmojiBrowser(owner) {
     emojiBrowserOwner = owner;
     if (!isDestroyed(emojiBrowserWindow)) { focus(emojiBrowserWindow); return; }
@@ -134,7 +155,7 @@
   }
   function openProfileSettings() {
     if (!isDestroyed(profileWindow)) { focus(profileWindow); return; }
-    profileWindow = createWindow({ url: '/assets/html/profile_settings_frame.html', width: 430, height: 390, minWidth: 360, minHeight: 310 });
+    profileWindow = createWindow({ url: '/assets/html/profile_settings_frame.html', width: 700, height: 520, minWidth: 460, minHeight: 360 });
     profileWindow.onClosed = () => { profileWindow = null; };
   }
   function openRoomCreate(owner) {
@@ -225,8 +246,10 @@
       maximize: () => { win.element.classList.remove('auto-maximized'); win.element.classList.toggle('maximized'); fitToScreen(win); },
       close: () => close(win),
       setWindowMeta: () => {},
-      openThemeSettings: () => openThemeSettings(win),
-      openThemeBrowser: () => openThemeBrowser(win),
+      openThemeSettings: tab => openThemeSettings(windowOwner(win), tab),
+      openControlPanel: () => openControlPanel(win),
+      openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
+      openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),
       openRoomCreate: () => openRoomCreate(win),
@@ -270,6 +293,7 @@
       prepareDisplayCapture: () => Promise.resolve(true),
       applyDisplaySettings: async settings => { activeDisplay = await invoke('display:apply', settings || {}); notifyDisplayChanged(activeDisplay); return clone(activeDisplay); },
       onThemeChanged: on('theme:changed'),
+      onSettingsTab: on('settings:show-tab'),
       onDisplayChanged: on('display:changed'),
       onProfileChanged: on('profile:changed'),
       onRoomCreated: on('room:created'),
