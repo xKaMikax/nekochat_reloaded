@@ -25,7 +25,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -49,6 +49,7 @@ TAGS = [
     {"name": "account", "description": "Linking a Nekochat account and the session"},
     {"name": "sync", "description": "Settings and read state shared between devices"},
     {"name": "status", "description": "Online, away, do-not-disturb and invisible statuses"},
+    {"name": "chats", "description": "Reactions, pinned messages, typing and read receipts of rooms and direct chats"},
     {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
 ]
@@ -115,6 +116,32 @@ def migrate() -> None:
                 sha256 TEXT NOT NULL,
                 created_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS reactions (
+                server TEXT NOT NULL,
+                chat TEXT NOT NULL,              -- "room:<id>" or "dm:<smaller id>-<larger id>"
+                message TEXT NOT NULL,           -- Nekochat message id
+                nekochat_id INTEGER NOT NULL,    -- who reacted
+                emoji TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (server, chat, message, nekochat_id, emoji)
+            );
+            CREATE TABLE IF NOT EXISTS pins (
+                server TEXT NOT NULL,
+                chat TEXT NOT NULL,
+                message TEXT NOT NULL,
+                content TEXT NOT NULL,           -- short copy of the text, shown in the pin bar
+                author TEXT NOT NULL,
+                pinned_by INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (server, chat, message)
+            );
+            CREATE TABLE IF NOT EXISTS drafts (
+                account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                chat TEXT NOT NULL,              -- the client's own key: "room:<id>" or "dm:<other id>"
+                text TEXT NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (account_id, chat)
+            );
             CREATE TABLE IF NOT EXISTS read_state (
                 account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 chat TEXT NOT NULL,              -- "room:<id>" or "dm:<user id>"
@@ -169,6 +196,7 @@ def account_view(row: sqlite3.Row, db: sqlite3.Connection) -> dict[str, Any]:
         "status": status["status"] if status else "online",
         "settings": json.loads(row["settings"]),
         "read_state": read,
+        "drafts": {r["chat"]: r["text"] for r in db.execute("SELECT chat, text FROM drafts WHERE account_id = ?", (row["id"],))},
         "linked_at": row["created_at"],
     }
 
@@ -282,6 +310,12 @@ def put_read_state(payload: ReadStateIn, account: sqlite3.Row = Depends(current_
             "ON CONFLICT (account_id, chat) DO UPDATE SET last_read = excluded.last_read, updated_at = excluded.updated_at",
             [(account["id"], chat, value, now()) for chat, value in chats.items()],
         )
+        invisible = is_invisible(db, account["id"])
+    # Read receipts: the other person of a direct chat learns what you have read (not while invisible).
+    if not invisible:
+        for chat, value in chats.items():
+            if chat.startswith("dm:") and chat[3:].isdigit():
+                publish(account["server"], {"type": "read", "chat": shared_chat(chat, account), "user": account["nekochat_id"], "last_read": value})
     return {"ok": True, "updated": len(chats)}
 
 
@@ -311,7 +345,7 @@ def put_status(payload: StatusIn, account: sqlite3.Row = Depends(current_account
         )
         stored = db.execute("SELECT client FROM user_status WHERE account_id = ?", (account["id"],)).fetchone()
     invisible = payload.status == "invisible"
-    publish(account["server"], {"id": account["nekochat_id"], "status": "offline" if invisible else payload.status, "client": "" if invisible else (stored["client"] if stored else "")})
+    publish(account["server"], {"type": "status", "id": account["nekochat_id"], "status": "offline" if invisible else payload.status, "client": "" if invisible else (stored["client"] if stored else "")})
     return {"ok": True, "status": payload.status}
 
 
@@ -337,7 +371,7 @@ def get_statuses(ids: str = "", account: sqlite3.Row = Depends(current_account))
 # ---- live status events ----------------------------------------------------------------------
 # Clients keep GET /events open (Server-Sent Events) and learn about status changes at once
 # instead of on their next /presence poll. Listeners are grouped by Nekochat server.
-_listeners: dict[str, set[asyncio.Queue]] = {}
+_listeners: dict[str, set[tuple[asyncio.Queue, int]]] = {}
 _loop: asyncio.AbstractEventLoop | None = None
 
 
@@ -348,22 +382,32 @@ async def remember_loop() -> None:
 
 
 def publish(server: str, event: dict[str, Any]) -> None:
-    """Called from request threads; hands the event to the listeners' event loop."""
+    """Called from request threads; hands the event to the listeners' event loop.
+
+    Events of a direct chat ("dm:<a>-<b>") go only to its two people, each seeing the chat as
+    "dm:<the other one>", the key their client uses."""
     if _loop is None:
         return
-    for queue in list(_listeners.get(server, ())):
-        _loop.call_soon_threadsafe(lambda q=queue: q.full() or q.put_nowait(event))
+    pair = dm_pair(event.get("chat", ""))
+    for queue, owner in list(_listeners.get(server, ())):
+        if pair and owner not in pair:
+            continue
+        data = dict(event)
+        if pair:
+            data["chat"] = f"dm:{pair[1] if owner == pair[0] else pair[0]}"
+        _loop.call_soon_threadsafe(lambda q=queue, d=data: q.full() or q.put_nowait(d))
 
 
 @app.get("/events", tags=["status"], response_class=StreamingResponse,
-         responses={200: {"content": {"text/event-stream": {}}, "description": "`event: status` with `{id, status, client}` for every status change on your Nekochat server"}})
+         responses={200: {"content": {"text/event-stream": {}}, "description": "Events: `status` {id, status, client}, `typing` {chat, user}, `reaction` {chat, message, emoji, user, on}, `pin` {chat, message, content, author, on}, `read` {chat, user, last_read}"}})
 async def events(request: Request, token: str = ""):
     """Live status changes (Server-Sent Events). EventSource cannot send headers, so the session
     token goes in `?token=`. Invisible users are reported as `offline` without a client."""
     account = account_for_token(token.strip())
     server = account["server"]
     queue: asyncio.Queue = asyncio.Queue(maxsize=200)
-    _listeners.setdefault(server, set()).add(queue)
+    listener = (queue, account["nekochat_id"])
+    _listeners.setdefault(server, set()).add(listener)
 
     async def stream():
         try:
@@ -371,13 +415,141 @@ async def events(request: Request, token: str = ""):
             while not await request.is_disconnected():
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=15)
-                    yield f"event: status\ndata: {json.dumps(event)}\n\n"
+                    kind = event.pop("type", "status")
+                    yield f"event: {kind}\ndata: {json.dumps(event)}\n\n"
                 except asyncio.TimeoutError:
                     yield ": ping\n\n"  # keeps proxies and the tunnel from closing the stream
         finally:
-            _listeners.get(server, set()).discard(queue)
+            _listeners.get(server, set()).discard(listener)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ---- chats: reactions, pins, typing, read receipts, drafts -------------------------------------
+def dm_pair(chat: str) -> tuple[int, int] | None:
+    parts = chat[3:].split("-") if chat.startswith("dm:") else []
+    return (int(parts[0]), int(parts[1])) if len(parts) == 2 and all(p.isdigit() for p in parts) else None
+
+
+def shared_chat(chat: str, account: sqlite3.Row) -> str:
+    """The client's key ("room:5", "dm:<other id>") → the key both sides share."""
+    kind, _, target = chat.partition(":")
+    if kind == "room" and target.isdigit():
+        return f"room:{int(target)}"
+    if kind == "dm" and target.isdigit():
+        a, b = sorted((int(target), int(account["nekochat_id"])))
+        return f"dm:{a}-{b}"
+    raise HTTPException(400, 'chat must be "room:<id>" or "dm:<user id>"')
+
+
+def is_invisible(db: sqlite3.Connection, account_id: int) -> bool:
+    row = db.execute("SELECT status FROM user_status WHERE account_id = ?", (account_id,)).fetchone()
+    return bool(row and row["status"] == "invisible")
+
+
+@app.get("/chat", tags=["chats"])
+def get_chat(chat: str, account: sqlite3.Row = Depends(current_account)):
+    """Reactions `{message: {emoji: [user ids]}}`, pins (newest first) and, in a direct chat, the
+    id of the last message the other person read (hidden while they are invisible)."""
+    shared = shared_chat(chat, account)
+    with database() as db:
+        reactions: dict[str, dict[str, list[int]]] = {}
+        for r in db.execute("SELECT message, emoji, nekochat_id FROM reactions WHERE server = ? AND chat = ? ORDER BY created_at", (account["server"], shared)):
+            reactions.setdefault(r["message"], {}).setdefault(r["emoji"], []).append(r["nekochat_id"])
+        pins = [dict(message=r["message"], content=r["content"], author=r["author"], pinned_by=r["pinned_by"], at=r["created_at"])
+                for r in db.execute("SELECT * FROM pins WHERE server = ? AND chat = ? ORDER BY created_at DESC", (account["server"], shared))]
+        read = None
+        pair = dm_pair(shared)
+        if pair:
+            other = pair[1] if pair[0] == account["nekochat_id"] else pair[0]
+            row = db.execute("SELECT accounts.id, read_state.last_read FROM accounts JOIN read_state ON read_state.account_id = accounts.id "
+                             "WHERE accounts.server = ? AND accounts.nekochat_id = ? AND read_state.chat = ?", (account["server"], other, f"dm:{account['nekochat_id']}")).fetchone()
+            if row and not is_invisible(db, row["id"]):
+                read = row["last_read"]
+    return {"chat": chat, "reactions": reactions, "pins": pins, "read": read}
+
+
+class ReactionIn(BaseModel):
+    chat: str = Field(max_length=40)
+    message: str = Field(max_length=64)
+    emoji: str = Field(min_length=1, max_length=16)
+    on: bool = True
+
+
+@app.put("/reactions", tags=["chats"])
+def put_reaction(payload: ReactionIn, account: sqlite3.Row = Depends(current_account)):
+    shared = shared_chat(payload.chat, account)
+    with database() as db:
+        if payload.on:
+            if db.execute("SELECT COUNT(DISTINCT emoji) FROM reactions WHERE server = ? AND chat = ? AND message = ?", (account["server"], shared, payload.message)).fetchone()[0] >= 20:
+                raise HTTPException(409, "Too many different reactions on this message")
+            db.execute("INSERT OR IGNORE INTO reactions VALUES (?, ?, ?, ?, ?, ?)", (account["server"], shared, payload.message, account["nekochat_id"], payload.emoji, now()))
+        else:
+            db.execute("DELETE FROM reactions WHERE server = ? AND chat = ? AND message = ? AND nekochat_id = ? AND emoji = ?", (account["server"], shared, payload.message, account["nekochat_id"], payload.emoji))
+    publish(account["server"], {"type": "reaction", "chat": shared, "message": payload.message, "emoji": payload.emoji, "user": account["nekochat_id"], "on": payload.on})
+    return {"ok": True}
+
+
+class PinIn(BaseModel):
+    chat: str = Field(max_length=40)
+    message: str = Field(max_length=64)
+    content: str = Field(default="", max_length=300)
+    author: str = Field(default="", max_length=80)
+    on: bool = True
+
+
+@app.put("/pins", tags=["chats"])
+def put_pin(payload: PinIn, account: sqlite3.Row = Depends(current_account)):
+    shared = shared_chat(payload.chat, account)
+    with database() as db:
+        if payload.on:
+            if db.execute("SELECT COUNT(*) FROM pins WHERE server = ? AND chat = ?", (account["server"], shared)).fetchone()[0] >= 50:
+                raise HTTPException(409, "A chat can have at most 50 pinned messages")
+            db.execute("INSERT OR REPLACE INTO pins VALUES (?, ?, ?, ?, ?, ?, ?)", (account["server"], shared, payload.message, payload.content, payload.author, account["nekochat_id"], now()))
+        else:
+            db.execute("DELETE FROM pins WHERE server = ? AND chat = ? AND message = ?", (account["server"], shared, payload.message))
+    publish(account["server"], {"type": "pin", "chat": shared, "message": payload.message, "content": payload.content, "author": payload.author, "on": payload.on, "user": account["nekochat_id"]})
+    return {"ok": True}
+
+
+class ChatIn(BaseModel):
+    chat: str = Field(max_length=40)
+
+
+@app.post("/typing", tags=["chats"])
+def post_typing(payload: ChatIn, account: sqlite3.Row = Depends(current_account)):
+    """"… is typing": clients send it at most every few seconds while typing. Not sent on while invisible."""
+    shared = shared_chat(payload.chat, account)
+    with database() as db:
+        if is_invisible(db, account["id"]):
+            return {"ok": True}
+    publish(account["server"], {"type": "typing", "chat": shared, "user": account["nekochat_id"]})
+    return {"ok": True}
+
+
+class DraftIn(BaseModel):
+    chat: str = Field(max_length=40)
+    text: str = Field(default="", max_length=4000)
+
+
+@app.put("/drafts", tags=["sync"])
+def put_draft(payload: DraftIn, account: sqlite3.Row = Depends(current_account)):
+    """The unsent text of a chat, shared by your devices; empty text removes it."""
+    shared_chat(payload.chat, account)
+    with database() as db:
+        if payload.text.strip():
+            if db.execute("SELECT COUNT(*) FROM drafts WHERE account_id = ? AND chat != ?", (account["id"], payload.chat)).fetchone()[0] >= 200:
+                raise HTTPException(413, "Too many drafts")
+            db.execute("INSERT INTO drafts VALUES (?, ?, ?, ?) ON CONFLICT (account_id, chat) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at", (account["id"], payload.chat, payload.text, now()))
+        else:
+            db.execute("DELETE FROM drafts WHERE account_id = ? AND chat = ?", (account["id"], payload.chat))
+    return {"ok": True}
+
+
+@app.get("/drafts", tags=["sync"])
+def get_drafts(account: sqlite3.Row = Depends(current_account)):
+    with database() as db:
+        return {r["chat"]: r["text"] for r in db.execute("SELECT chat, text FROM drafts WHERE account_id = ?", (account["id"],))}
 
 
 @app.get("/presence", tags=["status"])
