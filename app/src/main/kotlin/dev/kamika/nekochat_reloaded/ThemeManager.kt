@@ -323,19 +323,23 @@ class ThemeManager(private val context: Context) {
             val directory = entry.optString("directory", id).trim('/')
             val rawType = entry.optString("type", entry.optString("Type")).lowercase()
             val type = if (rawType in listOf("cursors", "sounds", "icons", "combo")) rawType else "combo"
-            val contains = entry.optJSONArray("Contains") ?: entry.optJSONArray("contains") ?: JSONArray().put(type)
+            // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
+            val includes = if (type == "combo") (entry.optJSONObject("Includes") ?: entry.optJSONObject("includes")) else null
+            val contains = includes?.let { JSONArray(it.keys().asSequence().toList()) } ?: entry.optJSONArray("Contains") ?: entry.optJSONArray("contains") ?: JSONArray().put(type)
             result.put(JSONObject().put("id", id).put("type", type).put("kind", "pack").put("directory", directory)
                 .put("displayName", entry.optString("DisplayName", entry.optString("displayName", id))).put("contains", contains)
                 .put("author", details.optString("Author", entry.optString("Author", "Unknown"))).put("added", details.optString("Added", entry.optString("Added", "")))
                 .put("version", details.optString("Version", "")).put("previewUrl", entry.optString("Preview", "$CATALOG_ROOT/$directory/Preview.png"))
-                .put("zipUrl", entry.optString("PackZIP", "$CATALOG_ROOT/$directory/Pack.ZIP")))
+                .put("zipUrl", entry.optString("PackZIP", "$CATALOG_ROOT/$directory/Pack.ZIP")).put("includes", includes ?: JSONObject.NULL))
         }
         return result
     }
 
     fun installCatalogPack(id: String): JSONObject {
         val catalog = fetchCatalogPacks()
-        val item = (0 until catalog.length()).map { catalog.getJSONObject(it) }.firstOrNull { it.getString("id") == id } ?: throw IllegalArgumentException("The pack no longer exists in the catalog.")
+        val items = (0 until catalog.length()).map { catalog.getJSONObject(it) }
+        val item = items.firstOrNull { it.getString("id") == id } ?: throw IllegalArgumentException("The pack no longer exists in the catalog.")
+        item.optJSONObject("includes")?.let { return installCombo(item, it, items) }
         val (status, zip) = download(item.getString("zipUrl"))
         if (status !in 200..299) throw IllegalStateException("Unable to download Pack.ZIP ($status).")
         val safeId = id.replace(Regex("[^a-zA-Z0-9._-]"), "_")
@@ -366,6 +370,27 @@ class ThemeManager(private val context: Context) {
         }
     }
 
+    /** Installs every item a combo lists (skipping what is already installed) and remembers them. */
+    private fun installCombo(item: JSONObject, includes: JSONObject, catalog: List<JSONObject>): JSONObject {
+        var themeId: String? = null
+        includes.optString("theme").takeIf { it.isNotEmpty() }?.let { ref ->
+            val installed = listThemes(); val existing = (0 until installed.length()).map { installed.getJSONObject(it) }.firstOrNull { it.optString("catalogId") == ref }
+            themeId = existing?.getString("id") ?: installCatalogTheme(ref).getString("id")
+        }
+        val parts = JSONArray()
+        for (part in listOf("cursors", "sounds", "icons")) {
+            val ref = includes.optString(part).takeIf { it.isNotEmpty() } ?: continue
+            if (catalog.none { it.getString("id") == ref && it.isNull("includes") }) throw IllegalArgumentException("The combo lists a missing $part pack: $ref")
+            val packs = listPacks(); val existing = (0 until packs.length()).map { packs.getJSONObject(it) }.firstOrNull { it.optString("catalogId") == ref }
+            parts.put(existing?.getString("id") ?: installCatalogPack(ref).getString("id"))
+        }
+        val safeId = item.getString("id").replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val destination = File(userPacksRoot, safeId).apply { mkdirs() }
+        File(destination, "pack.json").writeText(JSONObject().put("catalogId", item.getString("id")).put("type", "combo").put("name", item.getString("displayName")).put("author", item.getString("author"))
+            .put("contains", JSONArray(includes.keys().asSequence().toList())).put("theme", themeId ?: JSONObject.NULL).put("parts", parts).toString())
+        return JSONObject().put("id", safeId).put("packs", listPacks()).put("themes", listThemes())
+    }
+
     /** Installed packs with every file as a URL, and their sounds, cursors and icons resolved. */
     fun listPacks(): JSONArray {
         val result = JSONArray()
@@ -383,6 +408,19 @@ class ThemeManager(private val context: Context) {
             try { val map = JSONObject(File(folder, "cursors/cursors.json").readText()); map.keys().forEach { kind -> val value = map.get(kind); val file = if (value is JSONObject) value.optString("file") else value.toString(); files.optString("cursors/$file").takeIf { it.isNotEmpty() }?.let { url -> cursors.put(kind, JSONObject().put("url", url).apply { (value as? JSONObject)?.let { spec -> if (spec.has("x") && spec.has("y")) { put("x", spec.optInt("x")); put("y", spec.optInt("y")) } } }) } } } catch (_: Exception) {}
             val icons = JSONObject()
             try { val map = JSONObject(File(folder, "icons/icons.json").readText()); map.keys().forEach { name -> files.optString("icons/${map.optString(name)}").takeIf { it.isNotEmpty() }?.let { icons.put(name, it) } } } catch (_: Exception) {}
+            // A combo's folder has no files: take the sounds, cursors and icons of its parts.
+            info.optJSONArray("parts")?.let { list ->
+                for (index in 0 until list.length()) {
+                    val partFolder = File(userPacksRoot, list.optString(index)); if (!partFolder.isDirectory) continue
+                    val partBase = "${WebContent.ORIGIN}/user-packs/${enc(partFolder.name)}"
+                    partFolder.walkTopDown().filter { it.isFile }.forEach { file ->
+                        val relative = file.relativeTo(partFolder).invariantSeparatorsPath; val url = "$partBase/${relative.split('/').joinToString("/") { enc(it) }}"
+                        Regex("^sounds/([\\w-]+)\\.(wav|mp3|ogg)$", RegexOption.IGNORE_CASE).find(relative)?.let { sounds.put(it.groupValues[1].lowercase(), url) }
+                    }
+                    try { val map = JSONObject(File(partFolder, "cursors/cursors.json").readText()); map.keys().forEach { kind -> val value = map.get(kind); val file = if (value is JSONObject) value.optString("file") else value.toString(); val target = File(partFolder, "cursors/$file"); if (target.isFile) cursors.put(kind, JSONObject().put("url", "$partBase/cursors/${enc(file)}").apply { (value as? JSONObject)?.let { spec -> if (spec.has("x") && spec.has("y")) { put("x", spec.optInt("x")); put("y", spec.optInt("y")) } } }) } } catch (_: Exception) {}
+                    try { val map = JSONObject(File(partFolder, "icons/icons.json").readText()); map.keys().forEach { name -> val file = map.optString(name); if (File(partFolder, "icons/$file").isFile) icons.put(name, "$partBase/icons/${enc(file)}") } } catch (_: Exception) {}
+                }
+            }
             result.put(JSONObject().put("id", folder.name).put("catalogId", info.opt("catalogId") ?: JSONObject.NULL).put("type", info.optString("type", "combo"))
                 .put("name", info.optString("name", folder.name)).put("author", info.optString("author")).put("contains", info.optJSONArray("contains") ?: JSONArray())
                 .put("theme", info.opt("theme") ?: JSONObject.NULL).put("files", files).put("sounds", sounds).put("cursors", cursors).put("icons", icons))
@@ -395,6 +433,8 @@ class ThemeManager(private val context: Context) {
         if (folder.parentFile != userPacksRoot.canonicalFile) throw IllegalArgumentException("Invalid pack.")
         val info = try { JSONObject(File(folder, "pack.json").readText()) } catch (_: Exception) { JSONObject() }
         info.optString("theme").takeIf { it.isNotEmpty() && it != "null" }?.let { try { removeTheme(it) } catch (_: Exception) {} }
+        // A combo takes the items it installed with it.
+        info.optJSONArray("parts")?.let { list -> for (index in 0 until list.length()) File(userPacksRoot, list.optString(index)).canonicalFile.takeIf { it.parentFile == userPacksRoot.canonicalFile }?.deleteRecursively() }
         folder.deleteRecursively()
         return JSONObject().put("packs", listPacks()).put("themes", listThemes())
     }
