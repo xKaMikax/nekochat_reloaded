@@ -298,3 +298,23 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .mention-item { padding: 4px 10px; border: 0; background: transparent; text-align: left; font: 12px Tahoma, sans-serif; cursor: pointer; }
 .mention-item small { color: #777; }.mention-item.selected, .mention-item:hover { background: var(--xp-theme-highlight, #316ac5); color: #fff; }.mention-item.selected small { color: #dde; }
 
+/* The assistant (assets/js/assistant.js): Rover or a Catalog assistant over the chat, with
+   Windows XP's yellow balloon. */
+.assistant-host { position: fixed; right: 24px; bottom: 84px; z-index: 60; width: 80px; height: 80px; }
+.assistant-host canvas { display: block; cursor: pointer; }
+.assistant-balloon { position: absolute; right: 30px; bottom: 86px; width: 210px; padding: 8px 10px; border: 1px solid #000; border-radius: 8px; background: #ffffe1; color: #000; font: 11px Tahoma, Arial, sans-serif; box-shadow: 2px 2px 4px rgba(0, 0, 0, .3); }
+.assistant-balloon::after { content: ''; position: absolute; right: 18px; bottom: -11px; border: 10px solid transparent; border-top-color: #000; border-bottom: 0; }
+.assistant-balloon::before { content: ''; position: absolute; right: 19px; bottom: -9px; z-index: 1; border: 9px solid transparent; border-top-color: #ffffe1; border-bottom: 0; }
+.assistant-balloon p { margin: 0 0 6px; }
+.assistant-balloon button { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 0; border: 0; background: none; color: #0000ee; font: inherit; text-align: left; cursor: pointer; }
+.assistant-balloon button:hover { text-decoration: underline; }
+.assistant-balloon button i { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #9ff, #1a7fd4); box-shadow: inset 0 0 0 1px #0a4c9a; }
+.assistant-balloon { width: 250px; }
+.assistant-search { display: flex; gap: 4px; margin: 0 0 6px; }
+.assistant-search input { flex: 1; min-width: 0; height: 20px; box-sizing: border-box; padding: 1px 3px; border: 1px solid #7f9db9; background: #fff; font: inherit; }
+.assistant-search button { padding: 0 8px; border: 1px solid #003c74; border-radius: 3px; background: linear-gradient(#fff, #ece9d8); color: #000; font: inherit; cursor: pointer; }
+.assistant-hits { display: flex; flex-direction: column; gap: 2px; max-height: 220px; margin: 0 0 6px; overflow-y: auto; }
+.assistant-balloon .assistant-hit { display: flex; flex-direction: column; align-items: flex-start; padding: 3px 4px; border-radius: 3px; color: #000; }
+.assistant-balloon .assistant-hit:hover { background: #fff5b8; text-decoration: none; }
+.assistant-hit b { color: #0000ee; }
+.assistant-hit span { overflow: hidden; max-width: 100%; color: #333; text-overflow: ellipsis; white-space: nowrap; }

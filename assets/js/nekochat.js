@@ -1716,8 +1716,8 @@ refreshStartPanelIcons();
 (async () => {
   if (!desktopControls?.listPacks) return;
   const chosen = key => { try { const value = localStorage.getItem(key) || ''; return value.startsWith('pack:') ? value.slice(5) : null; } catch { return null; } };
-  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper') };
-  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper) return;
+  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper'), assistant: chosen('nk_assistant') };
+  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper && !ids.assistant) return;
   let packs = []; try { packs = await desktopControls.listPacks(); } catch { return; }
   const find = id => packs.find(pack => pack.id === id);
   try {
@@ -1725,6 +1725,7 @@ refreshStartPanelIcons();
     if (ids.cursor) localStorage.setItem('nk_cursor_pack', JSON.stringify(find(ids.cursor)?.cursors || {}));
     if (ids.icon) localStorage.setItem('nk_icon_pack', JSON.stringify(find(ids.icon)?.icons || {}));
     // pack:<id>/<name>; the choice is synced, so on another device the pack may be missing.
+    if (ids.assistant) { localStorage.setItem('nk_assistant_pack', JSON.stringify(find(ids.assistant)?.assistant || null)); window.nkAssistant?.change(); }
     if (ids.wallpaper) { const [id, ...name] = ids.wallpaper.split('/'); localStorage.setItem('nk_chat_wallpaper_pack', find(id)?.wallpapers?.[name.join('/')] || ''); }
   } catch {}
   window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons(); applyWallpaper();

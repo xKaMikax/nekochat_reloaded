@@ -150,7 +150,7 @@ function openApplet(owner, applet, tab) {
   const existing = appletWindows.get(name);
   if (existing && !existing.isDestroyed()) { existing.focus(); if (page) existing.webContents.send('settings:show-tab', page); return; }
   // Window sizes of the XP applets.
-  const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+  const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520], assistant: [420, 360] }[name] || [440, 420];
   const win = new BrowserWindow({
     title: name, width, height, minWidth: 380, minHeight: 320, resizable: true,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
@@ -603,7 +603,7 @@ async function fetchCatalog() {
 // ---- Catalog packs: cursors, sounds, icons and combos (any of those plus a theme) -------------
 // packs.json lists them; each directory holds Pack.ZIP with pack.json and the folders sounds/,
 // cursors/ (cursors.json), icons/ (icons.json) and theme/.
-const PACK_TYPES = ['cursors', 'sounds', 'icons', 'wallpapers', 'combo'];
+const PACK_TYPES = ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'combo'];
 const packFileList = entry => (Array.isArray(entry.Files || entry.files) ? (entry.Files || entry.files) : []).map(String).filter(name => /^[^/\\]+$/.test(name) && name !== '.' && name !== '..');
 function packEntries(manifest) {
   const entries = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.packs) ? manifest.packs : [];
@@ -615,7 +615,7 @@ function packEntries(manifest) {
     return {
       id, type, directory, kind: 'pack', displayName: entry.DisplayName || entry.displayName || id,
       // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
-      includes: type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? Object.fromEntries(Object.entries(entry.Includes || entry.includes).filter(([part, id]) => ['theme', 'cursors', 'sounds', 'icons', 'wallpapers'].includes(part) && id).map(([part, id]) => [part, String(id)])) : null,
+      includes: type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? Object.fromEntries(Object.entries(entry.Includes || entry.includes).filter(([part, id]) => ['theme', 'cursors', 'sounds', 'icons', 'wallpapers', 'assistants'].includes(part) && id).map(([part, id]) => [part, String(id)])) : null,
       contains: type === 'combo' && (entry.Includes || entry.includes) ? Object.keys(entry.Includes || entry.includes) : Array.isArray(entry.Contains || entry.contains) ? (entry.Contains || entry.contains).map(String) : [type],
       author: details.Author || details.author || entry.Author || entry.author || 'Unknown',
       added: String(details.Added || details.added || entry.Added || entry.added || ''),
@@ -648,7 +648,9 @@ async function packContents(folder, files) {
   for (const [name, file] of Object.entries(await readJson('icons/icons.json') || {})) { const url = files[`icons/${file}`]; if (url) icons[name] = url; }
   const wallpapers = {};
   for (const [name, url] of Object.entries(files)) { const match = name.match(/^wallpapers\/([^/]+)\.(jpe?g|png|webp)$/i); if (match) wallpapers[match[1]] = url; }
-  return { sounds, cursors, icons, wallpapers };
+  // assistant/agent.json + frames.png + sound<N>.wav: a Microsoft Agent character (assets/js/assistant.js).
+  const assistant = files['assistant/agent.json'] && files['assistant/frames.png'] ? { json: files['assistant/agent.json'], frames: files['assistant/frames.png'], sounds: Object.fromEntries(Object.entries(files).map(([name, url]) => [name.match(/^assistant\/sound(\d+)\.(wav|mp3|ogg)$/i)?.[1], url]).filter(([index]) => index !== undefined)) } : null;
+  return { sounds, cursors, icons, wallpapers, assistant };
 }
 async function listPacks() {
   const packs = [];
@@ -663,8 +665,8 @@ async function listPacks() {
     await walk(folder, '');
     // A combo's own folder has no files: it points at the packs it installed.
     const own = await packContents(folder, files);
-    const parts = Array.isArray(info.parts) ? await Promise.all(info.parts.map(async part => { try { const partFolder = packFolder(part); const partFiles = {}; const walkPart = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) await walkPart(path.join(dir, item.name), name); else partFiles[name] = pathToFileURL(path.join(dir, item.name)).href; } }; await walkPart(partFolder, ''); return packContents(partFolder, partFiles); } catch { return { sounds: {}, cursors: {}, icons: {}, wallpapers: {} }; } })) : [];
-    const merged = parts.reduce((all, part) => ({ sounds: { ...all.sounds, ...part.sounds }, cursors: { ...all.cursors, ...part.cursors }, icons: { ...all.icons, ...part.icons }, wallpapers: { ...all.wallpapers, ...part.wallpapers } }), own);
+    const parts = Array.isArray(info.parts) ? await Promise.all(info.parts.map(async part => { try { const partFolder = packFolder(part); const partFiles = {}; const walkPart = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) await walkPart(path.join(dir, item.name), name); else partFiles[name] = pathToFileURL(path.join(dir, item.name)).href; } }; await walkPart(partFolder, ''); return packContents(partFolder, partFiles); } catch { return { sounds: {}, cursors: {}, icons: {}, wallpapers: {}, assistant: null }; } })) : [];
+    const merged = parts.reduce((all, part) => ({ sounds: { ...all.sounds, ...part.sounds }, cursors: { ...all.cursors, ...part.cursors }, icons: { ...all.icons, ...part.icons }, wallpapers: { ...all.wallpapers, ...part.wallpapers }, assistant: all.assistant || part.assistant }), own);
     packs.push({ id: entry.name, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || entry.name, author: info.author || '', contains: info.contains || [], theme: info.theme || null, parts: info.parts || [], files, ...merged });
   }
   return packs;
@@ -680,11 +682,12 @@ async function installCatalogPack(id) {
   try {
     if (item.files.length) {
       // No Pack.ZIP: download the listed files into the folder of the pack's type.
-      await fs.mkdir(path.join(temporary, item.type), { recursive: true });
+      const folder = item.type === 'assistants' ? 'assistant' : item.type;
+      await fs.mkdir(path.join(temporary, folder), { recursive: true });
       for (const name of item.files) {
         const response = await fetch(`${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`);
         if (!response.ok) throw new Error(`Unable to download ${name} (${response.status}).`);
-        await fs.writeFile(path.join(temporary, item.type, name), Buffer.from(await response.arrayBuffer()));
+        await fs.writeFile(path.join(temporary, folder, name), Buffer.from(await response.arrayBuffer()));
       }
     } else {
       const response = await fetch(item.zipUrl);
@@ -693,7 +696,7 @@ async function installCatalogPack(id) {
     }
     let info = {}; try { info = JSON.parse(await fs.readFile(path.join(temporary, 'pack.json'), 'utf8')); } catch {}
     const contains = [];
-    for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
+    for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'assistant', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
     // The theme of a combo goes to the installed themes, like a catalog theme.
     let themeId = null;
     if (contains.includes('theme')) {
@@ -723,7 +726,7 @@ async function installCombo(item, catalog) {
     installed.theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id;
   }
   const packs = await listPacks();
-  for (const part of ['cursors', 'sounds', 'icons', 'wallpapers']) {
+  for (const part of ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants']) {
     const ref = item.includes[part]; if (!ref) continue;
     if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new Error(`The combo lists a missing ${part} pack: ${ref}`);
     const existing = packs.find(pack => pack.catalogId === ref);

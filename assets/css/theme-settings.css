@@ -110,3 +110,9 @@ html:not(.xp-checkboxes) .backup-parts input[type="checkbox"], html:not(.xp-chec
 .updates-option .updates-detail { grid-column: 2; display: flex; align-items: flex-start; gap: 8px; }
 .updates-option .updates-detail img, .updates-option .updates-detail i { flex: none; width: 32px; height: 32px; }
 .updates-page a { color: #0000ee; }
+/* Assistant applet. */
+.assistant-page .assistant-choice { display: flex; align-items: center; gap: 14px; margin: 10px 0; }
+.assistant-page canvas { flex: none; width: 80px; height: 80px; border: 1px solid #7f9db9; background: #fff; }
+.assistant-page .assistant-choice label { display: flex !important; flex: 1; flex-direction: column; gap: 4px; margin: 0 !important; }
+.assistant-page[hidden] { display: none; }
+.assistant-page .assistant-choice label { align-items: flex-start !important; text-align: left; }
