@@ -17,6 +17,10 @@
     'display:apply': settings => themes.saveDisplaySettings(settings || {}),
     'backup:export-themes': () => themes.exportThemeFiles(),
     'backup:restore-themes': archive => themes.restoreThemeFiles(String(archive || '')),
+    'pack:catalog': () => themes.fetchCatalogPacks(),
+    'pack:install': id => themes.installCatalogPack(String(id || '')),
+    'pack:list': () => themes.listPacks(),
+    'pack:remove': id => themes.removePack(String(id || '')),
   };
 
   const icon = new URL('icons/icon-192.png', location.href).href;

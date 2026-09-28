@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Theme Editor</title><link rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/theme-editor.css"><link rel="stylesheet" href="assets/css/theme-controls.css">
+<script src="assets/js/web-bridge.js"></script><link rel="stylesheet" href="assets/css/web.css"></head>
+<body>
+  <div class="xp-window theme-editor-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/nekochat_icon.png')"></span><span class="xp-title" data-text="title">Редактор тем</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="theme-editor">
+      <section class="editor-toolbar">
+        <label><span data-text="base">Основа:</span> <select id="base-theme"></select></label>
+        <select id="base-scheme"></select>
+        <button id="load-base" type="button" data-text="load">Загрузить</button>
+        <label class="editor-name"><span data-text="name">Имя темы:</span> <input id="theme-name" type="text" maxlength="48"></label>
+      </section>
+      <div class="editor-body">
+        <section class="editor-properties">
+          <nav class="editor-groups" id="editor-groups"></nav>
+          <div class="editor-list" id="editor-list"></div>
+        </section>
+        <section class="editor-preview">
+          <iframe id="editor-preview" src="assets/html/theme_editor_preview.html" title="Preview"></iframe>
+        </section>
+      </div>
+      <footer class="editor-footer">
+        <p class="editor-status" id="editor-status" role="status"></p>
+        <button id="save" type="button" data-text="save">Сохранить</button>
+        <button id="save-apply" type="button" data-text="saveApply">Сохранить и применить</button>
+        <button id="cancel" type="button" data-text="close">Закрыть</button>
+      </footer>
+      <input id="image-file" type="file" accept="image/png,image/*" hidden>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <script src="assets/js/packs.js"></script>
+  <script src="assets/js/theme-editor.js"></script>
+</body>
+</html>

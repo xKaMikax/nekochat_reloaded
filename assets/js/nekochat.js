@@ -37,7 +37,7 @@ if (detachedChat) document.documentElement.classList.add('detached-chat');
 const sounds = Object.freeze({ navigation: 'navigation.wav', notify: 'notify.wav', logon: 'logon.wav', logoff: 'logoff.wav', ringin: 'ringin.wav', ringout: 'ringout.wav', exclamation: 'exclamation.wav', default: 'default.wav', error: 'error.wav', critical: 'critical-stop.wav' });
 // Sound scheme and volume from Display Properties (localStorage, shared by every window).
 function soundSettings() { let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} return { scheme, volume: Math.min(100, Math.max(0, Number.isFinite(volume) ? volume : 72)) }; }
-function playSound(name) { const audio = new Audio(`assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
+function playSound(name) { const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl(name, sounds[name]) : `assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
 function showSystemDialog(message, type = 'error', title = 'Nekochat Reloaded', options = {}) {
   if (desktopControls?.showSystemDialog) { desktopControls.showSystemDialog({ message: String(message || t('unknownError')), type, title, ...options }); return; }
   const dialog = $('#system-dialog'); if (!dialog) return;
@@ -60,8 +60,8 @@ function playServerSound(kind, status = 0) {
   return playSound('default');
 }
 const translations = {
-  ru: { loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', themeBrowser: 'Каталог тем', personalize: 'Персонализация', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
-  en: { loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', themeBrowser: 'Theme Browser', personalize: 'Personalization', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
+  ru: { loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', themeBrowser: 'Каталог', personalize: 'Панель управления', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
+  en: { loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', themeBrowser: 'Catalog', personalize: 'Control Panel', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
 };
 function t(key, values = {}) { return String((translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru)[key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? ''); }
 // Call states are keys, so the call window follows the chosen language.
@@ -81,8 +81,8 @@ Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online',
   updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
   updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
   updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
-Object.assign(translations.ru, { adminPanel: 'Админ-панель сервера' });
-Object.assign(translations.en, { adminPanel: 'Server admin panel' });
+Object.assign(translations.ru, { noMessagesYet: 'Сообщений пока нет. Напишите первым!', archiveTitle: 'Архив', archiveHint: 'Скрытые чаты', archiveBack: 'Назад к чатам', seenJustNow: 'был(а) только что', seenMinutes: 'был(а) {n} мин. назад', seenHours: 'был(а) {n} ч. назад', seenToday: 'был(а) сегодня в {time}', seenYesterday: 'был(а) вчера в {time}', seenDate: 'был(а) {date}', adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
+Object.assign(translations.en, { noMessagesYet: 'No messages yet. Say hello!', archiveTitle: 'Archive', archiveHint: 'Hidden chats', archiveBack: 'Back to chats', seenJustNow: 'last seen just now', seenMinutes: 'last seen {n} min ago', seenHours: 'last seen {n} h ago', seenToday: 'last seen today at {time}', seenYesterday: 'last seen yesterday at {time}', seenDate: 'last seen {date}', adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
 Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
@@ -109,7 +109,7 @@ function applyDisplaySettings(settings) {
   $('#emoji-button').setAttribute('aria-label', text.emoji); $('#emoji-button').title = text.emoji;
   $('#auth-switch').textContent = registering ? text.backToLogin : text.createAccount;
   $('#auth-submit').setAttribute('aria-label', registering ? text.register : text.signIn);
-  if (me) { $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`; renderList(); renderConversationHeader(); }
+  if (me) { $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`; setOwnStatus(companion.status, false); renderList(); renderConversationHeader(); }
   updateCallWindow();
 }
 const api = async (path, options = {}) => {
@@ -166,17 +166,43 @@ const chatKey = (kind, id) => `${kind}:${Number(id)}`;
 // Material-style icons, drawn like the other conversation header buttons (members, call).
 const ICON_BELL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>';
 const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 18.69 7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0-.01 0-.01.01L18 14.68z"/></svg>';
+const ICON_ARCHIVE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 2.5h13v3h-13zm1 4h11v7h-11zm3.5 2v1h4v-1z"/></svg>';
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
 const unread = new Map();
 let mutedChats = new Set();
+// Favourite chats stay at the top of the list; drafts keep unsent text per chat. Both are per
+// account and shared between devices through the companion (settings, /drafts).
+let favoriteChats = new Set(); let drafts = {};
+// Archived chats leave the list for an "Archive" entry; notes are private notes about people.
+let archivedChats = new Set(); let userNotes = {}; let showArchive = false;
+const isArchived = key => archivedChats.has(key);
+function saveArchive() { try { localStorage.setItem(`nk_archived:${API}|${me?.id}`, JSON.stringify([...archivedChats])); } catch {} }
+function toggleArchived(key) { if (archivedChats.has(key)) archivedChats.delete(key); else archivedChats.add(key); saveArchive(); renderList(); pushCompanionSettings(); }
+function saveNotes() { try { localStorage.setItem(`nk_notes:${API}|${me?.id}`, JSON.stringify(userNotes)); } catch {} }
+function setUserNote(id, text) { const value = String(text || '').slice(0, 1000); if (value.trim()) userNotes[String(id)] = value; else delete userNotes[String(id)]; saveNotes(); pushCompanionSettings(); }
+const isFavorite = key => favoriteChats.has(key);
+function saveFavorites() { try { localStorage.setItem(`nk_favorites:${API}|${me?.id}`, JSON.stringify([...favoriteChats])); } catch {} }
+function loadFavorites() { try { favoriteChats = new Set(JSON.parse(localStorage.getItem(`nk_favorites:${API}|${me?.id}`) || '[]')); } catch { favoriteChats = new Set(); } }
+function toggleFavorite(key) { if (favoriteChats.has(key)) favoriteChats.delete(key); else favoriteChats.add(key); saveFavorites(); renderList(); renderConversationHeader(); pushCompanionSettings(); }
+function saveDrafts() { try { localStorage.setItem(`nk_drafts:${API}|${me?.id}`, JSON.stringify(drafts)); } catch {} }
+function loadDrafts() { try { drafts = JSON.parse(localStorage.getItem(`nk_drafts:${API}|${me?.id}`) || '{}') || {}; } catch { drafts = {}; } }
+let draftTimer = null;
+function setDraft(key, text, sync = true) {
+  const value = String(text || '').slice(0, 4000);
+  if ((drafts[key] || '') === value) return;
+  if (value.trim()) drafts[key] = value; else delete drafts[key];
+  saveDrafts(); renderList();
+  if (!sync) return;
+  clearTimeout(draftTimer); draftTimer = setTimeout(() => companionFetch('PUT', '/drafts', { chat: key, text: value }), 1000);
+}
 // ---- Nekochat Reloaded companion server ------------------------------------------------------
 // Optional (Display Properties → "Nekochat Reloaded server"). It keeps settings and the read
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
-const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
+const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
 let profileUser = null;
-const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, legacyStatuses: false };
+const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
 // The public Nekochat Reloaded server is used unless another address is set or it is turned off
 // (Display Properties → Settings); an address saved by 1.4 is kept as it is.
@@ -209,6 +235,12 @@ function applyCompanionBundle(bundle) {
   if (!bundle) return;
   const settings = bundle.settings || {};
   if (Array.isArray(settings.muted)) { mutedChats = new Set(settings.muted.map(String)); saveMuted(); }
+  if (Array.isArray(settings.favorites)) { favoriteChats = new Set(settings.favorites.map(String)); saveFavorites(); }
+  if (Array.isArray(settings.archived)) { archivedChats = new Set(settings.archived.map(String)); saveArchive(); }
+  if (settings.notes && typeof settings.notes === 'object') { userNotes = { ...settings.notes }; saveNotes(); }
+  if (typeof bundle.hide_last_seen === 'boolean') try { localStorage.setItem('nk_hide_last_seen', bundle.hide_last_seen ? '1' : '0'); } catch {}
+  // Drafts from other devices; text typed here and not synced yet wins.
+  if (bundle.drafts && typeof bundle.drafts === 'object') { drafts = { ...bundle.drafts, ...drafts }; saveDrafts(); }
   // Other windows (Display Properties) follow through the storage event.
   for (const key of SYNCED_KEYS) { if (settings[key] !== undefined && settings[key] !== null) try { localStorage.setItem(key, String(settings[key])); } catch {} }
   applyWallpaper();
@@ -272,13 +304,26 @@ async function refreshStatuses() {
   if (presence === false) { companion.legacyStatuses = true; presence = null; }
   if (!presence) { const statuses = await companionFetch('GET', `/statuses?ids=${ids}`); if (!statuses) return; presence = Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, { status, client: '' }])); }
   const statuses = {}; const clients = {};
-  for (const [id, item] of Object.entries(presence)) { if (item?.status && item.status !== 'online') statuses[id] = item.status; if (item?.client) clients[id] = item.client; }
+  for (const [id, item] of Object.entries(presence)) { if (item?.status && item.status !== 'online') statuses[id] = item.status; if (item?.client) clients[id] = item.client; if (item?.last_seen) companion.lastSeen[id] = item.last_seen; else delete companion.lastSeen[id]; }
   const changed = JSON.stringify([statuses, clients]) !== JSON.stringify([companion.statuses, companion.clients]);
   companion.statuses = statuses; companion.clients = clients;
   if (changed) { renderList(); if ($('#user-profile-dialog')?.open && profileUser) showUserProfile(profileUser); }
 }
 const userStatus = id => companion.statuses[String(id)] || null;
 const userClient = id => companion.clients?.[String(id)] || '';
+// "last seen 5 minutes ago" for offline Reloaded users who do not hide it.
+function lastSeenText(id) {
+  const seconds = Number(companion.lastSeen?.[String(id)]); if (!seconds) return '';
+  const diff = Math.max(0, Date.now() / 1000 - seconds); const date = new Date(seconds * 1000);
+  const time = date.toLocaleTimeString(displaySettings.language === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (diff < 60) return t('seenJustNow');
+  if (diff < 3600) return t('seenMinutes', { n: Math.floor(diff / 60) });
+  if (diff < 6 * 3600) return t('seenHours', { n: Math.floor(diff / 3600) });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (date >= today) return t('seenToday', { time });
+  if (date >= new Date(today - 86400000)) return t('seenYesterday', { time });
+  return t('seenDate', { date: date.toLocaleDateString(displaySettings.language === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long' }) });
+}
 // "Android 1.4.1" → a small badge with the platform's icon and the version in grey.
 const CLIENT_ICONS = {
   Android: '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#3ddc84" d="M3 7a5 5 0 0 1 10 0v.5H3zm2.6-3.9-1-1.6.5-.3 1 1.6zm4.8 0 1-1.6.5.3-1 1.6zM6 5.2a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zm4 0a.7.7 0 1 0 0 1.4.7.7 0 0 0 0-1.4zM3 8.3h10v4.2c0 .8-.6 1.5-1.4 1.5H4.4C3.6 14 3 13.3 3 12.5z"/></svg>',
@@ -332,7 +377,7 @@ function pushCompanionSettings() {
   if (!companion.token) return;
   clearTimeout(companion.pushTimer);
   companion.pushTimer = setTimeout(() => {
-    const settings = { muted: [...mutedChats] };
+    const settings = { muted: [...mutedChats], favorites: [...favoriteChats], archived: [...archivedChats], notes: userNotes };
     for (const key of SYNCED_KEYS) { try { const value = localStorage.getItem(key); if (value !== null) settings[key] = value; } catch {} }
     companionFetch('PUT', '/settings', settings);
   }, 800);
@@ -345,8 +390,14 @@ function markRead(chat, messageId) {
 }
 window.addEventListener('storage', event => {
   if (event.key === 'nk_reloaded_server' || event.key === 'nk_reloaded_enabled') companionConnect();
+  else if (event.key === 'nk_hide_last_seen') companionFetch('PUT', '/privacy', { hide_last_seen: event.newValue === '1' });
   else if (SYNCED_KEYS.includes(event.key)) pushCompanionSettings();
 });
+function loadMutedAndMore() {
+  loadMuted(); loadFavorites(); loadDrafts();
+  try { archivedChats = new Set(JSON.parse(localStorage.getItem(`nk_archived:${API}|${me?.id}`) || '[]')); } catch { archivedChats = new Set(); }
+  try { userNotes = JSON.parse(localStorage.getItem(`nk_notes:${API}|${me?.id}`) || '{}') || {}; } catch { userNotes = {}; }
+}
 function loadMuted() { try { mutedChats = new Set(JSON.parse(localStorage.getItem(`nk_muted:${API}|${me?.id}`) || '[]')); } catch { mutedChats = new Set(); } }
 function saveMuted() { try { localStorage.setItem(`nk_muted:${API}|${me?.id}`, JSON.stringify([...mutedChats])); } catch {} }
 const isMuted = key => mutedChats.has(key);
@@ -362,7 +413,10 @@ function updateUnread() {
   document.querySelectorAll('.tab').forEach(tab => { const kind = tab.dataset.tab === 'rooms' ? 'room' : 'dm'; let count = tab.querySelector('.unread-count'); if (!sums[kind]) { count?.remove(); return; } if (!count) { count = document.createElement('span'); count.className = 'unread-count'; tab.append(count); } count.textContent = ` (${sums[kind] > 99 ? '99+' : sums[kind]})`; });
 }
 function clearUnread(key) { if (!unread.delete(key)) return; renderList(); updateUnread(); }
-const formatTime = value => new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+// The server sends UTC times without a zone ("2026-09-28T10:58:00"); without the Z the browser
+// would read them as local time, so the sender's own message and the others' differed by hours.
+const parseTime = value => new Date(typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?$/.test(value) ? `${value}Z` : value);
+const formatTime = value => parseTime(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const displayName = user => user?.display_name || user?.username || t('user');
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
 function fitXpLogonBackground() {
@@ -372,7 +426,7 @@ function fitXpLogonBackground() {
 }
 
 function setLoggedIn(user, announceLogin = false) {
-  me = user; rememberSession(user); loadMuted(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
+  me = user; rememberSession(user); loadMutedAndMore(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
   setProfileAvatarFrame(me);
   $('#me-avatar').innerHTML = avatar(me); $('#me-name').textContent = me.display_name; $('#me-handle').textContent = `@${me.username}`;
   $('#profile-avatar').innerHTML = avatar(me); $('#profile-name').textContent = me.display_name; $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`;
@@ -422,14 +476,25 @@ function showRoomMembers(room) {
 function renderList() {
   const query = $('#search').value.trim().toLowerCase(); const list = $('#chat-list');
   const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, client: userClient(user.id), kind: 'dm', frame: avatarFrameAttributes(user) }));
-  list.innerHTML = items.map(item => {
+  // Favourites first, the rest keeps its order.
+  items.sort((a, b) => Number(isFavorite(chatKey(b.kind, b.id))) - Number(isFavorite(chatKey(a.kind, a.id))));
+  // Archived chats live behind an "Archive" row at the end of the list.
+  const archived = items.filter(item => isArchived(chatKey(item.kind, item.id)));
+  if (showArchive && !archived.length) showArchive = false;
+  const shown = showArchive ? archived : items.filter(item => !isArchived(chatKey(item.kind, item.id)));
+  const archiveUnread = archived.reduce((sum, item) => sum + (unread.get(chatKey(item.kind, item.id)) || 0), 0);
+  const archiveRow = showArchive
+    ? `<button class="chat-item archive-row" type="button" data-archive="close"><span class="archive-icon">←</span><span class="chat-name"><b>${esc(t('archiveBack'))}</b><small>${esc(t('archiveTitle'))}</small></span></button>`
+    : archived.length ? `<button class="chat-item archive-row" type="button" data-archive="open"><span class="archive-icon">${ICON_ARCHIVE}</span><span class="chat-name"><b>${esc(t('archiveTitle'))} (${archived.length})${archiveUnread ? `<span class="unread-count"> (${archiveUnread > 99 ? '99+' : archiveUnread})</span>` : ''}</b><small>${esc(t('archiveHint'))}</small></span></button>` : '';
+  list.innerHTML = (showArchive ? archiveRow : '') + shown.map(item => {
     const key = chatKey(item.kind, item.id); const count = unread.get(key) || 0; const muted = isMuted(key);
+    const draft = drafts[key] && !(current?.kind === item.kind && current?.data.id === item.id) ? drafts[key] : '';
     // Rooms whose voice channel is on show a speaker and how many people are in it.
     const channel = item.kind === 'room' ? activeChannel(item.id) : null;
     const voice = channel ? `<span class="voice-badge" title="${esc(t('voiceNow', { count: channel.members.size }))}">${ICON_SPEAKER}${channel.members.size}</span>` : '';
     const badge = count ? `<span class="unread-count${muted ? ' muted' : ''}"> (${count > 99 ? '99+' : count})</span>` : '';
-    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}</b><small>${esc(item.sub)}${voice}</small></span></button>`;
-  }).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
+    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}${isFavorite(key) ? ` <span class="favorite-icon" title="${esc(t('favorite'))}">★</span>` : ''}</b><small>${draft ? `<span class="draft-label">${esc(t('draft'))}:</span> ${esc(draft.split('\n')[0].slice(0, 60))}` : esc(item.sub)}${voice}</small></span></button>`;
+  }).join('') + (showArchive ? '' : archiveRow) || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
   const online = userOnline(user);
@@ -438,7 +503,8 @@ function showUserProfile(user) {
   $('#user-profile-name').textContent = displayName(user);
   $('#user-profile-handle').textContent = `@${user.username}`;
   const shown = !userOnline(user) ? 'offline' : ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : 'online';
-  $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${user.status ? ` · ${user.status}` : ''}`;
+  const seen = shown === 'offline' ? lastSeenText(user.id) : '';
+  $('#user-profile-status').textContent = `● ${shown === 'online' ? t('online') : statusLabel(shown)}${seen ? ` · ${seen}` : ''}${user.status ? ` · ${user.status}` : ''}`;
   ['away', 'dnd'].forEach(item => $('#user-profile-status').classList.toggle(item, shown === item));
   $('#user-profile-status').classList.toggle('offline', !online);
   // The app they use, from the Nekochat Reloaded server; nothing for offline or invisible users.
@@ -452,6 +518,42 @@ function showUserProfile(user) {
   banner.classList.toggle('has-user-banner', Boolean(user.banner));
   $('#user-profile-dialog').showModal();
 }
+// A reply starts with "> Author: quoted text" lines (plain text, so official clients show it as a
+// quote too); Reloaded draws those lines as a quote block above the answer.
+function renderMessageContent(content) {
+  const lines = String(content ?? '').split('\n'); const quote = [];
+  while (lines.length > 1 && lines[0].startsWith('> ')) quote.push(lines.shift().slice(2));
+  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${formatText(lines.join('\n'))}</p>`;
+}
+// Markdown-like formatting: ```code blocks```, `code`, **bold**, *italic* / _italic_, ~~strike~~,
+// clickable links and @mentions (yours highlighted). Everything is escaped first.
+const URL_PATTERN = /https?:\/\/[^\s<>"']+[^\s<>"'.,:;!?)\]]/g;
+function formatInline(raw) {
+  let out = ''; let at = 0;
+  for (const match of raw.matchAll(URL_PATTERN)) {
+    out += formatPlain(raw.slice(at, match.index));
+    out += `<a href="${esc(match[0])}" target="_blank" rel="noopener noreferrer">${esc(match[0])}</a>`;
+    at = match.index + match[0].length;
+  }
+  return out + formatPlain(raw.slice(at));
+}
+function formatPlain(raw) {
+  const me_ = String(me?.username || '').toLowerCase();
+  return esc(raw)
+    .replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<b>$1</b>')
+    .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<s>$1</s>')
+    .replace(/(^|[\s(])\*(?=\S)([^*\n]*?\S)\*(?=$|[\s).,!?:;])/g, '$1<i>$2</i>')
+    .replace(/(^|[\s(])_(?=\S)([^_\n]*?\S)_(?=$|[\s).,!?:;])/g, '$1<i>$2</i>')
+    .replace(/(^|[\s(])@([\w.-]{2,32})/g, (all, before, name) => `${before}<span class="mention${name.toLowerCase() === me_ ? ' me' : ''}" data-mention="${name}">@${name}</span>`);
+}
+function formatText(raw) {
+  return String(raw).split(/(```[\s\S]*?```)/g).map(part => {
+    if (part.startsWith('```') && part.endsWith('```') && part.length >= 6) return `<pre class="code-block"><code>${esc(part.slice(3, -3).replace(/^\w*\n/, ''))}</code></pre>`;
+    return part.split(/(`[^`\n]+`)/g).map(piece => piece.length > 2 && piece.startsWith('`') && piece.endsWith('`') ? `<code>${esc(piece.slice(1, -1))}</code>` : formatInline(piece)).join('');
+  }).join('');
+}
+// Does a message mention me (@username)?
+const mentionsMe = content => Boolean(me?.username) && new RegExp(`(^|[\\s(])@${String(me.username).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.-])`, 'i').test(String(content || ''));
 function messageKey(message) { return `${message.id ?? ''}:${message.created_at ?? ''}:${message.content ?? ''}`; }
 // "Today", "Yesterday" or the date, shown between messages of different days.
 function dayLabel(date) {
@@ -465,14 +567,16 @@ function dayLabel(date) {
 function appendMessage(message, mine, key = messageKey(message), pending = false, { incoming = false } = {}) {
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id) || { display_name: t('unknown') };
   const profileId = sender.id ? ` data-profile-id="${sender.id}"` : '';
-  const list = $('#messages');
+  const list = $('#messages'); list.querySelector('.messages-empty')?.remove();
   // Only follow the conversation when the reader is already at the bottom.
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-  const created = new Date(message.created_at || Date.now());
+  const created = parseTime(message.created_at || Date.now());
   const day = Number.isNaN(created.getTime()) ? '' : created.toDateString();
   const lastArticle = [...list.querySelectorAll('article')].pop();
   if (day && lastArticle?.dataset.day !== day) list.insertAdjacentHTML('beforeend', `<div class="day-separator"><span>${esc(dayLabel(created))}</span></div>`);
-  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time></div><p>${esc(message.content)}</p></div></article>`);
+  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time>${mine && current?.kind === 'dm' ? '<span class="receipt"></span>' : ''}</div>${renderMessageContent(message.content)}<div class="reactions"></div></div></article>`);
+  const added = list.lastElementChild; if (/^\d+$/.test(String(message.id ?? ''))) added.dataset.id = String(message.id); added.dataset.author = displayName(sender);
+  window.chatExtras?.decorate(added);
   if (!incoming || atBottom || mine) { list.scrollTop = list.scrollHeight; hideNewMessages(); }
   else showNewMessages();
 }
@@ -490,9 +594,9 @@ function hideNewMessages() { newMessagesCount = 0; const button = $('#new-messag
 function renderConversationHeader() {
   if (!current) return;
   const { kind, data } = current;
-  const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
+  const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const seen = kind === 'dm' && !userOnline(data) ? lastSeenText(data.id) : ''; const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : seen || `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
   const profileId = kind === 'dm' ? ` data-profile-id="${data.id}"` : '';
-  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button mute-chat-button" id="mute-chat" type="button" aria-label="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}" title="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}">${isMuted(chatKey(kind, data.id)) ? ICON_BELL_OFF : ICON_BELL}</button><button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
+  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
 }
 async function openChat(kind, id, { force = false } = {}) {
   const data = kind === 'room' ? rooms.find(room => room.id === id) : users.find(user => user.id === id); if (!data) return;
@@ -520,9 +624,13 @@ async function refreshCurrentHistory() {
     const history = await fetchHistory(selected);
     if (current !== selected) return;
     const key = history.map(message => `${message.id}:${message.created_at}:${message.content}`).join('|');
-    if (key === historyKey) return;
-    historyKey = key; $('#messages').innerHTML = '';
+    // An empty chat has an empty key too: mark it so it still gets rendered once.
+    const stamp = key || 'empty';
+    if (stamp === historyKey) return;
+    historyKey = stamp; $('#messages').innerHTML = '';
     history.forEach(message => appendMessage(message, (message.user?.id || message.sender?.id) === me.id));
+    // An empty chat keeps the message area (and the composer at the bottom) with a hint.
+    if (!history.length) $('#messages').innerHTML = `<p class="messages-empty">${esc(t('noMessagesYet'))}</p>`;
     const last = history[history.length - 1]; if (last) markRead(chatKey(selected.kind, selected.data.id), last.id);
   } catch (error) {
     $('#messages').innerHTML = '';
@@ -565,8 +673,11 @@ function socketMessage(payload) {
   const roomId = payload.room_id ?? message.room_id;
   const otherId = payload.to_id ?? payload.user_id ?? message.to_id ?? message.user_id;
   const matchingRoom = current?.kind === 'room' && Number(roomId) === Number(current.data.id);
-  const matchingDirect = current?.kind === 'dm' && [message.user_id, message.sender_id, message.to_id, payload.from_id, payload.to_id].some(id => Number(id) === Number(current.data.id));
   const mine = Number(message.user?.id || message.sender?.id || message.user_id || message.sender_id) === Number(me?.id);
+  // The server echoes our own direct message without to_id: it belongs to the open chat when
+  // a message with the same text is waiting there for its confirmation.
+  const ownEcho = mine && type === 'direct_message' && current?.kind === 'dm' && [...document.querySelectorAll('#messages article[data-pending="true"], #messages article[data-failed="true"]')].some(node => node.dataset.content === String(message.content));
+  const matchingDirect = current?.kind === 'dm' && (ownEcho || [message.user_id, message.sender_id, message.to_id, payload.from_id, payload.to_id].some(id => Number(id) === Number(current.data.id)));
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id || payload.from_id) || { display_name: t('user') };
   // An open conversation is already the notification: do not interrupt the user
   // with a toast for messages they can see immediately. A hidden window (tray on PC,
@@ -576,7 +687,8 @@ function socketMessage(payload) {
   // A muted chat still counts unread messages, but never notifies or plays a sound.
   if (!mine && !seen) {
     unread.set(key, (unread.get(key) || 0) + 1); if (message.id !== undefined) latestIncoming.set(key, message.id); renderList(); updateUnread();
-    if (!isMuted(key) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
+    // A mention of you notifies even in a muted chat (Do not disturb still stays quiet).
+    if ((!isMuted(key) || mentionsMe(message.content)) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
   }
   if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playSound('notify'); return; }
   const messageId = messageKey(message);
@@ -587,6 +699,77 @@ function socketMessage(payload) {
   }
   appendMessage(message, mine, messageId, false, { incoming: !mine });
   if (seen) markRead(key, message.id);
+}
+// ---- /ws/media: calls and screen sharing as binary frames (Nekochat servers from 2026-09-27) --
+// Frame, little-endian: u8 version 1 | u8 kind (1 audio, 2 video) | u16 flags (bit 0: room) |
+// u32 target (room or user id; from the server: the sender's id) | u32 length | payload.
+// The payload is the Opus / video chunk that call_audio / screen_frame carry in base64.
+// Signalling stays on /ws; without the socket (older servers, SSE transport, turned off in
+// Display Properties) frames go over /ws as before.
+const MEDIA_AUDIO = 1; const MEDIA_VIDEO = 2; const MEDIA_ROOM = 1; const MEDIA_HEADER = 12;
+const media = { socket: null, open: false, wanted: false, retry: null, attempts: 0, failures: 0, probeAfter: 0, audioSeq: new Map(), videoSeq: 0 };
+function mediaEnabled() { try { return localStorage.getItem('nk_media_socket') !== '0'; } catch { return true; } }
+function mediaUrl() { const url = new URL(websocketUrl()); url.pathname = url.pathname.replace(/\/ws$/, '/ws/media'); return url.href; }
+function openMediaSocket() {
+  if (!token || callTransport !== 'ws' || !mediaEnabled() || media.socket) return;
+  // A server without /ws/media fails the handshake; ask again only every 10 minutes.
+  if (Date.now() < media.probeAfter) return;
+  media.wanted = true; clearTimeout(media.retry);
+  let ws; try { ws = new WebSocket(mediaUrl()); } catch { return; }
+  ws.binaryType = 'arraybuffer'; media.socket = ws;
+  const session = token; let opened = false;
+  const handshake = setTimeout(() => { if (ws.readyState === WebSocket.CONNECTING) try { ws.close(); } catch {} }, 10000);
+  ws.onopen = () => { clearTimeout(handshake); opened = true; media.open = true; media.attempts = 0; media.failures = 0; };
+  ws.onmessage = event => { if (typeof event.data !== 'string') receiveMediaFrame(event.data); };
+  ws.onerror = () => {};
+  ws.onclose = event => {
+    clearTimeout(handshake);
+    if (media.socket === ws) { media.socket = null; media.open = false; }
+    if (!media.wanted || token !== session) return;
+    if (event.code === 4401 || event.code === 4403) return; // the /ws connection reports the session problem
+    if (!opened && (event.code === 4404 || ++media.failures >= 2)) { media.failures = 0; media.probeAfter = Date.now() + 10 * 60 * 1000; return; }
+    media.retry = setTimeout(openMediaSocket, Math.min(1000 * 2 ** Math.min(media.attempts++, 2), 4000) + Math.random() * 300);
+  };
+}
+function closeMediaSocket() { media.wanted = false; clearTimeout(media.retry); const ws = media.socket; media.socket = null; media.open = false; media.probeAfter = 0; try { ws?.close(); } catch {} }
+function sendMediaFrame(kind, payload) {
+  const ws = media.socket; const target = activeCall?.target;
+  if (!media.open || !ws || ws.readyState !== WebSocket.OPEN || !target) return false;
+  const room = target.room_id != null; const id = Number(room ? target.room_id : target.to_id); if (!Number.isFinite(id)) return false;
+  const frame = new Uint8Array(MEDIA_HEADER + payload.byteLength); const view = new DataView(frame.buffer);
+  view.setUint8(0, 1); view.setUint8(1, kind); view.setUint16(2, room ? MEDIA_ROOM : 0, true); view.setUint32(4, id >>> 0, true); view.setUint32(8, payload.byteLength, true);
+  frame.set(payload, MEDIA_HEADER);
+  try { ws.send(frame); return true; } catch { return false; }
+}
+// Binary frames carry no key-frame flag: read it from the bitstream (VP8, VP9, AV1).
+function isKeyFrame(codec, bytes) {
+  const first = bytes[0] ?? 0xff; const name = String(codec || '').toLowerCase();
+  if (name.startsWith('vp8')) return (first & 1) === 0;
+  if (name.startsWith('vp09') || name === 'vp9') {
+    const profile = ((first >> 5) & 1) | (((first >> 4) & 1) << 1); const bit = profile === 3 ? 2 : 3;
+    if ((first >> bit) & 1) return false; // show_existing_frame
+    return ((first >> (bit - 1)) & 1) === 0;
+  }
+  if (name.startsWith('av01')) { let at = 0; while (at < bytes.length) { const type = (bytes[at] >> 3) & 15; if (type === 1) return true; if (type === 6 || type === 3) return false; const extension = (bytes[at] >> 2) & 1; at += 1 + extension; let size = 0; let shift = 0; while (at < bytes.length) { const byte = bytes[at++]; size |= (byte & 127) << shift; shift += 7; if (!(byte & 128)) break; } at += size; } return false; }
+  return true;
+}
+function receiveMediaFrame(buffer) {
+  if (buffer.byteLength < MEDIA_HEADER) return;
+  const view = new DataView(buffer); if (view.getUint8(0) !== 1) return;
+  const kind = view.getUint8(1); const flags = view.getUint16(2, true); const from = view.getUint32(4, true); const length = view.getUint32(8, true);
+  if (buffer.byteLength < MEDIA_HEADER + length || !activeCall || activeCall.incoming || !from || from === Number(me?.id)) return;
+  // The frame names only the sender; it belongs to the current call or channel.
+  if (Boolean(flags & MEDIA_ROOM) !== Boolean(activeCall.room)) return;
+  if (!activeCall.room && from !== Number(activeCall.target.to_id)) return;
+  const bytes = new Uint8Array(buffer, MEDIA_HEADER, length);
+  if (kind === MEDIA_AUDIO) {
+    if (!callAudio) return;
+    if (activeCall.room) { noteRoomPresence({ room_id: activeCall.target.room_id }, from); addParticipant(from); }
+    const seq = media.audioSeq.get(from) || 0; media.audioSeq.set(from, seq + 1);
+    playCallAudio(from, seq, bytes);
+  } else if (kind === MEDIA_VIDEO && remoteScreen && (!remoteScreen.senderId || remoteScreen.senderId === from)) {
+    decodeScreenFrame(isKeyFrame(remoteScreen.codec, bytes), media.videoSeq++, bytes);
+  }
 }
 function openWebSocketConnection() {
   return new Promise((resolve, reject) => {
@@ -717,10 +900,11 @@ async function connectSocket() {
   startHeartbeat(connection);
   try { connection.send({ type: 'ping' }); } catch {}
   flushPendingCallSignals();
+  openMediaSocket();
   // Messages sent while the connection was down never arrive as events: load what was missed.
   if (reconnected) { refresh().catch(() => {}); catchUpHistory(); }
 }
-function disconnectSocket() { clearTimeout(socketRetry); socketRetryDelay = 1000; stopHeartbeat(); pendingCallSignals.clear(); const connection = socket; socket = null; connection?.close(); }
+function disconnectSocket() { closeMediaSocket(); clearTimeout(socketRetry); socketRetryDelay = 1000; stopHeartbeat(); pendingCallSignals.clear(); const connection = socket; socket = null; connection?.close(); }
 function sendSocketMessage(payload) {
   if (!socket) {
     connectSocket();
@@ -793,7 +977,7 @@ function setCallTransport(value) {
   const next = value === 'sse' ? 'sse' : 'ws';
   if (next === callTransport) return;
   callTransport = next; localStorage.setItem('nk_call_transport', next);
-  if (next === 'sse') connectEventStream(); else disconnectEventStream();
+  if (next === 'sse') { connectEventStream(); closeMediaSocket(); } else { disconnectEventStream(); if (socket) openMediaSocket(); }
   updateCallWindow();
 }
 function callId() { return globalThis.crypto?.randomUUID?.() || `call-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
@@ -811,7 +995,7 @@ function releaseCallAudio(state) {
   state.denoiser?.destroy(); state.denoiser = null;
   if (state.context && state.context.state !== 'closed') state.context.close().catch(() => {});
 }
-function stopCallAudio() { const state = callAudio; if (!state) return; callAudio = null; releaseCallAudio(state); }
+function stopCallAudio() { media.audioSeq.clear(); const state = callAudio; if (!state) return; callAudio = null; releaseCallAudio(state); }
 function setCallSpeaking(side, value) { if (!activeCall || activeCall[`${side}Speaking`] === value) return; activeCall[`${side}Speaking`] = value; updateCallWindow(); }
 // Each remote speaker has its own Opus decoder and playback clock; their buffers play into the
 // same AudioContext, which mixes them (N−1 in a room voice channel, one peer in a direct call).
@@ -889,7 +1073,9 @@ async function startCallAudio() {
     state.encoder = new AudioEncoder({ output: chunk => {
       if (!activeCall || activeCall !== state.call || chunk.byteLength === 0) return;
       const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes);
-      sendCallMessage({ type: 'call_audio', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, audio: bytesToBase64(bytes) }).catch(() => {});
+      // Binary /ws/media frame when the server has it; JSON over /ws otherwise.
+      const seq = state.sequence++;
+      if (!sendMediaFrame(MEDIA_AUDIO, bytes)) sendCallMessage({ type: 'call_audio', ...activeCall.target, call_id: activeCall.callId, seq, audio: bytesToBase64(bytes) }).catch(() => {});
     }, error: error => console.warn('Opus encode failed:', error) });
     state.encoder.configure(opus);
     const display = await desktopControls?.getDisplaySettings?.(); if (cancelled()) return;
@@ -944,8 +1130,11 @@ function receiveCallAudio(payload) {
   if (!callAudio || !activeCall || !payload.audio || !sameCall(payload) || (senderId && senderId === Number(me?.id))) return;
   // A late participant is picked up by their first audio frame (from_id).
   if (activeCall.room && senderId) addParticipant(senderId);
+  playCallAudio(senderId, Number(payload.seq || 0), base64ToBytes(payload.audio));
+}
+function playCallAudio(senderId, seq, bytes) {
   const peer = peerFor(senderId || 'remote'); if (!peer) return;
-  try { peer.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Number(payload.seq || 0) * 20000, data: base64ToBytes(payload.audio) })); } catch (error) { console.warn('Invalid Opus frame:', error); }
+  try { peer.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: seq * 20000, data: bytes })); } catch (error) { console.warn('Invalid Opus frame:', error); }
 }
 // Both sides can share at once: each keeps its own picture and the call window shows the one
 // chosen with the button under that person, so the two streams no longer overwrite each other.
@@ -998,7 +1187,7 @@ async function toggleScreenShare() {
   const config = await screenEncoderConfig(width, height);
   if (!config) { stream.getTracks().forEach(item => item.stop()); throw new Error(t('screenCodecUnsupported')); }
   const state = { stream, sequence: 0, lastPreview: 0 }; screenShare = state;
-  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); sendCallMessage({ type: 'screen_frame', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('Screen encode failed:', error) });
+  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); const seq = state.sequence++; if (!sendMediaFrame(MEDIA_VIDEO, bytes)) sendCallMessage({ type: 'screen_frame', ...activeCall.target, call_id: activeCall.callId, seq, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('Screen encode failed:', error) });
   state.encoder.configure(config); state.reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
   refreshScreenView('self');
   try { await sendCallMessage({ type: 'screen_start', ...activeCall.target, call_id: activeCall.callId, codec: config.codec, width, height }); }
@@ -1011,8 +1200,8 @@ function handleScreenSignal(payload) {
   const senderId = senderOf(payload); if (senderId && senderId === Number(me?.id)) return;
   if (payload.type === 'screen_start') {
     // A room has one sharer: a new screen_start switches the screen to that person.
-    stopRemoteScreen(); const state = { lastPreview: 0, senderId };
-    const codec = payload.codec || 'vp8';
+    stopRemoteScreen(); const codec = payload.codec || 'vp8'; const state = { lastPreview: 0, senderId, codec };
+    media.videoSeq = 0;
     const config = { codec, codedWidth: Number(payload.width) || 1280, codedHeight: Number(payload.height) || 720 };
     remoteScreen = state;
     (globalThis.VideoDecoder ? VideoDecoder.isConfigSupported(config).catch(() => ({ supported: false })) : Promise.resolve({ supported: false })).then(support => {
@@ -1033,7 +1222,11 @@ function handleScreenSignal(payload) {
     stopRemoteScreen(); refreshScreenView(); return;
   }
   if (!remoteScreen?.decoder || !payload.data) return;
-  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: payload.key ? 'key' : 'delta', timestamp: Number(payload.seq || 0) * 83333, data: base64ToBytes(payload.data) })); } catch (error) { console.warn('Invalid screen frame:', error); }
+  decodeScreenFrame(Boolean(payload.key), Number(payload.seq || 0), base64ToBytes(payload.data));
+}
+function decodeScreenFrame(key, seq, bytes) {
+  if (!remoteScreen?.decoder || remoteScreen.decoder.state !== 'configured') return;
+  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: seq * 83333, data: bytes })); } catch (error) { console.warn('Invalid screen frame:', error); }
 }
 function updateCallWindow() {
   if (!activeCall) return;
@@ -1268,6 +1461,8 @@ document.addEventListener('change', event => {
 renderDnsControls();
 $('#auth-form').addEventListener('submit', async event => { event.preventDefault(); if (displaySettings.loginUi === 'classic' && !applyServerUrl($('#classic-server-url').value)) return; const username = $('#auth-username').value.trim(); const password = $('#auth-password').value; $('#auth-error').textContent = ''; showWelcome(); try { const body = registering ? { username, password, display_name: $('#auth-display').value.trim() || username } : { username, password }; const result = await api(registering ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(body) }); token = result.access_token; localStorage.setItem('nk_token', token); rememberSession(result.user); setLoggedIn(result.user, true); await refresh(); } catch (error) { $('#welcome-screen').hidden = true; showSystemDialog(error.message, 'critical', t('loginError')); } });
 $('#chat-list').addEventListener('click', event => {
+  const archiveRow = event.target.closest('[data-archive]');
+  if (archiveRow) { showArchive = archiveRow.dataset.archive === 'open'; renderList(); return; }
   const button = event.target.closest('[data-kind]');
   if (!button) return;
   if (button.dataset.kind === 'dm' && event.target.closest('.avatar')) return showUserProfile(users.find(user => user.id === Number(button.dataset.id)));
@@ -1460,7 +1655,7 @@ $('#theme-browser-profile').onclick = () => { $('#profile-dialog').close(); desk
 // The theme editor needs the desktop app (it writes theme folders).
 $('#theme-editor-profile').hidden = !desktopControls?.openThemeEditor;
 $('#theme-editor-profile').onclick = () => { $('#profile-dialog').close(); desktopControls.openThemeEditor(); };
-$('#personalize').onclick = () => { $('#profile-dialog').close(); desktopControls?.openThemeSettings(); };
+$('#personalize').onclick = () => { $('#profile-dialog').close(); (desktopControls?.openControlPanel || desktopControls?.openThemeSettings)?.(); };
 document.querySelectorAll('[data-profile-task]').forEach(button => button.onclick = () => openProfileTask(button.dataset.profileTask));
 $('#profile-back').onclick = () => openProfileTask(); $('#profile-cancel').onclick = () => $('#profile-editor').close();
 desktopControls?.onProfileChanged(user => { if (!user?.id || user.id !== me?.id) return; setLoggedIn(user); renderList(); });
@@ -1483,24 +1678,58 @@ window.addEventListener('resize', fitXpLogonBackground);
 // Chat background from Display Properties; the storage event updates open windows at once.
 function applyWallpaper() {
   let choice = 'none', image = ''; try { choice = localStorage.getItem('nk_chat_wallpaper') || 'none'; image = localStorage.getItem('nk_chat_wallpaper_image') || ''; } catch {}
-  const url = { bliss: 'assets/images/Bliss.jpg', logon: 'assets/images/xp_1920x1200.jpg', custom: image }[choice] || '';
+  let packUrl = ''; try { packUrl = localStorage.getItem('nk_chat_wallpaper_pack') || ''; } catch {}
+  const url = choice.startsWith('pack:') ? packUrl : { bliss: 'assets/images/Bliss.jpg', logon: 'assets/images/xp_1920x1200.jpg', custom: image }[choice] || '';
   let visibility = 35; try { visibility = Number(localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35); } catch {}
   const veil = 100 - Math.min(100, Math.max(5, Number.isFinite(visibility) ? visibility : 35));
   // A veil of the window colour over the picture keeps the messages readable.
-  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url));
+  // Position and colour, like XP's Desktop tab: stretch (cover), center or tile, on the colour.
+  let position = 'stretch', colour = ''; try { position = localStorage.getItem('nk_chat_wallpaper_position') || 'stretch'; colour = localStorage.getItem('nk_chat_wallpaper_color') || ''; } catch {}
+  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url || colour));
   list.style.backgroundImage = url ? `linear-gradient(color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent), color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent)), url("${url}")` : '';
+  list.style.backgroundSize = url ? `100% 100%, ${position === 'stretch' ? 'cover' : 'auto'}` : '';
+  list.style.backgroundRepeat = url ? `no-repeat, ${position === 'tile' ? 'repeat' : 'no-repeat'}` : '';
+  list.style.backgroundPosition = url ? `0 0, ${position === 'tile' ? '0 0' : 'center'}` : '';
+  list.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(colour) ? `color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, ${colour})` : '';
 }
 applyWallpaper();
 window.addEventListener('storage', event => { if (event.key?.startsWith('nk_chat_wallpaper')) applyWallpaper(); });
 window.addEventListener('message', event => {
   if (event.data?.type === 'xp-display-settings') applyDisplaySettings(event.data.settings || {});
-  if (event.data?.type === 'xp-theme-refresh') { const link = document.querySelector('#nekochat-style'); if (link) link.href = `assets/css/nekochat.css?theme=${event.data.revision}`; const theme = document.querySelector('#nekochat-theme'); if (theme && event.data.cssUrl) theme.href = event.data.cssUrl; }
+  if (event.data?.type === 'xp-theme-refresh') { const link = document.querySelector('#nekochat-style'); if (link) link.href = `assets/css/nekochat.css?theme=${event.data.revision}`; const theme = document.querySelector('#nekochat-theme'); if (theme && event.data.cssUrl) theme.href = event.data.cssUrl; refreshStartPanelIcons(); }
 });
 desktopControls?.getActiveTheme().then(theme => {
   const link = document.querySelector('#nekochat-theme');
   if (link && theme?.cssUrl) link.href = theme.cssUrl;
 });
 desktopControls?.getDisplaySettings().then(applyDisplaySettings);
+// Themes from .msstyles bring the Start menu footer icons (Turn off, Log off): Sign out and
+// Change user use them; Classic keeps the app's own icons. The stylesheet has no reliable load
+// event for file:// links, so look again shortly after a change.
+function refreshStartPanelIcons() {
+  [0, 150, 500, 1500].forEach(delay => setTimeout(() => document.documentElement.classList.toggle('xp-startpanel', getComputedStyle(document.documentElement).getPropertyValue('--xp-turnoff-icon').trim() !== ''), delay));
+}
+refreshStartPanelIcons();
+
+// Chosen packs are stored with their file URLs; the web version's blob URLs live only as long as
+// the page, so resolve them again at start.
+(async () => {
+  if (!desktopControls?.listPacks) return;
+  const chosen = key => { try { const value = localStorage.getItem(key) || ''; return value.startsWith('pack:') ? value.slice(5) : null; } catch { return null; } };
+  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper') };
+  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper) return;
+  let packs = []; try { packs = await desktopControls.listPacks(); } catch { return; }
+  const find = id => packs.find(pack => pack.id === id);
+  try {
+    if (ids.sound) localStorage.setItem('nk_sound_pack', JSON.stringify(find(ids.sound)?.sounds || {}));
+    if (ids.cursor) localStorage.setItem('nk_cursor_pack', JSON.stringify(find(ids.cursor)?.cursors || {}));
+    if (ids.icon) localStorage.setItem('nk_icon_pack', JSON.stringify(find(ids.icon)?.icons || {}));
+    // pack:<id>/<name>; the choice is synced, so on another device the pack may be missing.
+    if (ids.wallpaper) { const [id, ...name] = ids.wallpaper.split('/'); localStorage.setItem('nk_chat_wallpaper_pack', find(id)?.wallpapers?.[name.join('/')] || ''); }
+  } catch {}
+  window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons(); applyWallpaper();
+})();
+
 // ---- Updates -------------------------------------------------------------------------------
 // Apps look for a newer GitHub release; the web version compares its version.js with the one
 // on the site. Installing is up to the platform (desktopControls.installUpdate): the Windows
@@ -1518,8 +1747,16 @@ function compareVersions(a, b) {
   if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
 }
 const storedFlag = (key, fallback) => { try { const value = localStorage.getItem(key); return value === null ? fallback : value === '1'; } catch { return fallback; } };
+// Automatic Updates (Control Panel): auto (download, install on quit), download (download, ask to
+// restart), notify (ask first) or off. Downloading by itself works where the app installs itself.
+function updatePolicy() {
+  let mode = ''; try { mode = localStorage.getItem('nk_update_mode') || ''; } catch {}
+  if (['auto', 'download', 'notify', 'off'].includes(mode)) return mode;
+  return storedFlag('nk_update_auto', true) ? 'notify' : 'off';
+}
 async function checkForUpdates(manual = false) {
-  if (!manual && !storedFlag('nk_update_auto', true)) return;
+  const policy = updatePolicy();
+  if (!manual && policy === 'off') return;
   try {
     updateMode ||= (await desktopControls?.getUpdateInfo?.())?.mode || 'download';
     const current = versionParts(window.NEKOCHAT_RELOADED_VERSION);
@@ -1541,17 +1778,18 @@ async function checkForUpdates(manual = false) {
     if (!found) { if (manual) showSystemDialog(t('updateNone', { version: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle')); return; }
     if (!manual && updateOffered === found.version) return;
     updateOffered = found.version;
+    if (!manual && (policy === 'auto' || policy === 'download') && updateMode === 'install' && desktopControls?.onUpdateStatus) { installUpdate(found, { quiet: true, installOnQuit: policy === 'auto' }); return; }
     const label = { install: 'updateInstall', download: 'updateDownload', altstore: 'updateAltStore', reload: 'updateReload' }[updateMode] || 'updateDownload';
     showSystemDialog(t('updateFound', { version: found.version, current: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle'), { action: { type: 'update-install', release: found }, actionLabel: t(label) });
   } catch (error) { if (manual) showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
 }
-async function installUpdate(release) {
+async function installUpdate(release, options = {}) {
   try {
     if (updateMode === 'reload') { await navigator.serviceWorker?.getRegistration().then(registration => registration?.update()).catch(() => {}); location.reload(); return; }
     // Android answers only after the download; say that it is running.
     if (updateMode === 'install' && !desktopControls?.onUpdateStatus) showSystemDialog(t('updateDownloadingPhone', { version: release.version }), 'info', t('updateTitle'));
-    const result = await desktopControls?.installUpdate?.(release);
-    if (result?.mode === 'install') showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
+    const result = await desktopControls?.installUpdate?.(release, options);
+    if (result?.mode === 'install' && !options.quiet) showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
     else if (result?.state === 'permission') showSystemDialog(t('updatePermission'), 'warning', t('updateTitle'));
     else if (!result) window.open(release.page || 'https://github.com/xKaMikax/nekochat_reloaded/releases', '_blank');
   } catch (error) { showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
@@ -1566,6 +1804,8 @@ desktopControls?.onUpdateStatus?.(status => {
 });
 // "Check now" in Display Properties → Settings.
 window.addEventListener('storage', event => { if (event.key === 'nk_update_check' && event.newValue) checkForUpdates(true); });
+// Binary media socket turned on or off in Display Properties → Settings.
+window.addEventListener('storage', event => { if (event.key !== 'nk_media_socket') return; if (mediaEnabled()) { if (socket) openMediaSocket(); } else closeMediaSocket(); });
 setTimeout(() => checkForUpdates(false), 15000);
 setInterval(() => checkForUpdates(false), UPDATE_EVERY);
 

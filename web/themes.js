@@ -18,8 +18,9 @@
   let database;
   function db() {
     database ||= new Promise((resolve, reject) => {
-      const request = indexedDB.open('nekochat-web', 1);
-      request.onupgradeneeded = () => { request.result.createObjectStore('themes', { keyPath: 'id' }); request.result.createObjectStore('rendered', { keyPath: 'id' }); };
+      // Version 2 adds the packs store (cursors, sounds, icons from the catalog).
+      const request = indexedDB.open('nekochat-web', 2);
+      request.onupgradeneeded = () => { const stores = request.result.objectStoreNames; for (const name of ['themes', 'rendered', 'packs']) if (!stores.contains(name)) request.result.createObjectStore(name, { keyPath: 'id' }); };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -444,7 +445,9 @@
       if (RESERVED_IDS.has(record.id)) continue;
       const source = findSource(Object.keys(record.files)); if (!source) continue;
       const index = found.findIndex(theme => theme.id === record.id); if (index >= 0) found.splice(index, 1);
-      found.push({ id: record.id, prebuilt: false, record, source, css: baseName(source).toLowerCase() === 'theme.css', userInstalled: true, catalogId: record.catalogId || null });
+      // schemes/<scheme>/theme.css without a theme.css at the root: a CSS theme with colour schemes.
+      const schemed = /^schemes\/[^/]+\/theme\.css$/i.test(source);
+      found.push({ id: record.id, prebuilt: false, record, source, css: baseName(source).toLowerCase() === 'theme.css', schemed, userInstalled: true, catalogId: record.catalogId || null });
     }
     return found;
   }
@@ -455,6 +458,12 @@
       const response = await fetch(`prebuilt/${encodeURIComponent(id)}/theme.json`);
       if (!response.ok) throw new ThemeError('Theme not found');
       return { theme, metadata: await response.json() };
+    }
+    if (theme.css && theme.schemed) {
+      let info = {}; try { info = JSON.parse(await theme.record.files['theme.json'].text()); } catch {}
+      const names = new Map((Array.isArray(info.schemes) ? info.schemes : []).map(item => [String(item.id), String(item.name || item.id)]));
+      const schemes = [...new Set(Object.keys(theme.record.files).map(name => name.match(/^schemes\/([\w.-]+)\/theme\.css$/i)?.[1]).filter(Boolean))].sort().map(scheme => ({ id: scheme, name: names.get(scheme) || scheme }));
+      return { theme, metadata: { theme: info.name || id, schemes, defaultScheme: schemes.some(item => item.id === info.defaultScheme) ? info.defaultScheme : schemes[0].id } };
     }
     if (theme.css) return { theme, metadata: { theme: id, schemes: [{ id: 'default', name: 'Default' }], defaultScheme: 'default' } };
     const stamp = `${theme.record.installed}:${IMPORTER_VERSION}`;
@@ -473,7 +482,7 @@
     const directory = new URL(`prebuilt/${encodeURIComponent(id)}/schemes/${encodeURIComponent(scheme)}/`, location.href);
     const response = await fetch(new URL('theme.css', directory));
     if (!response.ok) throw new ThemeError('Theme not found');
-    return (await response.text()).replace(/url\("([^"]+)"\)/g, (_, target) => `url("${new URL(baseName(target), directory).href}")`);
+    return (await response.text()).replace(/url\("([^"]+)"\)/g, (match, target) => /^(data|https?|blob):/i.test(target) ? match : `url("${new URL(baseName(target), directory).href}")`);
   }
   // A theme.css bundle refers to its images by relative paths inside the ZIP.
   function userCss(record, source) {
@@ -490,6 +499,7 @@
     if (materialized.has(key)) return materialized.get(key);
     let css;
     if (prepared.theme.prebuilt) css = await prebuiltCss(prepared.theme.id, scheme);
+    else if (prepared.theme.css && prepared.theme.schemed) css = await userCss(prepared.theme.record, `schemes/${scheme}/theme.css`);
     else if (prepared.theme.css) css = await userCss(prepared.theme.record, prepared.theme.source);
     else {
       const directory = prepared.rendered.dirs[`schemes/${scheme}`] || prepared.rendered.dirs[''];
@@ -517,7 +527,7 @@
     return { id, scheme: active, revision: now(), cssUrl: await cssUrl(prepared, active) };
   }
   async function activateTheme(id, requestedScheme) {
-    if (!/^[a-zA-Z0-9._ -]+$/.test(String(id)) || (requestedScheme && !/^[a-zA-Z0-9._-]+$/.test(requestedScheme))) throw new ThemeError('Invalid theme name');
+    if (!/^[\p{L}\p{N}._ ()-]+$/u.test(String(id)) || String(id).includes('..') || (requestedScheme && !/^[a-zA-Z0-9._-]+$/.test(requestedScheme))) throw new ThemeError('Invalid theme name');
     const prepared = await prepareTheme(id);
     const scheme = requestedScheme || prepared.metadata.defaultScheme || '';
     if (!hasScheme(prepared.metadata, scheme)) throw new ThemeError('Unknown colour scheme');
@@ -533,11 +543,13 @@
     return { themes: await listThemes(), activeTheme };
   }
   // Keeps only what a theme needs from a ZIP, like installCatalogTheme() in main.js.
-  async function bundleFiles(zip) {
-    const entries = await readZip(zip);
+  async function bundleFiles(zip) { return bundleFromEntries(await readZip(zip)); }
+  function bundleFromEntries(entries) {
     const source = Object.keys(entries).sort().find(name => ['theme', 'msstyles'].includes(extension(name)) || baseName(name).toLowerCase() === 'theme.css');
     if (!source) throw new ThemeError('Theme.ZIP must contain a .theme, .msstyles, or theme.css file.');
-    const root = source.includes('/') ? source.slice(0, source.lastIndexOf('/') + 1) : '';
+    // A theme.css inside schemes/<scheme>/ belongs to a theme with colour schemes: keep its root.
+    const schemedAt = source.match(/^(.*?)schemes\/[^/]+\/theme\.css$/i);
+    const root = schemedAt ? schemedAt[1] : source.includes('/') ? source.slice(0, source.lastIndexOf('/') + 1) : '';
     const copyAll = baseName(source).toLowerCase() === 'theme.css';
     const files = {};
     for (const [name, bytes] of Object.entries(entries)) {
@@ -575,6 +587,12 @@
       for (const [name, blob] of Object.entries(record.files)) files.push({ path: `themes/${record.id}/${name}`, data: toBase64(new Uint8Array(await blob.arrayBuffer())) });
       if (record.catalogId) files.push({ path: `themes/${record.id}/catalog-theme.json`, data: btoa(JSON.stringify({ id: record.catalogId })) });
     }
+    // Installed packs travel under packs/<id>/ with their pack.json.
+    for (const record of await dbAll('packs')) {
+      for (const [name, blob] of Object.entries(record.files)) files.push({ path: `packs/${record.id}/${name}`, data: toBase64(new Uint8Array(await blob.arrayBuffer())) });
+      const info = { catalogId: record.catalogId, type: record.type, name: record.name, author: record.author, contains: record.contains, theme: record.theme };
+      files.push({ path: `packs/${record.id}/pack.json`, data: toBase64(new TextEncoder().encode(JSON.stringify(info))) });
+    }
     return files;
   }
   // Adds the themes of a backup archive (made on any platform) to the installed ones.
@@ -592,6 +610,13 @@
       if (!findSource(Object.keys(files))) continue;
       await dbDelete('rendered', id);
       await installRecord({ id, installed: now(), catalogId, files: Object.fromEntries(Object.entries(files).map(([name, bytes]) => [name, new Blob([bytes])])) });
+    }
+    const byPack = new Map();
+    for (const [name, bytes] of Object.entries(entries)) { const match = name.match(/^packs\/([^/]+)\/(.+)$/); if (!match || match[1].startsWith('.')) continue; if (!byPack.has(match[1])) byPack.set(match[1], {}); byPack.get(match[1])[match[2]] = bytes; }
+    for (const [id, files] of byPack) {
+      let info = {}; try { info = JSON.parse(new TextDecoder().decode(files['pack.json'])); } catch {} delete files['pack.json'];
+      packUrls.delete(id);
+      await dbPut('packs', { id, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || id, author: info.author || '', contains: info.contains || [], theme: info.theme || null, files: Object.fromEntries(Object.entries(files).map(([name, bytes]) => [name, new Blob([bytes])])) });
     }
     return listThemes();
   }
@@ -625,6 +650,7 @@
         colorSchemes: entry.ColorSchemes || entry.ColorShemas || entry.colorSchemes || [],
         type: detail('Type', 'type') || pick('Type', 'type') || 'WindowsThemeFile',
         author: detail('Author', 'author') || pick('Author', 'author') || 'Unknown',
+        added: detail('Added', 'added') || pick('Added', 'added') || '',
         version: detail('Version', 'version') || pick('Version', 'version') || 'Unknown',
         previewUrl: pick('Preview', 'preview') || `${CATALOG_ROOT}/${directory}/Preview.png`,
         descriptionUrl: pick('Description', 'description') || `${CATALOG_ROOT}/${directory}/Description.md`,
@@ -648,6 +674,98 @@
     let description = '';
     try { const response = await fetch(item.descriptionUrl); if (response.ok) description = await response.text(); } catch {}
     return { ...item, description };
+  }
+  // ---- Catalog packs: cursors, sounds, icons and combos (like main.js) ----------------------
+  async function fetchCatalogPacks() {
+    const response = await fetch(`${CATALOG_ROOT}/packs.json`, { cache: 'no-store' });
+    if (response.status === 404) return [];
+    if (!response.ok) throw new ThemeError(`Unable to load the catalog (${response.status}).`);
+    const manifest = await response.json();
+    return (Array.isArray(manifest?.packs) ? manifest.packs : []).map((entry, index) => {
+      const details = entry.Details || entry.details || {};
+      const id = String(entry.pack_id || entry.id || `pack-${index + 1}`);
+      const directory = String(entry.directory || id).replace(/^\/+|\/+$/g, '');
+      const rawType = String(entry.type || entry.Type || '').toLowerCase();
+      const type = ['cursors', 'sounds', 'icons', 'wallpapers', 'combo'].includes(rawType) ? rawType : 'combo';
+      // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
+      const includes = type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? { ...(entry.Includes || entry.includes) } : null;
+      // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
+      const files = (Array.isArray(entry.Files || entry.files) ? (entry.Files || entry.files) : []).map(String).filter(name => /^[^/\\]+$/.test(name) && name !== '.' && name !== '..');
+      return { id, type, kind: 'pack', directory, files, displayName: entry.DisplayName || entry.displayName || id, includes, contains: includes ? Object.keys(includes) : entry.Contains || entry.contains || [type],
+        author: details.Author || entry.Author || 'Unknown', added: String(details.Added || entry.Added || ''), version: details.Version || '',
+        previewUrl: entry.Preview || (type === 'wallpapers' && files[0] ? `${CATALOG_ROOT}/${directory}/${encodeURIComponent(files[0])}` : `${CATALOG_ROOT}/${directory}/Preview.png`), zipUrl: entry.PackZIP || `${CATALOG_ROOT}/${directory}/Pack.ZIP` };
+    });
+  }
+  async function installCatalogPack(id) {
+    const catalog = await fetchCatalogPacks();
+    const item = catalog.find(pack => pack.id === id);
+    if (!item) throw new ThemeError('The pack no longer exists in the catalog.');
+    if (item.includes) {
+      let theme = null; const parts = [];
+      if (item.includes.theme) { const existing = (await listThemes()).find(entry => entry.catalogId === item.includes.theme); theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id; }
+      for (const part of ['cursors', 'sounds', 'icons', 'wallpapers']) {
+        const ref = item.includes[part]; if (!ref) continue;
+        if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new ThemeError(`The combo lists a missing ${part} pack: ${ref}`);
+        const existing = (await dbAll('packs')).find(pack => pack.catalogId === ref);
+        parts.push(existing ? existing.id : (await installCatalogPack(ref)).id);
+      }
+      const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
+      await dbPut('packs', { id: safeId, catalogId: item.id, type: 'combo', name: item.displayName, author: item.author, contains: Object.keys(item.includes), theme, parts, files: {} });
+      return { id: safeId, packs: await listPacks(), themes: await listThemes() };
+    }
+    let entries = {};
+    if (item.files.length) {
+      // No Pack.ZIP: download the listed files into the folder of the pack's type.
+      for (const name of item.files) {
+        const response = await fetch(`${CATALOG_ROOT}/${item.directory}/${encodeURIComponent(name)}`);
+        if (!response.ok) throw new ThemeError(`Unable to download ${name} (${response.status}).`);
+        entries[`${item.type}/${name}`] = new Uint8Array(await response.arrayBuffer());
+      }
+    } else {
+      const response = await fetch(item.zipUrl);
+      if (!response.ok) throw new ThemeError(`Unable to download Pack.ZIP (${response.status}).`);
+      entries = await readZip(await response.arrayBuffer());
+    }
+    let info = {}; try { info = JSON.parse(new TextDecoder().decode(entries['pack.json'])); } catch {}
+    const contains = ['sounds', 'cursors', 'icons', 'wallpapers', 'theme'].filter(part => Object.keys(entries).some(name => name.startsWith(`${part}/`) && name.length > part.length + 1));
+    const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
+    // The theme of a combo goes to the installed themes, like a catalog theme.
+    let theme = null;
+    if (contains.includes('theme')) {
+      const themeEntries = Object.fromEntries(Object.entries(entries).filter(([name]) => name.startsWith('theme/')).map(([name, bytes]) => [name.slice(6), bytes]));
+      theme = `${safeId}-theme`;
+      await dbDelete('rendered', theme);
+      await installRecord({ id: theme, installed: now(), catalogId: `pack:${item.id}`, files: bundleFromEntries(themeEntries) });
+    }
+    const files = Object.fromEntries(Object.entries(entries).filter(([name]) => contains.some(part => part !== 'theme' && name.startsWith(`${part}/`))).map(([name, bytes]) => [name, new Blob([bytes])]));
+    await dbPut('packs', { id: safeId, catalogId: item.id, type: item.type, name: info.name || item.displayName, author: info.author || item.author, contains, theme, files });
+    return { id: safeId, packs: await listPacks(), themes: await listThemes() };
+  }
+  // Blob URLs live as long as this page; windows get them resolved (packs.js).
+  const packUrls = new Map();
+  async function listPacks() {
+    const result = [];
+    for (const record of (await dbAll('packs')).sort((a, b) => a.id.localeCompare(b.id))) {
+      if (!packUrls.has(record.id)) packUrls.set(record.id, Object.fromEntries(Object.entries(record.files).map(([name, blob]) => [name, objectUrl(blob)])));
+      const urls = packUrls.get(record.id);
+      const sounds = {}; for (const [name, url] of Object.entries(urls)) { const match = name.match(/^sounds\/([\w-]+)\.(wav|mp3|ogg)$/i); if (match) sounds[match[1].toLowerCase()] = url; }
+      const readJson = async name => { try { return JSON.parse(await record.files[name].text()); } catch { return {}; } };
+      const cursors = {}; for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json'))) { const url = urls[`cursors/${typeof value === 'string' ? value : value?.file}`]; if (url) cursors[kind] = { url, x: value?.x, y: value?.y }; }
+      const icons = {}; for (const [name, file] of Object.entries(await readJson('icons/icons.json'))) { const url = urls[`icons/${file}`]; if (url) icons[name] = url; }
+      const wallpapers = {}; for (const [name, url] of Object.entries(urls)) { const match = name.match(/^wallpapers\/([^/]+)\.(jpe?g|png|webp)$/i); if (match) wallpapers[match[1]] = url; }
+      result.push({ id: record.id, catalogId: record.catalogId || null, type: record.type, name: record.name, author: record.author || '', contains: record.contains || [], theme: record.theme || null, parts: record.parts || [], files: urls, sounds, cursors, icons, wallpapers });
+    }
+    // A combo has no files of its own: it takes the sounds, cursors, icons and wallpapers of its parts.
+    for (const pack of result) for (const part of pack.parts) { const source = result.find(item => item.id === part); if (source) { Object.assign(pack.sounds, source.sounds); Object.assign(pack.cursors, source.cursors); Object.assign(pack.icons, source.icons); Object.assign(pack.wallpapers, source.wallpapers); } }
+    return result;
+  }
+  async function removePack(id) {
+    const record = await dbGet('packs', String(id));
+    if (record?.theme) await removeTheme(record.theme).catch(() => {});
+    for (const part of record?.parts || []) { Object.values(packUrls.get(part) || {}).forEach(url => URL.revokeObjectURL(url)); packUrls.delete(part); await dbDelete('packs', part); }
+    Object.values(packUrls.get(String(id)) || {}).forEach(url => URL.revokeObjectURL(url)); packUrls.delete(String(id));
+    await dbDelete('packs', String(id));
+    return { packs: await listPacks(), themes: await listThemes() };
   }
   async function installCatalogTheme(id) {
     const item = await catalogItem(id);
@@ -683,6 +801,7 @@
     get activeTheme() { return activeTheme; },
     get activeDisplay() { return activeDisplay; },
     listThemes, previewTheme, activateTheme, removeTheme, importTheme, exportThemeFiles, restoreThemeFiles,
+    fetchCatalogPacks, installCatalogPack, listPacks, removePack,
     fetchCatalog, fetchCatalogThemeDetails, installCatalogTheme, saveDisplaySettings,
   };
 })();

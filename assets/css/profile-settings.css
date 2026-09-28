@@ -1,5 +1,52 @@
-html,body{margin:0;width:100%;height:100%;overflow:hidden;font:12px Tahoma,Arial,sans-serif}.profile-window{min-width:0;min-height:0}.profile-shell{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;background:#fff}.profile-window input[type=file][hidden]{display:none!important}.profile-window .xp-window-controls{width:var(--xp-control-width,21px)}.profile-window #close{flex-basis:var(--xp-control-width,21px);background-image:var(--xp-close-normal)}.profile-window #close::after{content:'';display:block;width:var(--xp-glyph-width,13px);height:var(--xp-glyph-height,13px);margin:var(--xp-glyph-margin,4px);background:var(--xp-close-glyph) center/var(--xp-glyph-width,13px) var(--xp-glyph-height,13px) no-repeat}.toolbar{height:28px;flex:none;padding:6px 10px;border-bottom:1px solid #b6c6df;background:var(--xp-theme-buttonface,#ece9d8);color:#666}.profile-window main{display:flex;min-height:0;flex:1;background:#fff}.profile-window aside{width:126px;padding:9px 6px;background:linear-gradient(#d8e8ff,#6d8ddd)}aside h3{margin:0 0 7px;padding:5px 7px;background:#fff;color:#315e99;font-size:12px}aside button{display:block;width:100%;padding:4px 7px;border:0;background:transparent;color:#0d4c9a;text-align:left;text-decoration:underline;font:inherit}aside p{margin:0;padding:7px;background:#fff;color:#315e99;font-size:11px}.profile-window section{position:relative;min-width:0;flex:1;padding:18px 14px}h1{margin:0 0 18px;color:#6284c3;font-size:19px}#tasks>button{display:block;margin:0 0 10px;border:0;background:transparent;color:#315e99;text-align:left;font:inherit}.summary{display:flex;align-items:center;gap:9px;margin-top:20px;color:#315e99}.summary img{width:52px;height:52px;object-fit:cover;border:2px solid #fff;box-shadow:1px 1px 2px #555}.summary b,.summary small{display:block}form label{display:block;margin:9px 0}input,textarea{display:block;width:100%;margin-top:3px;border:1px solid #7f9db9;background:#fff;font:inherit}input{height:25px;padding:3px 5px}textarea{height:75px;padding:4px 5px}label.colour input{width:42px}.actions{display:flex;gap:7px;margin-top:16px}.actions button{flex:1;height:26px;border:4px solid transparent;border-image:var(--xp-button-normal) 4 fill;background:transparent}#back{border:0;background:transparent;color:#315e99;font:inherit;font-weight:bold}
- .profile-window .xp-window-controls{width:var(--xp-controls-width,73px)}.profile-window #minimize,.profile-window #maximize{background-image:var(--xp-caption-normal)}.profile-window #minimize::after,.profile-window #maximize::after{content:'';display:block;width:var(--xp-glyph-width,13px);height:var(--xp-glyph-height,13px);margin:var(--xp-glyph-margin,4px);background:center/var(--xp-glyph-width,13px) var(--xp-glyph-height,13px) no-repeat}.profile-window #minimize::after{background-image:var(--xp-minimize-glyph)}.profile-window #maximize::after{background-image:var(--xp-maximize-glyph)}
-.profile-window .actions button { border: var(--xp-button-border,1px solid #7f9db9); border-image: var(--xp-button-frame,none) 1 fill; background: var(--xp-button-background,#e8f2fa); box-shadow: var(--xp-button-shadow,inset 0 0 0 1px #fff); }
-.profile-window .actions button:hover { border-image: var(--xp-button-frame-hover,var(--xp-button-frame,none)) 1 fill; background: var(--xp-button-background-hover,var(--xp-button-background,#e8f2fa)); box-shadow: var(--xp-button-shadow-hover,var(--xp-button-shadow)); }
-.profile-window .actions button:active { border-image: var(--xp-button-frame-pressed,var(--xp-button-frame,none)) 1 fill; background: var(--xp-button-background-pressed,var(--xp-button-background,#e8f2fa)); box-shadow: var(--xp-button-shadow-pressed,var(--xp-button-shadow)); }
+/* User Accounts, like Windows XP's nusrmgr.cpl; the task pane, toolbar and category header
+   come from control-panel.css. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.profile-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.profile-window input[type=file][hidden] { display: none !important; }
+.profile-window .xp-window-controls { width: var(--xp-controls-width, 73px); }
+.profile-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.profile-window #close::after, .profile-window #minimize::after, .profile-window #maximize::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.profile-window #close::after { background-image: var(--xp-close-glyph); }
+.profile-window #minimize, .profile-window #maximize { background-image: var(--xp-caption-normal); }
+.profile-window #minimize::after { background-image: var(--xp-minimize-glyph); }
+.profile-window #maximize::after { background-image: var(--xp-maximize-glyph); }
+.accounts-toolbar { height: 32px; }
+.accounts-toolbar .cp-tool { height: 28px; }
+/* Pages other than Home: white, with the light blue headings of XP's web view. */
+.accounts-content.ua-white { background: #fff; }
+.cp-classic-look .accounts-content.ua-white { background: var(--xp-theme-window, #fff); }
+.ua-page { padding: 16px 22px; }
+.ua-heading { margin: 4px 0 16px; color: #7294df; font: bold 20px 'Trebuchet MS', Tahoma, sans-serif; }
+.ua-white .cp-task { color: #215dc6 !important; font-weight: normal !important; }
+.ua-split { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ua-note { margin-top: 24px; }
+.ua-tiles { display: flex; flex-wrap: wrap; gap: 16px; }
+.ua-tile { display: flex; align-items: flex-start; gap: 10px; padding: 2px; border: 0; background: none; color: #fff !important; font: inherit; text-align: left; }
+.ua-tile:disabled { color: #215dc6 !important; }
+.ua-tile img { width: 48px; height: 48px; border: 1px solid #fff; box-shadow: 0 0 0 1px #aaa; object-fit: cover; }
+.ua-tile span { display: flex; flex-direction: column; }
+.ua-tile b { font-size: 12px; }
+.ua-tile:not(:disabled):hover b { text-decoration: underline; }
+.ua-field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.ua-field input, .ua-field textarea { box-sizing: border-box; width: 100%; max-width: 420px; padding: 2px 4px; border: 1px solid #7f9db9; background: #fff; font: inherit; }
+.ua-field textarea { height: 70px; resize: vertical; }
+.ua-colour input { width: 60px; height: 24px; padding: 0 2px; }
+.ua-rule { margin: 18px 0 10px; border: 0; border-top: 1px solid #7294df; }
+.ua-buttons { display: flex; justify-content: flex-end; gap: 6px; }
+.ua-button { min-width: 75px; height: 23px; padding: 0 10px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: inherit; }
+.ua-button:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
+.ua-button:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal)); }
+.ua-button:disabled { color: #a0a0a0; }
+.ua-pictures { display: grid; grid-template-columns: repeat(auto-fill, 60px); gap: 8px; max-height: 140px; overflow-y: auto; padding: 8px; border: 1px solid #7f9db9; background: #fff; }
+.ua-picture { width: 56px; height: 56px; padding: 2px; border: 2px solid transparent; background: none; }
+.ua-picture img { display: block; width: 48px; height: 48px; }
+.ua-picture:hover { border-color: #c6d3f7; }
+.ua-picture.selected { border-color: var(--xp-theme-highlight, #316ac5); }
+.ua-browse { margin-top: 10px; }
+.ua-current { width: 48px; height: 48px; object-fit: cover; }
+.ua-banner { height: 70px; max-width: 420px; border: 1px solid #7f9db9; background: var(--xp-title-fill, #316ac5) center / cover no-repeat; }
+.ua-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; margin: 10px 0; }
+.ua-error { min-height: 1.2em; color: #b0281a; }
+.cp-classic-look .ua-heading { color: var(--xp-theme-highlight, #000080); }
+.cp-classic-look .ua-tile, .cp-classic-look .ua-white .cp-task { color: var(--xp-theme-windowtext, #000) !important; }
+@media (max-width: 560px) { .ua-page { padding: 10px 12px; } .ua-heading { font-size: 17px; } }

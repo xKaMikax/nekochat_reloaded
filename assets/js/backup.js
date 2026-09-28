@@ -87,7 +87,7 @@
 
   // What a backup can hold; every part is on by default, both when saving and when restoring.
   const PARTS = [
-    { id: 'themes', label: 'Themes', hint: 'installed themes and the chosen one', keys: /^nk_active_(theme|scheme)$/ },
+    { id: 'themes', label: 'Themes', hint: 'installed themes, cursor, sound and icon packs, and the chosen theme', keys: /^nk_active_(theme|scheme)$/ },
     { id: 'display', label: 'Display', hint: 'language, logon screen, chat background and its picture', keys: /^nk_chat_wallpaper/, display: ['language', 'loginUi'] },
     { id: 'sounds', label: 'Sounds', hint: 'sound scheme and volume', keys: /^nk_sound_/ },
     { id: 'settings', label: 'Settings', hint: 'microphone, noise suppression, servers, screen codec, DNS', display: ['micDeviceId', 'noiseSuppression', 'dns', 'dnsCustom'] },

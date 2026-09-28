@@ -1,0 +1,62 @@
+{
+ "default": {
+  "file": "default_arrow.png",
+  "x": 10,
+  "y": 10
+ },
+ "pointer": {
+  "file": "default_link.png",
+  "x": 10,
+  "y": 10
+ },
+ "text": {
+  "file": "default_ibeam.png",
+  "x": 6,
+  "y": 10
+ },
+ "wait": {
+  "file": "default_busy.png",
+  "x": 10,
+  "y": 10
+ },
+ "progress": {
+  "file": "default_wait.png",
+  "x": 10,
+  "y": 10
+ },
+ "not-allowed": {
+  "file": "default_no.png",
+  "x": 10,
+  "y": 10
+ },
+ "help": {
+  "file": "default_helpsel.png",
+  "x": 10,
+  "y": 10
+ },
+ "move": {
+  "file": "default_move.png",
+  "x": 10,
+  "y": 10
+ },
+ "ew-resize": {
+  "file": "default_size3.png",
+  "x": 10,
+  "y": 10
+ },
+ "ns-resize": {
+  "file": "default_size4.png",
+  "x": 10,
+  "y": 10
+ },
+ "nwse-resize": {
+  "file": "default_size2.png",
+  "x": 10,
+  "y": 10
+ },
+ "nesw-resize": {
+  "file": "default_size1.png",
+  "x": 10,
+  "y": 10
+ }
+}

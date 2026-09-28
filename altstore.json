@@ -19,6 +19,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "1.4.2",
+          "buildVersion": "12",
+          "date": "2026-09-28",
+          "localizedDescription": "The Windows XP Control Panel, a catalog of cursors, sounds, icons and chat wallpapers, Windows Classic colour schemes, and replies, reactions, pins, mentions and link previews in chats.",
+          "downloadURL": "https://github.com/xKaMikax/nekochat_reloaded/releases/download/build_v1.4.2/Nekochat-Reloaded-1.4.2.ipa",
+          "size": 4885293,
+          "minOSVersion": "16.4"
+        },
+        {
           "version": "1.4.1",
           "buildVersion": "8",
           "date": "2026-09-27",

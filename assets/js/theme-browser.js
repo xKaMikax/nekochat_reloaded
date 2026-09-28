@@ -2,16 +2,19 @@ const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { title:'Каталог тем Nekochat Reloaded', installed:'Установленные', discovery:'Каталог', installedIntro:'Темы, установленные на этом компьютере. Luna и Classic встроены в клиент.', discoveryIntro:'Темы из каталога Nekochat Reloaded Themes. Их можно скачать и установить.', loadingInstalled:'Загрузка установленных тем…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных тем.', found:'Найдено тем: ', apply:'Применить', using:'Используется', applying:'Применение…', download:'Установить', downloading:'Установка…', installedDone:'Установлено', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', defaultScheme:'Стандартная', installedType:'Установлена', back:'← Назад', close:'Закрыть' },
-  en: { title:'Nekochat Reloaded Theme Browser', installed:'Installed', discovery:'Discovery', installedIntro:'Themes installed on this computer. Luna and Classic are built into the client.', discoveryIntro:'Themes from the Nekochat Reloaded Themes catalog. Download and install them here.', loadingInstalled:'Loading installed themes…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There are no available themes in the catalog yet.', found:'Themes found: ', apply:'Apply', using:'In use', applying:'Applying…', download:'Install', downloading:'Installing…', installedDone:'Installed', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', defaultScheme:'Default', installedType:'Installed', back:'← Back', close:'Close' }
+  ru: { title:'Каталог Nekochat Reloaded', installed:'Установленные', discovery:'Каталог', installedIntro:'Темы, установленные на этом компьютере. Luna и Classic встроены в клиент.', discoveryIntro:'Темы, курсоры, звуки, иконки и обои для чата из каталога Nekochat Reloaded Themes. Их можно скачать и установить.', loadingInstalled:'Загрузка установленных тем…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных тем.', found:'Найдено: ', apply:'Применить', using:'Используется', applying:'Применение…', download:'Установить', downloading:'Установка…', installedDone:'Установлено', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', defaultScheme:'Стандартная', installedType:'Установлена', back:'← Назад', close:'Закрыть', sort:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', author:'Автор:', allAuthors:'Все', byAuthor:'Автор: ', schemes:'Схемы: ', type:'Тип:', types:{ '':'Все', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Иконки', wallpapers:'Обои для чата', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'иконки', wallpapers:'обои' }, contains:'Внутри: ', noPacks:'Здесь пока пусто.' },
+  en: { title:'Nekochat Reloaded Catalog', installed:'Installed', discovery:'Discovery', installedIntro:'Themes installed on this computer. Luna and Classic are built into the client.', discoveryIntro:'Themes, cursors, sounds, icons and chat wallpapers from the Nekochat Reloaded Themes catalog. Download and install them here.', loadingInstalled:'Loading installed themes…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There are no available themes in the catalog yet.', found:'Found: ', apply:'Apply', using:'In use', applying:'Applying…', download:'Install', downloading:'Installing…', installedDone:'Installed', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', defaultScheme:'Default', installedType:'Installed', back:'← Back', close:'Close', sort:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', author:'Author:', allAuthors:'All', byAuthor:'By ', schemes:'Schemes: ', type:'Type:', types:{ '':'All', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers' }, contains:'Contains: ', noPacks:'Nothing here yet.' }
 };
 let language = 'ru'; let activeTheme;
 let selectedCatalogTheme;
+const authorsByCatalog = new Map();
 const t = key => words[language][key];
 function applyFrame(theme) { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }
-function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#installed-tab').textContent = t('installed'); $('#discovery-tab').textContent = t('discovery'); $('[data-panel="installed"]').textContent = t('installedIntro'); $('[data-panel="discovery"]').textContent = t('discoveryIntro'); $('#detail-back').textContent = t('back'); $('#close').setAttribute('aria-label', t('close')); }
+function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#installed-tab').textContent = t('installed'); $('#discovery-tab').textContent = t('discovery'); $('[data-panel="installed"]').textContent = t('installedIntro'); $('[data-panel="discovery"]').textContent = t('discoveryIntro'); $('#detail-back').textContent = t('back'); $('#close').setAttribute('aria-label', t('close')); $('#sort-label').textContent = t('sort'); $('#author-label').textContent = t('author'); $('#type-label').textContent = t('type'); [...$('#catalog-type').options].forEach(option => { option.textContent = t('types')[option.value]; }); [['date', 'sortDate'], ['name', 'sortName'], ['author', 'sortAuthor']].forEach(([value, key]) => { $(`#catalog-sort option[value="${value}"]`).textContent = t(key); }); }
 function switchTab(tab) { const installed = tab === 'installed'; $('#installed-tab').classList.toggle('active', installed); $('#discovery-tab').classList.toggle('active', !installed); $('#installed-panel').hidden = !installed; $('#discovery-panel').hidden = installed; }
-function themeCard(theme, label) { const schemes = (theme.schemes || theme.colorSchemes || []).map(item => typeof item === 'string' ? item : item.name || item.id).filter(Boolean).join(', ') || t('defaultScheme'); const preview = theme.previewUrl ? `<img class="theme-preview" src="${esc(theme.previewUrl)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'theme-preview placeholder',textContent:'Theme'}))">` : '<span class="theme-preview placeholder">Theme</span>'; return `<article class="theme-card${theme.id === activeTheme?.id ? ' active' : ''}">${preview}<div class="theme-info"><h2>${esc(theme.name || theme.displayName || theme.id)}</h2><p>${esc(theme.type || t('installedType'))}</p><p>${esc(schemes)}</p><button type="button" data-theme="${esc(theme.id)}">${esc(label)}</button></div></article>`; }
+// The card names the author (a click filters the catalog by them) and lists colour schemes only
+// when there are several; the theme's file type and a lone "Default" scheme mean nothing to people.
+function themeCard(theme, label) { const schemeList = (theme.schemes || theme.colorSchemes || []).map(item => typeof item === 'string' ? item : item.name || item.id).filter(Boolean); const schemes = schemeList.length > 1 ? t('schemes') + schemeList.join(', ') : ''; const author = theme.author && theme.author !== 'Unknown' ? theme.author : authorsByCatalog.get(theme.catalogId) || ''; const inside = theme.kind === 'pack' ? t('contains') + (theme.contains || []).map(part => t('parts')[part] || part).join(', ') : ''; const preview = theme.previewUrl ? `<img class="theme-preview" src="${esc(theme.previewUrl)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'theme-preview placeholder',textContent:'Theme'}))">` : '<span class="theme-preview placeholder">Theme</span>'; return `<article class="theme-card${theme.id === activeTheme?.id ? ' active' : ''}">${preview}<div class="theme-info"><h2>${esc(theme.name || theme.displayName || theme.id)}</h2>${author ? `<p class="theme-author" data-author="${esc(author)}" title="${esc(t('byAuthor') + author)}">${esc(t('byAuthor') + author)}</p>` : ''}${schemes ? `<p>${esc(schemes)}</p>` : ''}${inside ? `<p>${esc(inside)}</p>` : ''}<button type="button" data-theme="${esc(theme.id)}">${esc(label)}</button></div></article>`; }
 async function showInstalled() { const list = $('#installed-list'); list.innerHTML = `<p class="browser-status">${t('loadingInstalled')}</p>`; try { activeTheme = await controls.getActiveTheme(); const themes = await controls.listThemes(); list.innerHTML = themes.length ? themes.map(theme => themeCard(theme, theme.id === activeTheme?.id ? t('using') : t('apply'))).join('') : `<p class="empty-list">${t('noThemes')}</p>`; list.querySelectorAll('button[data-theme]').forEach(button => { const theme = themes.find(item => item.id === button.dataset.theme); if (theme?.id === activeTheme?.id) { button.disabled = true; return; } button.onclick = async () => { button.disabled = true; button.textContent = t('applying'); try { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } }; }); } catch (error) { list.innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; } }
 async function showDiscovery() { const status = $('#discovery-status'), list = $('#discovery-list'); status.textContent = t('loadingCatalog'); status.classList.remove('error'); list.innerHTML = ''; try { const themes = (await controls.listCatalogThemes()).filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase())); status.textContent = themes.length ? `${t('found')}${themes.length}` : t('noCatalog'); list.innerHTML = themes.map(theme => themeCard(theme, t('download'))).join(''); list.querySelectorAll('button[data-theme]').forEach(button => button.onclick = async () => { button.disabled = true; button.textContent = t('downloading'); try { await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } }); } catch (error) { status.textContent = error.message; status.classList.add('error'); } }
 $('#installed-tab').onclick = () => switchTab('installed'); $('#discovery-tab').onclick = () => { switchTab('discovery'); showDiscovery(); }; $('#close').onclick = () => controls.close(); controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); showInstalled(); }); controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); showInstalled(); if (!$('#discovery-panel').hidden) showDiscovery(); }); Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); return showInstalled(); });
@@ -23,7 +26,7 @@ async function openCatalogDetails(id) {
   details.installedId = installed.find(theme => theme.catalogId === details.id)?.id || null;
   selectedCatalogTheme = details;
   $('#detail-name').textContent = details.displayName || details.id;
-  $('#detail-meta').textContent = `${details.type} • ${details.author} • ${details.version}`;
+  $('#detail-meta').textContent = [details.author && details.author !== 'Unknown' ? t('byAuthor') + details.author : '', details.version && details.version !== 'Unknown' ? details.version : ''].filter(Boolean).join(' • ');
   $('#detail-preview').src = details.previewUrl; $('#detail-preview').alt = details.displayName || details.id;
   $('#detail-description').textContent = plainDescription(details.description) || (language === 'ru' ? 'Описание для этой темы пока не добавлено.' : 'No description has been added for this theme yet.');
   $('#detail-install').textContent = details.installedId ? t('remove') : t('download'); $('#theme-details').hidden = false;
@@ -31,7 +34,7 @@ async function openCatalogDetails(id) {
 }
 $('#discovery-list').addEventListener('click', event => {
   if (event.target.closest('button')) return;
-  const card = event.target.closest('.theme-card'); const id = card?.querySelector('[data-theme]')?.dataset.theme;
+  const card = event.target.closest('.theme-card'); const button = card?.querySelector('[data-theme]'); if (button?.dataset.kind === 'pack') return; const id = button?.dataset.theme;
   if (id) openCatalogDetails(id).catch(error => { $('#discovery-status').textContent = error.message; $('#discovery-status').classList.add('error'); });
 });
 $('#detail-back').onclick = () => { $('#theme-details').hidden = true; };
@@ -47,6 +50,11 @@ async function removeInstalledTheme(id, button) {
   try { await controls.removeTheme(id); button.textContent = t('removed'); await showInstalled(); await showDiscovery(); }
   catch (error) { button.disabled = false; button.textContent = error.message; }
 }
+async function removeInstalledPack(id, button) {
+  button.disabled = true; button.textContent = t('removing');
+  try { await controls.removePack(id); button.textContent = t('removed'); await showInstalled(); await showDiscovery(); }
+  catch (error) { button.disabled = false; button.textContent = error.message; }
+}
 async function showInstalled() {
   const list = $('#installed-list'); list.innerHTML = `<p class="browser-status">${t('loadingInstalled')}</p>`;
   try {
@@ -58,24 +66,51 @@ async function showInstalled() {
       else if (theme.id === activeTheme?.id) button.disabled = true;
       else button.onclick = async () => { button.disabled = true; button.textContent = t('applying'); try { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } };
     });
+    // Installed packs follow the themes; they are chosen in Display Properties.
+    const packs = controls.listPacks ? await controls.listPacks().catch(() => []) : [];
+    if (packs.length) {
+      list.insertAdjacentHTML('beforeend', packs.map(pack => themeCard({ ...pack, kind: 'pack', displayName: pack.name, contains: pack.contains }, t('remove')).replace('data-theme=', 'data-pack=')).join(''));
+      list.querySelectorAll('button[data-pack]').forEach(button => { button.onclick = () => removeInstalledPack(button.dataset.pack, button); });
+    }
   } catch (error) { list.innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; }
 }
 async function showDiscovery() {
   const status = $('#discovery-status'), list = $('#discovery-list'); status.textContent = t('loadingCatalog'); status.classList.remove('error'); list.innerHTML = '';
   try {
-    const [themes, installed] = await Promise.all([controls.listCatalogThemes(), controls.listThemes()]);
-    const catalog = themes.filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase()));
+    const [themes, installed, catalogPacks, installedPacks] = await Promise.all([controls.listCatalogThemes(), controls.listThemes(), controls.listCatalogPacks ? controls.listCatalogPacks().catch(() => []) : [], controls.listPacks ? controls.listPacks().catch(() => []) : []]);
+    // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
+    const all = [...themes.filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((theme, index) => ({ ...theme, position: index }));
+    const packsByCatalog = new Map(installedPacks.filter(pack => pack.catalogId).map(pack => [pack.catalogId, pack]));
+    all.forEach(theme => { if (theme.author) authorsByCatalog.set(theme.id, theme.author); });
+    const authors = [...new Set(all.map(theme => theme.author).filter(author => author && author !== 'Unknown'))].sort((a, b) => a.localeCompare(b));
+    const chosenAuthor = $('#catalog-author').value;
+    $('#catalog-author').innerHTML = `<option value="">${esc(t('allAuthors'))}</option>` + authors.map(author => `<option value="${esc(author)}">${esc(author)}</option>`).join('');
+    $('#catalog-author').value = authors.includes(chosenAuthor) ? chosenAuthor : '';
+    const sort = $('#catalog-sort').value; const name = theme => String(theme.displayName || theme.id);
+    const type = $('#catalog-type').value;
+    const catalog = all.filter(theme => (!type || theme.type === type) && (!$('#catalog-author').value || theme.author === $('#catalog-author').value)).sort((a, b) =>
+      sort === 'name' ? name(a).localeCompare(name(b)) :
+      sort === 'author' ? String(a.author).localeCompare(String(b.author)) || name(a).localeCompare(name(b)) :
+      String(b.added || '').localeCompare(String(a.added || '')) || b.position - a.position);
     const installedByCatalog = new Map(installed.filter(theme => theme.catalogId).map(theme => [theme.catalogId, theme]));
-    status.textContent = catalog.length ? `${t('found')}${catalog.length}` : t('noCatalog');
-    list.innerHTML = catalog.map(theme => themeCard(theme, installedByCatalog.has(theme.id) ? t('remove') : t('download'))).join('');
+    status.textContent = catalog.length ? `${t('found')}${catalog.length}` : type && type !== 'theme' ? t('noPacks') : t('noCatalog');
+    const isInstalled = theme => theme.kind === 'pack' ? packsByCatalog.has(theme.id) : installedByCatalog.has(theme.id);
+    list.innerHTML = catalog.map(theme => themeCard({ ...theme, cardKind: theme.kind }, isInstalled(theme) ? t('remove') : t('download')).replace('data-theme=', `data-kind="${theme.kind}" data-theme=`)).join('');
     list.querySelectorAll('button[data-theme]').forEach(button => button.onclick = async () => {
-      const existing = installedByCatalog.get(button.dataset.theme);
-      if (existing) return removeInstalledTheme(existing.id, button);
+      const pack = button.dataset.kind === 'pack';
+      const existing = pack ? packsByCatalog.get(button.dataset.theme) : installedByCatalog.get(button.dataset.theme);
+      if (existing) return pack ? removeInstalledPack(existing.id, button) : removeInstalledTheme(existing.id, button);
       button.disabled = true; button.textContent = t('downloading');
-      try { await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); await showDiscovery(); }
+      try { if (pack) await controls.installCatalogPack(button.dataset.theme); else await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); await showDiscovery(); }
       catch (error) { button.disabled = false; button.textContent = error.message; }
     });
   } catch (error) { status.textContent = error.message; status.classList.add('error'); }
 }
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio('assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+$('#catalog-sort').onchange = () => showDiscovery();
+$('#catalog-type').onchange = () => showDiscovery();
+$('#catalog-author').onchange = () => showDiscovery();
+// A click on the author of a card shows only that author's themes.
+document.addEventListener('click', event => { const author = event.target.closest?.('.theme-author')?.dataset.author; if (!author || $('#discovery-panel').hidden) return; event.stopPropagation(); $('#catalog-author').value = author; showDiscovery(); }, true);
+
