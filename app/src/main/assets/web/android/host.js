@@ -129,6 +129,18 @@
     controlPanelWindow = createWindow({ url: '/assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
     controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
   }
+  // Control Panel applets (Display, Sounds, Mouse…): Display Properties showing only their pages.
+  const appletWindows = new Map();
+  function openApplet(owner, applet, tab) {
+    const name = typeof applet === 'string' && /^[a-z]+$/.test(applet) ? applet : 'display';
+    const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
+    const existing = appletWindows.get(name);
+    if (!isDestroyed(existing)) { focus(existing); if (page) send(existing, 'settings:show-tab', page); return; }
+    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+    const win = createWindow({ url: `/assets/html/theme_settings_frame.html?applet=${name}${page ? `&tab=${page}` : ''}`, width, height, minWidth: 380, minHeight: 320, parent: owner });
+    appletWindows.set(name, win);
+    win.onClosed = () => { if (appletWindows.get(name) === win) appletWindows.delete(name); };
+  }
   // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
   const windowOwner = win => win === controlPanelWindow ? win.parent : win;
   function openEmojiBrowser(owner) {
@@ -143,7 +155,7 @@
   }
   function openProfileSettings() {
     if (!isDestroyed(profileWindow)) { focus(profileWindow); return; }
-    profileWindow = createWindow({ url: '/assets/html/profile_settings_frame.html', width: 430, height: 390, minWidth: 360, minHeight: 310 });
+    profileWindow = createWindow({ url: '/assets/html/profile_settings_frame.html', width: 700, height: 520, minWidth: 460, minHeight: 360 });
     profileWindow.onClosed = () => { profileWindow = null; };
   }
   function openRoomCreate(owner) {
@@ -236,6 +248,7 @@
       setWindowMeta: () => {},
       openThemeSettings: tab => openThemeSettings(windowOwner(win), tab),
       openControlPanel: () => openControlPanel(win),
+      openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),

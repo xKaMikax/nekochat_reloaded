@@ -200,7 +200,7 @@ function setDraft(key, text, sync = true) {
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
-const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity'];
+const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
 let profileUser = null;
 const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
@@ -1683,8 +1683,14 @@ function applyWallpaper() {
   let visibility = 35; try { visibility = Number(localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35); } catch {}
   const veil = 100 - Math.min(100, Math.max(5, Number.isFinite(visibility) ? visibility : 35));
   // A veil of the window colour over the picture keeps the messages readable.
-  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url));
+  // Position and colour, like XP's Desktop tab: stretch (cover), center or tile, on the colour.
+  let position = 'stretch', colour = ''; try { position = localStorage.getItem('nk_chat_wallpaper_position') || 'stretch'; colour = localStorage.getItem('nk_chat_wallpaper_color') || ''; } catch {}
+  const list = $('#messages'); list.classList.toggle('has-wallpaper', Boolean(url || colour));
   list.style.backgroundImage = url ? `linear-gradient(color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent), color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, transparent)), url("${url}")` : '';
+  list.style.backgroundSize = url ? `100% 100%, ${position === 'stretch' ? 'cover' : 'auto'}` : '';
+  list.style.backgroundRepeat = url ? `no-repeat, ${position === 'tile' ? 'repeat' : 'no-repeat'}` : '';
+  list.style.backgroundPosition = url ? `0 0, ${position === 'tile' ? '0 0' : 'center'}` : '';
+  list.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(colour) ? `color-mix(in srgb, var(--xp-theme-window, #ece9d8) ${veil}%, ${colour})` : '';
 }
 applyWallpaper();
 window.addEventListener('storage', event => { if (event.key?.startsWith('nk_chat_wallpaper')) applyWallpaper(); });
@@ -1741,8 +1747,16 @@ function compareVersions(a, b) {
   if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
 }
 const storedFlag = (key, fallback) => { try { const value = localStorage.getItem(key); return value === null ? fallback : value === '1'; } catch { return fallback; } };
+// Automatic Updates (Control Panel): auto (download, install on quit), download (download, ask to
+// restart), notify (ask first) or off. Downloading by itself works where the app installs itself.
+function updatePolicy() {
+  let mode = ''; try { mode = localStorage.getItem('nk_update_mode') || ''; } catch {}
+  if (['auto', 'download', 'notify', 'off'].includes(mode)) return mode;
+  return storedFlag('nk_update_auto', true) ? 'notify' : 'off';
+}
 async function checkForUpdates(manual = false) {
-  if (!manual && !storedFlag('nk_update_auto', true)) return;
+  const policy = updatePolicy();
+  if (!manual && policy === 'off') return;
   try {
     updateMode ||= (await desktopControls?.getUpdateInfo?.())?.mode || 'download';
     const current = versionParts(window.NEKOCHAT_RELOADED_VERSION);
@@ -1764,17 +1778,18 @@ async function checkForUpdates(manual = false) {
     if (!found) { if (manual) showSystemDialog(t('updateNone', { version: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle')); return; }
     if (!manual && updateOffered === found.version) return;
     updateOffered = found.version;
+    if (!manual && (policy === 'auto' || policy === 'download') && updateMode === 'install' && desktopControls?.onUpdateStatus) { installUpdate(found, { quiet: true, installOnQuit: policy === 'auto' }); return; }
     const label = { install: 'updateInstall', download: 'updateDownload', altstore: 'updateAltStore', reload: 'updateReload' }[updateMode] || 'updateDownload';
     showSystemDialog(t('updateFound', { version: found.version, current: window.NEKOCHAT_RELOADED_VERSION }), 'info', t('updateTitle'), { action: { type: 'update-install', release: found }, actionLabel: t(label) });
   } catch (error) { if (manual) showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }
 }
-async function installUpdate(release) {
+async function installUpdate(release, options = {}) {
   try {
     if (updateMode === 'reload') { await navigator.serviceWorker?.getRegistration().then(registration => registration?.update()).catch(() => {}); location.reload(); return; }
     // Android answers only after the download; say that it is running.
     if (updateMode === 'install' && !desktopControls?.onUpdateStatus) showSystemDialog(t('updateDownloadingPhone', { version: release.version }), 'info', t('updateTitle'));
-    const result = await desktopControls?.installUpdate?.(release);
-    if (result?.mode === 'install') showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
+    const result = await desktopControls?.installUpdate?.(release, options);
+    if (result?.mode === 'install' && !options.quiet) showSystemDialog(t('updateDownloading', { version: release.version }), 'info', t('updateTitle'));
     else if (result?.state === 'permission') showSystemDialog(t('updatePermission'), 'warning', t('updateTitle'));
     else if (!result) window.open(release.page || 'https://github.com/xKaMikax/nekochat_reloaded/releases', '_blank');
   } catch (error) { showSystemDialog(t('updateFailed', { error: error.message }), 'error', t('updateTitle')); }

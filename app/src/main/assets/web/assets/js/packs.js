@@ -68,5 +68,7 @@
   window.addEventListener('storage', event => { if (event.key === 'nk_cursor_pack' || event.key === 'nk_cursor_scheme') applyCursors(); if (event.key === 'nk_icon_pack') applyIcons(); });
   // The file a sound plays from: the chosen sound pack, or the built-in Windows XP sounds.
   window.nkSoundUrl = (name, file) => { const pack = read('nk_sound_pack'); return pack?.[name] || `assets/sounds/${file || `${name}.wav`}`; };
-  window.nkPacks = { applyCursors, applyIcons, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
+  // The pointers a scheme shows (Mouse Properties → Pointers): 'xp', 'system' or a pack's cursors.
+  const schemeCursors = (scheme, pack) => scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, [file, x, y]]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href, x, y }])) : scheme === 'system' ? {} : pack || {};
+  window.nkPacks = { applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
 })();
