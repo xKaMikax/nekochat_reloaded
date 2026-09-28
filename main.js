@@ -329,11 +329,18 @@ async function scanThemes(root, userInstalled = false) {
     if (!entry.isDirectory() || entry.name.startsWith('.') || reservedThemeIds.includes(entry.name)) continue;
     const directory = path.join(root, entry.name);
     const files = await fs.readdir(directory, { withFileTypes: true });
-    const source = files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.theme')) || files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.msstyles')) || files.find(file => file.isFile() && file.name.toLowerCase() === 'theme.css');
+    let source = files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.theme')) || files.find(file => file.isFile() && file.name.toLowerCase().endsWith('.msstyles')) || files.find(file => file.isFile() && file.name.toLowerCase() === 'theme.css');
+    // A CSS theme with colour schemes: schemes/<scheme>/theme.css (names in an optional theme.json).
+    let schemed = false;
+    if (!source && files.some(file => file.isDirectory() && file.name === 'schemes')) {
+      const schemeDirs = await fs.readdir(path.join(directory, 'schemes'), { withFileTypes: true }).catch(() => []);
+      for (const scheme of schemeDirs) if (scheme.isDirectory()) { try { await fs.access(path.join(directory, 'schemes', scheme.name, 'theme.css')); schemed = true; break; } catch {} }
+      if (schemed) source = { name: 'theme.css' };
+    }
     if (source) {
       let catalogId;
       try { catalogId = JSON.parse(await fs.readFile(path.join(directory, 'catalog-theme.json'), 'utf8')).id; } catch {}
-      found.push({ id: entry.name, source: path.join(directory, source.name), css: source.name.toLowerCase() === 'theme.css', userInstalled, catalogId, editorMade: files.some(file => file.name === 'theme-editor.json') });
+      found.push({ id: entry.name, source: path.join(directory, source.name), css: source.name.toLowerCase() === 'theme.css', schemed, userInstalled, catalogId, editorMade: files.some(file => file.name === 'theme-editor.json') });
     }
   }
   return found;
@@ -460,11 +467,34 @@ async function materializeCssTheme(id, source) {
   await fs.writeFile(path.join(output, 'theme.css'), css.replace(/url\((["']?)([^"')]+)\1\)/g, (match, quote, url) => /^(data|file|https?|blob):/i.test(url) ? match : `url("${new URL(url, base).href}")`));
   return output;
 }
+// Every scheme of a CSS theme becomes runtime-themes/css-<id>/schemes/<scheme>/theme.css with
+// absolute picture URLs, the same layout the .msstyles importer writes.
+async function materializeSchemedCssTheme(id, root) {
+  let info = {};
+  try { info = JSON.parse(await fs.readFile(path.join(root, 'theme.json'), 'utf8')); } catch {}
+  const named = new Map((Array.isArray(info.schemes) ? info.schemes : []).map(item => [String(item.id), String(item.name || item.id)]));
+  const output = path.join(runtimeThemesRoot, `css-${id}`);
+  const schemes = [];
+  for (const entry of await fs.readdir(path.join(root, 'schemes'), { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^[\w.-]+$/.test(entry.name)) continue;
+    const source = path.join(root, 'schemes', entry.name, 'theme.css');
+    let css; try { css = await fs.readFile(source, 'utf8'); } catch { continue; }
+    const base = pathToFileURL(`${path.dirname(source)}${path.sep}`).href;
+    const target = path.join(output, 'schemes', entry.name);
+    await fs.mkdir(target, { recursive: true });
+    await fs.writeFile(path.join(target, 'theme.css'), css.replace(/url\((["']?)([^"')]+)\1\)/g, (match, quote, url) => /^(data|file|https?|blob):/i.test(url) ? match : `url("${new URL(url, base).href}")`));
+    schemes.push({ id: entry.name, name: named.get(entry.name) || entry.name });
+  }
+  if (!schemes.length) throw new Error('The theme has no colour schemes.');
+  const defaultScheme = schemes.some(item => item.id === info.defaultScheme) ? info.defaultScheme : schemes[0].id;
+  return { output, metadata: { theme: info.name || id, schemes, defaultScheme } };
+}
 async function prepareTheme(id) {
   const theme = (await discoverThemes()).find(item => item.id === id);
   if (!theme) throw new Error('Theme not found');
   const prebuilt = await prebuiltFor(id);
   if (prebuilt) return { ...theme, output: await materializePrebuiltTheme(id, prebuilt.output, prebuilt.metadata), metadata: prebuilt.metadata };
+  if (theme.css && theme.schemed) return { ...theme, ...(await materializeSchemedCssTheme(id, path.dirname(theme.source))), css: false };
   if (theme.css) return { ...theme, output: await materializeCssTheme(id, theme.source), css: true, metadata: { theme: id, schemes: [{ id: 'default', name: 'Default' }], defaultScheme: 'default' } };
   const output = path.join(runtimeThemesRoot, id);
   await fs.mkdir(runtimeThemesRoot, { recursive: true });
@@ -514,6 +544,7 @@ function catalogEntries(manifest) {
       colorSchemes: entry.ColorSchemes || entry.ColorShemas || entry.colorSchemes || [],
       type: details.Type || details.type || entry.Type || entry.type || 'WindowsThemeFile',
       author: details.Author || details.author || entry.Author || entry.author || 'Unknown',
+      added: String(details.Added || details.added || entry.Added || entry.added || ''),
       version: details.Version || details.version || entry.Version || entry.version || 'Unknown',
       previewUrl: entry.Preview || entry.preview || `${themeCatalogRoot}/${directory}/Preview.png`,
       descriptionUrl: entry.Description || entry.description || `${themeCatalogRoot}/${directory}/Description.md`,
@@ -559,7 +590,9 @@ async function installCatalogTheme(id) {
     const source = await findThemeSource(temporary);
     if (!source) throw new Error('Theme.ZIP must contain a .theme, .msstyles, or theme.css file.');
     await fs.mkdir(destination, { recursive: true });
-    if (path.basename(source).toLowerCase() === 'theme.css') await copyDirectory(path.dirname(source), destination);
+    // A theme.css inside schemes/<scheme>/ belongs to a theme with colour schemes: copy its root.
+    const cssRoot = path.basename(path.dirname(path.dirname(source))) === 'schemes' ? path.dirname(path.dirname(path.dirname(source))) : path.dirname(source);
+    if (path.basename(source).toLowerCase() === 'theme.css') await copyDirectory(cssRoot, destination);
     else await copyThemeBundle(source, destination);
     await fs.writeFile(path.join(destination, 'catalog-theme.json'), JSON.stringify({ id: item.id }));
     return { id: path.basename(destination), themes: await listThemes() };
