@@ -64,6 +64,10 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply, UIDocumentP
         case "display:apply": run { try self.themes.saveDisplaySettings(args.first as? [String: Any] ?? [:]) }
         case "backup:export-themes": run { try self.themes.exportThemeFiles() }
         case "backup:restore-themes": run { try self.themes.restoreThemeFiles(arg(0)) }
+        case "pack:catalog": run { try self.themes.fetchCatalogPacks() }
+        case "pack:install": run { try self.themes.installCatalogPack(id: arg(0)) }
+        case "pack:list": run { self.themes.listPacks() }
+        case "pack:remove": run { try self.themes.removePack(id: arg(0)) }
         default: replyHandler(nil, "Unknown method \(method)")
         }
     }

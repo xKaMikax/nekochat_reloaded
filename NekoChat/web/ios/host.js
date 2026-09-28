@@ -252,6 +252,11 @@
       listCatalogThemes: () => invoke('theme:browser-list'),
       getCatalogThemeDetails: id => invoke('theme:browser-details', String(id || '')),
       installCatalogTheme: id => invoke('theme:browser-install', String(id || '')),
+      // Cursor, sound and icon packs from the catalog (theme-browser.js, theme-settings.js, packs.js).
+      listCatalogPacks: () => invoke('pack:catalog'),
+      installCatalogPack: id => invoke('pack:install', String(id || '')),
+      listPacks: () => invoke('pack:list'),
+      removePack: id => invoke('pack:remove', String(id || '')),
       removeTheme: async id => {
         const result = await invoke('theme:remove', String(id || ''));
         if (result?.activeTheme && result.activeTheme.revision !== activeTheme?.revision) { activeTheme = result.activeTheme; notifyThemeChanged(activeTheme); }

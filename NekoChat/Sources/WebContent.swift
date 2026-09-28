@@ -46,6 +46,8 @@ final class WebContent: NSObject, WKURLSchemeHandler {
         let file: URL
         if path.hasPrefix("user-themes/") {
             file = themes.userThemesRoot.appendingPathComponent(String(path.dropFirst("user-themes/".count)))
+        } else if path.hasPrefix("user-packs/") {
+            file = themes.userPacksRoot.appendingPathComponent(String(path.dropFirst("user-packs/".count)))
         } else if path.hasPrefix("runtime-themes/") {
             file = themes.runtimeThemesRoot.appendingPathComponent(String(path.dropFirst("runtime-themes/".count)))
         } else {

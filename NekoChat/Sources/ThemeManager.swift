@@ -15,6 +15,7 @@ final class ThemeManager {
 
     let userThemesRoot: URL
     let runtimeThemesRoot: URL
+    let userPacksRoot: URL
     private let prebuiltRoot = Bundle.main.resourceURL!.appendingPathComponent("web/prebuilt", isDirectory: true)
     private let themeStateFile: URL
     private let displayStateFile: URL
@@ -45,6 +46,7 @@ final class ThemeManager {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         userThemesRoot = support.appendingPathComponent("themes", isDirectory: true)
         runtimeThemesRoot = support.appendingPathComponent("runtime-themes", isDirectory: true)
+        userPacksRoot = support.appendingPathComponent("packs", isDirectory: true)
         themeStateFile = support.appendingPathComponent("theme-selection.json")
         displayStateFile = support.appendingPathComponent("display-settings.json")
         try? FileManager.default.createDirectory(at: userThemesRoot, withIntermediateDirectories: true)
@@ -186,13 +188,16 @@ final class ThemeManager {
     func exportThemeFiles() throws -> [[String: Any]] {
         lock.lock(); defer { lock.unlock() }
         var result: [[String: Any]] = []
-        let root = userThemesRoot.standardizedFileURL
-        guard let enumerator = files.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { return result }
-        for case let file as URL in enumerator {
-            guard (try? file.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { continue }
-            let relative = String(file.standardizedFileURL.path.dropFirst(root.path.count + 1))
-            if relative.hasPrefix(".") { continue }
-            result.append(["path": "themes/\(relative)", "data": try Data(contentsOf: file).base64EncodedString()])
+        // Installed packs (cursors, sounds, icons) travel with the themes, under packs/.
+        for (prefix, folder) in [("themes", userThemesRoot), ("packs", userPacksRoot)] {
+            let root = folder.standardizedFileURL
+            guard let enumerator = files.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else { continue }
+            for case let file as URL in enumerator {
+                guard (try? file.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { continue }
+                let relative = String(file.standardizedFileURL.path.dropFirst(root.path.count + 1))
+                if relative.hasPrefix(".") { continue }
+                result.append(["path": "\(prefix)/\(relative)", "data": try Data(contentsOf: file).base64EncodedString()])
+            }
         }
         return result
     }
@@ -211,6 +216,13 @@ final class ThemeManager {
             let destination = userThemesRoot.appendingPathComponent(theme.lastPathComponent, isDirectory: true)
             try? files.removeItem(at: destination)
             try files.copyItem(at: theme, to: destination)
+        }
+        try files.createDirectory(at: userPacksRoot, withIntermediateDirectories: true)
+        for pack in (try? files.contentsOfDirectory(at: temporary.appendingPathComponent("packs", isDirectory: true), includingPropertiesForKeys: [.isDirectoryKey])) ?? [] {
+            guard (try? pack.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
+            let destination = userPacksRoot.appendingPathComponent(pack.lastPathComponent, isDirectory: true)
+            try? files.removeItem(at: destination)
+            try files.copyItem(at: pack, to: destination)
         }
         return listThemesLocked()
     }
@@ -369,6 +381,97 @@ final class ThemeManager {
         return item
     }
 
+    // MARK: - Catalog packs: cursors, sounds, icons and combos (like main.js)
+
+    func fetchCatalogPacks() throws -> [[String: Any]] {
+        let (status, data) = try Self.download("\(Self.catalogRoot)/packs.json")
+        if status == 404 { return [] }
+        guard (200..<300).contains(status) else { throw ThemeError("Unable to load the catalog (\(status)).") }
+        let entries = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["packs"] as? [[String: Any]] ?? []
+        return entries.enumerated().map { index, entry in
+            let details = entry["Details"] as? [String: Any] ?? entry["details"] as? [String: Any] ?? [:]
+            let id = entry["pack_id"] as? String ?? entry["id"] as? String ?? "pack-\(index + 1)"
+            let directory = (entry["directory"] as? String ?? id).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let rawType = (entry["type"] as? String ?? entry["Type"] as? String ?? "").lowercased()
+            let type = ["cursors", "sounds", "icons", "combo"].contains(rawType) ? rawType : "combo"
+            return ["id": id, "type": type, "kind": "pack", "directory": directory, "displayName": entry["DisplayName"] as? String ?? id,
+                    "contains": entry["Contains"] as? [String] ?? entry["contains"] as? [String] ?? [type],
+                    "author": details["Author"] as? String ?? entry["Author"] as? String ?? "Unknown", "added": details["Added"] as? String ?? entry["Added"] as? String ?? "",
+                    "version": details["Version"] as? String ?? "", "previewUrl": entry["Preview"] as? String ?? "\(Self.catalogRoot)/\(directory)/Preview.png",
+                    "zipUrl": entry["PackZIP"] as? String ?? "\(Self.catalogRoot)/\(directory)/Pack.ZIP"]
+        }
+    }
+
+    func installCatalogPack(id: String) throws -> [String: Any] {
+        guard let item = try fetchCatalogPacks().first(where: { $0["id"] as? String == id }) else { throw ThemeError("The pack no longer exists in the catalog.") }
+        let (status, zip) = try Self.download(item["zipUrl"] as? String ?? "")
+        guard (200..<300).contains(status) else { throw ThemeError("Unable to download Pack.ZIP (\(status)).") }
+        lock.lock(); defer { lock.unlock() }
+        let safe = id.replacingOccurrences(of: #"[^a-zA-Z0-9._-]"#, with: "_", options: .regularExpression)
+        let temporary = files.temporaryDirectory.appendingPathComponent("pack-\(UUID().uuidString)", isDirectory: true)
+        defer { try? files.removeItem(at: temporary) }
+        try ZipReader.extract(zip, to: temporary)
+        let info = readJSON(temporary.appendingPathComponent("pack.json")) as? [String: Any] ?? [:]
+        let contains = ["sounds", "cursors", "icons", "theme"].filter { var dir: ObjCBool = false; return files.fileExists(atPath: temporary.appendingPathComponent($0).path, isDirectory: &dir) && dir.boolValue }
+        // The theme of a combo goes to the installed themes, like a catalog theme.
+        var themeId: Any = NSNull()
+        if contains.contains("theme") {
+            let themeDestination = userThemesRoot.appendingPathComponent("\(safe)-theme", isDirectory: true)
+            try? files.removeItem(at: themeDestination)
+            try installThemeFolder(temporary.appendingPathComponent("theme"), destination: themeDestination)
+            try writeJSON(["id": "pack:\(id)"], to: themeDestination.appendingPathComponent("catalog-theme.json"))
+            themeId = themeDestination.lastPathComponent
+        }
+        let destination = userPacksRoot.appendingPathComponent(safe, isDirectory: true)
+        try? files.removeItem(at: destination)
+        try files.createDirectory(at: destination, withIntermediateDirectories: true)
+        for part in contains where part != "theme" { try files.copyItem(at: temporary.appendingPathComponent(part), to: destination.appendingPathComponent(part)) }
+        try writeJSON(["catalogId": id, "type": item["type"] ?? "combo", "name": info["name"] as? String ?? item["displayName"] ?? id, "author": info["author"] as? String ?? item["author"] ?? "", "contains": contains, "theme": themeId], to: destination.appendingPathComponent("pack.json"))
+        return ["id": safe, "packs": listPacksLocked(), "themes": listThemesLocked()]
+    }
+
+    func listPacks() -> [[String: Any]] { lock.lock(); defer { lock.unlock() }; return listPacksLocked() }
+
+    /// Installed packs with every file as a URL, and their sounds, cursors and icons resolved.
+    private func listPacksLocked() -> [[String: Any]] {
+        var result: [[String: Any]] = []
+        let folders = ((try? files.contentsOfDirectory(at: userPacksRoot, includingPropertiesForKeys: [.isDirectoryKey])) ?? []).sorted { $0.lastPathComponent < $1.lastPathComponent }
+        for folder in folders where !folder.lastPathComponent.hasPrefix(".") {
+            guard let info = readJSON(folder.appendingPathComponent("pack.json")) as? [String: Any] else { continue }
+            let base = "\(WebViewController.origin)/user-packs/\(Self.encode(folder.lastPathComponent))"
+            var urls: [String: String] = [:]
+            let root = folder.standardizedFileURL.path
+            let enumerator = files.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey])
+            while let file = enumerator?.nextObject() as? URL {
+                guard (try? file.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true, file.lastPathComponent != "pack.json" else { continue }
+                let relative = String(file.standardizedFileURL.path.dropFirst(root.count + 1))
+                urls[relative] = "\(base)/\(relative.split(separator: "/").map { Self.encode(String($0)) }.joined(separator: "/"))"
+            }
+            var sounds: [String: String] = [:]
+            for (name, url) in urls { if let match = name.range(of: #"^sounds/[\w-]+\.(wav|mp3|ogg)$"#, options: [.regularExpression, .caseInsensitive]) { _ = match; let file = (name as NSString).lastPathComponent; sounds[(file as NSString).deletingPathExtension.lowercased()] = url } }
+            var cursors: [String: Any] = [:]
+            for (kind, value) in readJSON(folder.appendingPathComponent("cursors/cursors.json")) as? [String: Any] ?? [:] {
+                let spec = value as? [String: Any]; let file = spec?["file"] as? String ?? value as? String ?? ""
+                if let url = urls["cursors/\(file)"] { cursors[kind] = ["url": url, "x": spec?["x"] as? Int ?? 0, "y": spec?["y"] as? Int ?? 0] }
+            }
+            var icons: [String: String] = [:]
+            for (name, file) in readJSON(folder.appendingPathComponent("icons/icons.json")) as? [String: String] ?? [:] { if let url = urls["icons/\(file)"] { icons[name] = url } }
+            result.append(["id": folder.lastPathComponent, "catalogId": info["catalogId"] ?? NSNull(), "type": info["type"] ?? "combo", "name": info["name"] ?? folder.lastPathComponent,
+                           "author": info["author"] ?? "", "contains": info["contains"] ?? [], "theme": info["theme"] ?? NSNull(), "files": urls, "sounds": sounds, "cursors": cursors, "icons": icons])
+        }
+        return result
+    }
+
+    func removePack(id: String) throws -> [String: Any] {
+        let folder = userPacksRoot.appendingPathComponent(id, isDirectory: true).standardizedFileURL
+        guard folder.deletingLastPathComponent().path == userPacksRoot.standardizedFileURL.path else { throw ThemeError("Invalid pack.") }
+        let info = readJSON(folder.appendingPathComponent("pack.json")) as? [String: Any] ?? [:]
+        if let theme = info["theme"] as? String { _ = try? removeTheme(id: theme) }
+        lock.lock(); defer { lock.unlock() }
+        try? files.removeItem(at: folder)
+        return ["packs": listPacksLocked(), "themes": listThemesLocked()]
+    }
+
     func installCatalogTheme(id: String) throws -> [String: Any] {
         let item = try catalogItem(id)
         let (status, zip) = try Self.download(item["zipUrl"] as? String ?? "")
@@ -392,6 +495,11 @@ final class ThemeManager {
         let temporary = files.temporaryDirectory.appendingPathComponent("theme-\(UUID().uuidString)", isDirectory: true)
         defer { try? files.removeItem(at: temporary) }
         try ZipReader.extract(zip, to: temporary)
+        try installThemeFolder(temporary, destination: destination)
+    }
+
+    /// Copies the theme found in an extracted folder (Theme.ZIP or the theme/ part of a pack).
+    private func installThemeFolder(_ temporary: URL, destination: URL) throws {
         guard let source = findThemeSource(temporary) else { throw ThemeError("Theme.ZIP must contain a .theme, .msstyles, or theme.css file.") }
         try files.createDirectory(at: destination, withIntermediateDirectories: true)
         // A theme.css inside schemes/<scheme>/ belongs to a theme with colour schemes: copy its root.
