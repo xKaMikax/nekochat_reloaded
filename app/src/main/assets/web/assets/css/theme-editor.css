@@ -1,0 +1,53 @@
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.theme-editor-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.theme-editor-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.theme-editor-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.theme-editor-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.theme-editor { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; gap: 8px; padding: 8px 10px; background: var(--xp-theme-window, #ece9d8); color: var(--xp-theme-windowtext, #000); }
+
+/* XP push buttons from the theme. */
+.theme-editor button { min-width: 72px; height: 23px; padding: 0 8px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: inherit; }
+.theme-editor button:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
+.theme-editor button:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal)); }
+/* XP edit boxes and lists: a 1px #7F9DB9 border on white, as Luna's EDIT class draws it. */
+.theme-editor input[type="text"], .theme-editor input[type="number"], .theme-editor select { height: 22px; box-sizing: border-box; padding: 1px 3px; border: 1px solid #7f9db9; border-radius: 0; background: #fff; color: #000; font: inherit; }
+
+.editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.editor-toolbar label { display: inline-flex; align-items: center; gap: 5px; }
+.editor-toolbar select { max-width: 170px; }
+.editor-name { margin-left: auto; }.editor-name input { width: 190px; }
+
+.editor-body { display: flex; flex: 1; min-height: 0; gap: 8px; }
+.editor-properties { display: flex; flex: 1 1 52%; min-width: 0; min-height: 0; }
+.editor-groups { display: flex; flex: none; flex-direction: column; width: 150px; overflow-y: auto; border: 1px solid #7f9db9; background: #fff; }
+.theme-editor .editor-group { display: flex; justify-content: space-between; align-items: center; min-width: 0; height: auto; padding: 4px 6px; border: 0; border-image: none; text-align: left; }
+.theme-editor .editor-group:hover { border-image: none; background: #e8f0fb; }
+.theme-editor .editor-group.active { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.editor-group small { opacity: .7; }
+.editor-list { flex: 1; min-width: 0; overflow-y: auto; margin-left: -1px; border: 1px solid #7f9db9; background: #fff; }
+.editor-row { display: grid; grid-template-columns: minmax(90px, 38%) 1fr; align-items: center; gap: 6px; min-height: 30px; padding: 3px 6px; border-bottom: 1px solid #eeeae0; }
+.editor-row.changed .editor-label { font-weight: bold; }
+.editor-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+.editor-control { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.editor-control input[type="color"] { width: 38px; height: 22px; padding: 0 2px; border: 1px solid #7f9db9; background: #fff; }
+.editor-control input[type="number"] { width: 64px; }
+.editor-control input[type="text"] { flex: 1; min-width: 0; }
+.editor-control code { color: #555; font: 11px 'Lucida Console', monospace; }
+.editor-thumb { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 36px; overflow: hidden; border: 1px solid #c8c8c0; background: repeating-conic-gradient(#e8e8e8 0 25%, #fff 0 50%) 0 0 / 10px 10px; }
+.editor-thumb img { max-width: 62px; max-height: 34px; image-rendering: pixelated; }
+.editor-size { min-width: 54px; color: #666; }
+.theme-editor .editor-control button { min-width: 0; }
+.editor-empty { padding: 14px; color: #6d6d6d; text-align: center; }
+
+.editor-preview { display: flex; flex: 1 1 48%; min-width: 0; border: 1px solid #7f9db9; background: #3a6ea5; }
+.editor-preview iframe { flex: 1; width: 100%; height: 100%; border: 0; }
+
+.editor-footer { display: flex; align-items: center; gap: 6px; }
+.editor-status { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-status.error { color: #b0281a; white-space: normal; }
+/* Picture rows: the name on its own line, then thumbnail, size and the buttons in one line. */
+.editor-row.image-row { grid-template-columns: 1fr; gap: 3px; padding: 5px 6px; }
+.editor-row.image-row .editor-control { flex-wrap: nowrap; }
+.editor-row.image-row .editor-size { min-width: 44px; }
+.theme-editor .editor-row.image-row .editor-control button { flex: none; height: 22px; }
+
