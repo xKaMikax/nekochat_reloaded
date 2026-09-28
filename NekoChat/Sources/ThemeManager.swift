@@ -394,8 +394,10 @@ final class ThemeManager {
             let directory = (entry["directory"] as? String ?? id).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let rawType = (entry["type"] as? String ?? entry["Type"] as? String ?? "").lowercased()
             let type = ["cursors", "sounds", "icons", "combo"].contains(rawType) ? rawType : "combo"
-            return ["id": id, "type": type, "kind": "pack", "directory": directory, "displayName": entry["DisplayName"] as? String ?? id,
-                    "contains": entry["Contains"] as? [String] ?? entry["contains"] as? [String] ?? [type],
+            // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
+            let includes = type == "combo" ? (entry["Includes"] as? [String: String] ?? entry["includes"] as? [String: String]) : nil
+            return ["id": id, "type": type, "kind": "pack", "directory": directory, "displayName": entry["DisplayName"] as? String ?? id, "includes": includes ?? NSNull(),
+                    "contains": includes.map { Array($0.keys) } ?? entry["Contains"] as? [String] ?? entry["contains"] as? [String] ?? [type],
                     "author": details["Author"] as? String ?? entry["Author"] as? String ?? "Unknown", "added": details["Added"] as? String ?? entry["Added"] as? String ?? "",
                     "version": details["Version"] as? String ?? "", "previewUrl": entry["Preview"] as? String ?? "\(Self.catalogRoot)/\(directory)/Preview.png",
                     "zipUrl": entry["PackZIP"] as? String ?? "\(Self.catalogRoot)/\(directory)/Pack.ZIP"]
@@ -403,7 +405,9 @@ final class ThemeManager {
     }
 
     func installCatalogPack(id: String) throws -> [String: Any] {
-        guard let item = try fetchCatalogPacks().first(where: { $0["id"] as? String == id }) else { throw ThemeError("The pack no longer exists in the catalog.") }
+        let catalog = try fetchCatalogPacks()
+        guard let item = catalog.first(where: { $0["id"] as? String == id }) else { throw ThemeError("The pack no longer exists in the catalog.") }
+        if let includes = item["includes"] as? [String: String] { return try installCombo(item, includes: includes, catalog: catalog) }
         let (status, zip) = try Self.download(item["zipUrl"] as? String ?? "")
         guard (200..<300).contains(status) else { throw ThemeError("Unable to download Pack.ZIP (\(status)).") }
         lock.lock(); defer { lock.unlock() }
@@ -427,6 +431,27 @@ final class ThemeManager {
         try files.createDirectory(at: destination, withIntermediateDirectories: true)
         for part in contains where part != "theme" { try files.copyItem(at: temporary.appendingPathComponent(part), to: destination.appendingPathComponent(part)) }
         try writeJSON(["catalogId": id, "type": item["type"] ?? "combo", "name": info["name"] as? String ?? item["displayName"] ?? id, "author": info["author"] as? String ?? item["author"] ?? "", "contains": contains, "theme": themeId], to: destination.appendingPathComponent("pack.json"))
+        return ["id": safe, "packs": listPacksLocked(), "themes": listThemesLocked()]
+    }
+
+    /// Installs every item a combo lists (skipping what is already installed) and remembers them.
+    private func installCombo(_ item: [String: Any], includes: [String: String], catalog: [[String: Any]]) throws -> [String: Any] {
+        var themeId: Any = NSNull()
+        if let ref = includes["theme"], !ref.isEmpty {
+            let existing = try listThemes().first(where: { $0["catalogId"] as? String == ref })
+            themeId = existing?["id"] as? String ?? (try installCatalogTheme(id: ref))["id"] ?? NSNull()
+        }
+        var parts: [String] = []
+        for part in ["cursors", "sounds", "icons"] {
+            guard let ref = includes[part], !ref.isEmpty else { continue }
+            guard catalog.contains(where: { $0["id"] as? String == ref && $0["includes"] is NSNull }) else { throw ThemeError("The combo lists a missing \(part) pack: \(ref)") }
+            if let existing = listPacks().first(where: { $0["catalogId"] as? String == ref }), let existingId = existing["id"] as? String { parts.append(existingId) }
+            else if let newId = try installCatalogPack(id: ref)["id"] as? String { parts.append(newId) }
+        }
+        lock.lock(); defer { lock.unlock() }
+        let safe = (item["id"] as? String ?? "combo").replacingOccurrences(of: #"[^a-zA-Z0-9._-]"#, with: "_", options: .regularExpression)
+        try writeJSON(["catalogId": item["id"] ?? safe, "type": "combo", "name": item["displayName"] ?? safe, "author": item["author"] ?? "", "contains": Array(includes.keys), "theme": themeId, "parts": parts],
+                      to: userPacksRoot.appendingPathComponent(safe, isDirectory: true).appendingPathComponent("pack.json"))
         return ["id": safe, "packs": listPacksLocked(), "themes": listThemesLocked()]
     }
 
@@ -456,6 +481,20 @@ final class ThemeManager {
             }
             var icons: [String: String] = [:]
             for (name, file) in readJSON(folder.appendingPathComponent("icons/icons.json")) as? [String: String] ?? [:] { if let url = urls["icons/\(file)"] { icons[name] = url } }
+            // A combo's folder has no files: take the sounds, cursors and icons of its parts.
+            for part in info["parts"] as? [String] ?? [] {
+                let partFolder = userPacksRoot.appendingPathComponent(part, isDirectory: true)
+                let partBase = "\(WebViewController.origin)/user-packs/\(Self.encode(part))"
+                for file in (try? files.contentsOfDirectory(atPath: partFolder.appendingPathComponent("sounds").path)) ?? [] where file.range(of: #"^[\w-]+\.(wav|mp3|ogg)$"#, options: [.regularExpression, .caseInsensitive]) != nil {
+                    sounds[(file as NSString).deletingPathExtension.lowercased()] = "\(partBase)/sounds/\(Self.encode(file))"
+                }
+                for (kind, value) in readJSON(partFolder.appendingPathComponent("cursors/cursors.json")) as? [String: Any] ?? [:] {
+                    let spec = value as? [String: Any]; let file = spec?["file"] as? String ?? value as? String ?? ""
+                    guard files.fileExists(atPath: partFolder.appendingPathComponent("cursors/\(file)").path) else { continue }
+                    var cursor: [String: Any] = ["url": "\(partBase)/cursors/\(Self.encode(file))"]; if let x = spec?["x"] as? Int, let y = spec?["y"] as? Int { cursor["x"] = x; cursor["y"] = y }; cursors[kind] = cursor
+                }
+                for (name, file) in readJSON(partFolder.appendingPathComponent("icons/icons.json")) as? [String: String] ?? [:] where files.fileExists(atPath: partFolder.appendingPathComponent("icons/\(file)").path) { icons[name] = "\(partBase)/icons/\(Self.encode(file))" }
+            }
             result.append(["id": folder.lastPathComponent, "catalogId": info["catalogId"] ?? NSNull(), "type": info["type"] ?? "combo", "name": info["name"] ?? folder.lastPathComponent,
                            "author": info["author"] ?? "", "contains": info["contains"] ?? [], "theme": info["theme"] ?? NSNull(), "files": urls, "sounds": sounds, "cursors": cursors, "icons": icons])
         }
@@ -468,6 +507,8 @@ final class ThemeManager {
         let info = readJSON(folder.appendingPathComponent("pack.json")) as? [String: Any] ?? [:]
         if let theme = info["theme"] as? String { _ = try? removeTheme(id: theme) }
         lock.lock(); defer { lock.unlock() }
+        // A combo takes the items it installed with it.
+        for part in info["parts"] as? [String] ?? [] where !part.contains("/") && !part.hasPrefix(".") { try? files.removeItem(at: userPacksRoot.appendingPathComponent(part, isDirectory: true)) }
         try? files.removeItem(at: folder)
         return ["packs": listPacksLocked(), "themes": listThemesLocked()]
     }
