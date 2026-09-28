@@ -1,0 +1,200 @@
+/* Windows Classic — values and 3D framing from the supplied design specification. */
+:root {
+  --xp-caption-left: 1px;
+  --xp-caption-right: 1px;
+  --xp-caption-middle: 1px;
+  --xp-caption-height: 18px;
+  --xp-bottom-left: 1px;
+  --xp-bottom-right: 1px;
+  --xp-bottom-middle: 1px;
+  --xp-bottom-height: 3px;
+  --xp-theme-window: #ffffff;
+  --xp-theme-buttonface: #cfafb7;
+  --xp-theme-windowtext: #000000;
+  --xp-theme-highlight: #9f6070;
+  --xp-theme-highlighttext: #ffffff;
+  --xp-theme-graytext: #9f6070;
+  --xp-title-fill: linear-gradient(270deg, #d8ccd0 0%, #9f6070 100%);
+  --xp-controls-width: 52px;
+  --xp-control-width: 16px;
+  --xp-control-height: 14px;
+  --xp-control-gap: 2px;
+  --xp-glyph-width: 9px;
+  --xp-glyph-height: 9px;
+  --xp-glyph-margin: 2px 3px;
+  --xp-glyph-top: 2px;
+  --xp-glyph-left: 3px;
+  --xp-preview-radius: 0;
+  --xp-caption-normal: #cfafb7;
+  --xp-caption-hover: #cfafb7;
+  --xp-caption-pressed: #cfafb7;
+  --xp-close-normal: #cfafb7;
+  --xp-close-hover: #cfafb7;
+  --xp-close-pressed: #cfafb7;
+  --xp-button-normal: none;
+  --xp-button-hover: none;
+  --xp-button-pressed: none;
+  --xp-button-border: 0;
+  --xp-button-frame: none;
+  --xp-button-frame-hover: none;
+  --xp-button-frame-pressed: none;
+  --xp-button-background: #cfafb7;
+  --xp-button-background-hover: #cfafb7;
+  --xp-button-background-pressed: #cfafb7;
+  --xp-button-shadow: inset -1px -1px #000000, inset 1px 1px #e7d8dc, inset -2px -2px #9f6070, inset 2px 2px #cfafb7;
+  --xp-button-shadow-hover: var(--xp-button-shadow);
+  --xp-button-shadow-pressed: inset -1px -1px #e7d8dc, inset 1px 1px #000000, inset -2px -2px #cfafb7, inset 2px 2px #9f6070;
+  --xp-minimize-glyph: linear-gradient(transparent 68%, #000000 69% 86%, transparent 87%);
+  --xp-minimize-glyph-hover: var(--xp-minimize-glyph);
+  --xp-minimize-glyph-pressed: var(--xp-minimize-glyph);
+  --xp-maximize-glyph: linear-gradient(90deg, #000000 0 12%, transparent 12% 88%, #000000 88%), linear-gradient(#000000 0 12%, transparent 12% 88%, #000000 88%);
+  --xp-maximize-glyph-hover: var(--xp-maximize-glyph);
+  --xp-maximize-glyph-pressed: var(--xp-maximize-glyph);
+  --xp-close-glyph: linear-gradient(45deg, transparent 42%, #000000 43% 57%, transparent 58%), linear-gradient(-45deg, transparent 42%, #000000 43% 57%, transparent 58%);
+  --xp-close-glyph-hover: var(--xp-close-glyph);
+  --xp-close-glyph-pressed: var(--xp-close-glyph);
+}
+
+/* Window framing: outer black line, white highlight, grey shadow and #cfafb7 face. */
+.xp-window {
+  border-radius: 0;
+  background: #cfafb7;
+  box-shadow: inset -1px -1px #000000, inset 1px 1px #cfafb7, inset -2px -2px #9f6070, inset 2px 2px #e7d8dc;
+}
+.xp-titlebar { padding: 3px 4px; border-radius: 0; font: 700 11px/12px 'MS Sans Serif', Tahoma, sans-serif; text-shadow: none; }
+.xp-app-icon { width: 14px; height: 14px; margin-right: 3px; }
+.xp-window-controls { top: 2px; right: 2px; }
+.xp-window-controls button {
+  box-shadow: inset -1px -1px #000000, inset 1px 1px #e7d8dc, inset -2px -2px #9f6070, inset 2px 2px #cfafb7;
+}
+.xp-window-controls button:active { box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #000000, inset -2px -2px #cfafb7, inset 2px 2px #9f6070; }
+.xp-bottom { background: #cfafb7; }
+
+/* Display Properties must use this theme too, not the XP-only preview skin. */
+.settings-window { border-radius: 0; background: #cfafb7; }
+.settings-window .properties { padding: 6px; background: #cfafb7; }
+.settings-window .property-tabs { height: 21px; gap: 0; }
+.settings-window .property-tab {
+  height: 21px; padding: 0 8px; border: 0; border-radius: 0; background: #cfafb7; color: #000000;
+  box-shadow: inset -1px -1px #9f6070, inset 1px 1px #e7d8dc;
+}
+.settings-window .property-tab.active { height: 22px; background: #cfafb7; box-shadow: inset -1px -1px #000000, inset 1px 1px #e7d8dc, inset -2px -2px #9f6070, inset 2px 2px #cfafb7; }
+.settings-window .property-page { border: 0; background: #cfafb7; box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, inset -2px -2px #cfafb7, inset 2px 2px #000000; }
+.settings-window .property-page select { border: 0; background: #ffffff; box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, inset -2px -2px #cfafb7, inset 2px 2px #000000; }
+.settings-window .preview { border: 0; background: #cfafb7; box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, inset -2px -2px #cfafb7, inset 2px 2px #000000; }
+.settings-window .preview-window { border: 0; background: #ffffff; box-shadow: inset -1px -1px #000000, inset 1px 1px #cfafb7, inset -2px -2px #9f6070, inset 2px 2px #e7d8dc; }
+.settings-window .preview-window .preview-title { background: #9f6070; }
+.settings-window .preview-window p { color: #000000; }
+
+/* User Accounts uses the same Classic system palette and standard text buttons. */
+.profile-window .toolbar, .profile-window aside { background: #cfafb7; color: #000000; border-color: #9f6070; }
+.profile-window aside h3, .profile-window aside p { background: #cfafb7; color: #000000; }
+.profile-window aside button, .profile-window #tasks > button, .profile-window h1, .profile-window .summary { color: #000000; }
+.profile-window .actions button {
+  min-width: 76px; height: 25px; border: 0; border-image: none; background: #cfafb7; color: #000000;
+  box-shadow: inset -1px -1px #000000, inset 1px 1px #e7d8dc, inset -2px -2px #9f6070, inset 2px 2px #cfafb7;
+}
+.profile-window .actions button:active { box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #000000, inset -2px -2px #cfafb7, inset 2px 2px #9f6070; }
+
+/* Standard 76×25 button geometry from Button/Text/Regular in the supplied design. */
+.theme-button, .settings-window .inline-actions button, .settings-window footer button,
+.settings-window .appearance-actions button, .chat-app .composer button, .chat-app .xp-button {
+  min-width: 76px !important;
+  height: 25px !important;
+  color: #000000 !important;
+  font: 11px/12px 'MS Sans Serif', Tahoma, sans-serif !important;
+  text-align: center;
+}
+.chat-app .tab { height: 27px !important; color: #000000 !important; font: 11px/12px 'MS Sans Serif', Tahoma, sans-serif !important; }
+.chat-app .settings-button { height: 25px !important; color: #000000 !important; font: 11px/12px 'MS Sans Serif', Tahoma, sans-serif !important; }
+.chat-app .add-button { color: #000000 !important; }
+.chat-app .tab.active {
+  background: #9f6070 !important;
+  color: #ffffff !important;
+  box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #000000, inset -2px -2px #cfafb7, inset 2px 2px #9f6070 !important;
+}
+.chat-app input, .chat-app textarea, .settings-window input, .settings-window select,
+.profile-window input, .profile-window textarea, .profile-window select {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 0 !important;
+  box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, inset -2px -2px #cfafb7, inset 2px 2px #000000 !important;
+}
+
+/* ---- Classic everywhere: controls that the app draws in the XP style otherwise ------------ */
+/* Raised and sunken 3D edges of Windows Classic. */
+:root {
+  --classic-raised: inset -1px -1px #000000, inset 1px 1px #e7d8dc, inset -2px -2px #9f6070, inset 2px 2px #cfafb7;
+  --classic-pressed: inset -1px -1px #e7d8dc, inset 1px 1px #000000, inset -2px -2px #cfafb7, inset 2px 2px #9f6070;
+  --classic-sunken: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, inset -2px -2px #cfafb7, inset 2px 2px #000000;
+}
+
+/* Push buttons drawn with the theme's button pictures elsewhere. */
+.theme-card button, .detail-back, .detail-install, .browser-tab, .backups-page button, #update-check,
+.theme-editor button:not(.editor-group), .emoji-groups button, .admin-window button:not(.property-tab),
+.xp-dialog .xp-button, .profile-actions .account-action:not(.icon-only), .add-button, .status-chip {
+  border: 0 !important; border-image: none !important; border-radius: 0 !important;
+  background: #cfafb7 !important; color: #000000 !important; box-shadow: var(--classic-raised) !important; text-shadow: none !important;
+}
+.theme-card button:active, .detail-back:active, .detail-install:active, .browser-tab:active, .backups-page button:not(:disabled):active,
+#update-check:active, .theme-editor button:not(.editor-group):active, .emoji-groups button:active, .admin-window button:not(.property-tab):active,
+.xp-dialog .xp-button:active, .profile-actions .account-action:not(.icon-only):active, .add-button:active, .status-chip:active {
+  box-shadow: var(--classic-pressed) !important;
+}
+.backups-page button:disabled, .theme-card button:disabled { color: #9f6070 !important; text-shadow: 1px 1px #e7d8dc !important; filter: none !important; }
+.browser-tab.active { background: #cfafb7 !important; box-shadow: var(--classic-pressed) !important; }
+
+/* Sign out keeps its icon on a Classic button. */
+.profile-actions .icon-only { border: 0 !important; border-image: none !important; background: #cfafb7 !important; box-shadow: var(--classic-raised) !important; }
+
+/* Call, member and notification buttons in the chat header: square Classic buttons. */
+.call-button, .member-button { border: 0 !important; border-radius: 0 !important; background: #cfafb7 !important; color: #000000 !important; box-shadow: var(--classic-raised) !important; }
+.call-button:active, .member-button:active { box-shadow: var(--classic-pressed) !important; }
+.call-button svg, .member-button svg { fill: #000000; stroke: #000000; }
+
+/* Avatars and room icons: flat, sunken, no XP blue gradient. */
+.avatar { border: 0 !important; border-radius: 0 !important; background: #cfafb7 !important; color: #000000 !important; box-shadow: var(--classic-sunken) !important; }
+.avatar img { border-radius: 0; }
+
+/* Status and client badges. */
+.profile-client, .status { border-radius: 0 !important; background: #ffffff !important; border: 0 !important; box-shadow: var(--classic-sunken) !important; }
+
+/* Sliders: Classic trackbar, a sunken groove and a raised grey thumb. */
+input[type="range"] { -webkit-appearance: none; appearance: none; height: 22px; margin: 0; background: transparent; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border: 0; border-image: none; background: #cfafb7; box-shadow: var(--classic-sunken); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 21px; margin-top: -9px; border: 0; background: #cfafb7; box-shadow: var(--classic-raised); }
+input[type="range"]:active::-webkit-slider-thumb { box-shadow: var(--classic-raised); }
+
+/* Check boxes: a white sunken square with a black tick. */
+input[type="checkbox"] { -webkit-appearance: none !important; appearance: none !important; width: 13px !important; height: 13px !important; margin: 0; border: 0 !important; border-radius: 0; background: #ffffff center / 9px 9px no-repeat !important; box-shadow: var(--classic-sunken) !important; }
+input[type="checkbox"]:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Cpath d='M0 2h1v1h1v1h1V3h1V2h1V1h1V0h1v3H6v1H5v1H4v1H3v1H2V6H1V5H0z'/%3E%3C/svg%3E") !important; }
+input[type="checkbox"]:active { background-color: #cfafb7 !important; }
+
+/* Group boxes: the etched Classic line instead of the XP rounded frame. */
+fieldset, .backup-parts, .preview-group { border: 0 !important; border-image: none !important; border-radius: 0 !important; background: transparent !important; box-shadow: inset -1px -1px #e7d8dc, inset 1px 1px #9f6070, 1px 1px #e7d8dc, -1px -1px #9f6070 !important; }
+fieldset legend { color: #000000 !important; background: #cfafb7; }
+
+/* Scroll bars: grey raised thumb and arrow buttons on a dotted track. */
+::-webkit-scrollbar { width: 16px; height: 16px; background: #cfafb7; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-track-piece { background: repeating-conic-gradient(#cfafb7 0 25%, #e7d8dc 0 50%) 0 0 / 2px 2px !important; }
+::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb:hover { border: 0 !important; border-image: none !important; background: #cfafb7 !important; box-shadow: var(--classic-raised); }
+::-webkit-scrollbar-button { width: 16px; height: 16px; background-color: #cfafb7 !important; box-shadow: var(--classic-raised); background-size: 8px 8px !important; background-position: center !important; }
+::-webkit-scrollbar-button:single-button:vertical:decrement { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 4'%3E%3Cpath d='M3 0h1v1h1v1h1v1h1v1H0V3h1V2h1V1h1z'/%3E%3C/svg%3E") !important; }
+::-webkit-scrollbar-button:single-button:vertical:increment { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 4'%3E%3Cpath d='M0 0h7v1H6v1H5v1H4v1H3V3H2V2H1V1H0z'/%3E%3C/svg%3E") !important; }
+::-webkit-scrollbar-button:single-button:horizontal:decrement { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 7'%3E%3Cpath d='M3 0h1v7H3V6H2V5H1V4H0V3h1V2h1V1h1z'/%3E%3C/svg%3E") !important; }
+::-webkit-scrollbar-button:single-button:horizontal:increment { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 7'%3E%3Cpath d='M0 0h1v1h1v1h1v1h1v1H3v1H2v1H1v1H0z'/%3E%3C/svg%3E") !important; }
+::-webkit-scrollbar-button:active { box-shadow: var(--classic-pressed); }
+
+/* User Accounts task pane and the account side panel: grey, not the XP blue gradient. */
+.profile-window aside, .account-related { background: #cfafb7 !important; }
+
+/* Theme catalog cards and text fields. */
+.theme-card { border: 0 !important; background: #cfafb7 !important; box-shadow: var(--classic-raised) !important; }
+.theme-card.active { box-shadow: var(--classic-pressed) !important; }
+.backup-list-wrap, .editor-groups, .editor-list, .backup-create input, .theme-editor input[type="text"], .theme-editor input[type="number"], .theme-editor select { border: 0 !important; background: #ffffff; box-shadow: var(--classic-sunken) !important; }
+.backup-list th { background: #cfafb7 !important; box-shadow: var(--classic-raised); border: 0 !important; }
+/* The generic Classic field frame must not wrap the slider. */
+.chat-app input[type="range"], .settings-window input[type="range"], .profile-window input[type="range"] { background: transparent !important; box-shadow: none !important; }
+.settings-window input[type="checkbox"], .chat-app input[type="checkbox"] { background-color: #ffffff !important; }
+
+:root { --classic-face: #cfafb7; --classic-shadow: #9f6070; --classic-light: #cfafb7; --classic-hilight: #e7d8dc; --classic-dark: #000000; --classic-text: #000000; --classic-desktop: #808080; --xp-title-fill-inactive: linear-gradient(270deg, #d0d4d0 0%, #a0a0a4 100%); --xp-title-text: #ffffff; --xp-title-text-inactive: #7d7d7d; }

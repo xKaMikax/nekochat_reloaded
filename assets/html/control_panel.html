@@ -6,14 +6,22 @@
 </head>
 <body>
   <div class="xp-window control-panel-window">
-    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/control-panel/control-panel.png')"></span><span class="xp-title">Панель управления</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/control-panel/control-panel-16.png')"></span><span class="xp-title">Панель управления</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
     <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="control-panel">
-      <div class="cp-address"><button class="cp-back" id="cp-back" type="button" disabled><span class="cp-back-arrow"></span><span id="cp-back-text">Назад</span></button><span class="cp-address-label" id="cp-address-label">Адрес</span><span class="cp-address-box"><img src="assets/images/control-panel/control-panel.png" alt=""><span id="cp-address"></span></span></div>
+      <nav class="cp-menu" id="cp-menu"><button type="button" data-menu="file"></button><button type="button" data-menu="edit"></button><button type="button" data-menu="view"></button><button type="button" data-menu="favorites"></button><button type="button" data-menu="tools"></button><button type="button" data-menu="help"></button></nav>
+      <div class="cp-toolbar">
+        <button class="cp-tool cp-tool-labeled" id="cp-back" type="button" disabled><img src="assets/images/control-panel/tb-back.png" alt=""><span id="cp-back-text"></span></button>
+        <button class="cp-tool" id="cp-forward" type="button" disabled><img src="assets/images/control-panel/tb-forward.png" alt=""></button>
+        <button class="cp-tool" id="cp-up" type="button" disabled><img src="assets/images/control-panel/tb-up.png" alt=""></button>
+        <i class="cp-tool-separator"></i>
+        <button class="cp-tool cp-tool-labeled" id="cp-search" type="button" disabled><img src="assets/images/control-panel/tb-search.png" alt=""><span id="cp-search-text"></span></button>
+        <button class="cp-tool cp-tool-labeled" id="cp-folders" type="button" disabled><img src="assets/images/control-panel/tb-folders.png" alt=""><span id="cp-folders-text"></span></button>
+        <i class="cp-tool-separator"></i>
+        <button class="cp-tool" id="cp-views" type="button"><img src="assets/images/control-panel/tb-views.png" alt=""></button>
+      </div>
+      <div class="cp-address"><span class="cp-address-label" id="cp-address-label"></span><span class="cp-address-box"><img id="cp-address-icon" src="assets/images/control-panel/control-panel-16.png" alt=""><span id="cp-address"></span><i class="cp-address-drop"></i></span><button class="cp-go" id="cp-go" type="button"><img src="assets/images/control-panel/go.png" alt=""><span id="cp-go-text"></span></button></div>
       <div class="cp-body">
-        <aside class="cp-taskpane">
-          <section class="cp-box cp-box-main"><h2><img src="assets/images/control-panel/control-panel.png" alt=""><span id="cp-pane-title"></span><button class="cp-chevron" type="button" tabindex="-1" aria-hidden="true"></button></h2><div class="cp-box-body"><button class="cp-link" id="cp-switch" type="button"><img src="assets/images/control-panel/control-panel.png" alt=""><span></span></button></div></section>
-          <section class="cp-box"><h2><span id="cp-see-also"></span><button class="cp-chevron" type="button" tabindex="-1" aria-hidden="true"></button></h2><div class="cp-box-body"><button class="cp-link" id="cp-update" type="button"><img src="assets/images/control-panel/updates.png" alt=""><span></span></button><button class="cp-link" id="cp-help" type="button"><img src="assets/images/control-panel/help.png" alt=""><span></span></button></div></section>
-        </aside>
+        <aside class="cp-taskpane" id="cp-taskpane"></aside>
         <section class="cp-content" id="cp-content"></section>
       </div>
     </main><i class="xp-side xp-side-right"></i></div>

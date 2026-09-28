@@ -464,6 +464,7 @@ def write_shell(output: Path, msstyles: Path, prefix: str, asset: str) -> str:
         '--xp-taskpane-link-hover': colour(block('mainsectiontaskss', 'element [id=atom(title)][mousefocused]'), 'foreground'),
         '--xp-cp-background': colour(block('main', 'Element [id=atom(blockade)]'), 'background'),
         '--xp-cp-title': colour(block('main', 'Element [id=atom(blockadetitle)]'), 'foreground'),
+        '--xp-cp-accent': (gradient(block('main', 'Element [id=atom(blockadeaccent)]')) or '').replace('linear-gradient(#', 'linear-gradient(90deg, #') or None,
     }
     variables.update({key: value for key, value in values.items() if value})
     return ':root { %s }\n' % ' '.join(f'{key}: {value};' for key, value in variables.items()) if variables else ''

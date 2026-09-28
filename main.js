@@ -141,6 +141,25 @@ function openThemeSettings(owner, tab) {
   settingsWindow.on('closed', () => { settingsWindow = null; });
   settingsWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'), page ? { query: { tab: page } } : undefined);
 }
+// Control Panel applets (Display, Sounds, Mouse…): Display Properties showing only their pages,
+// each in its own window like in Windows XP.
+const appletWindows = new Map();
+function openApplet(owner, applet, tab) {
+  const name = typeof applet === 'string' && /^[a-z]+$/.test(applet) ? applet : 'display';
+  const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
+  const existing = appletWindows.get(name);
+  if (existing && !existing.isDestroyed()) { existing.focus(); if (page) existing.webContents.send('settings:show-tab', page); return; }
+  // Window sizes of the XP applets.
+  const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+  const win = new BrowserWindow({
+    title: name, width, height, minWidth: 380, minHeight: 320, resizable: true,
+    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  appletWindows.set(name, win);
+  win.on('closed', () => { if (appletWindows.get(name) === win) appletWindows.delete(name); });
+  win.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'), { query: page ? { applet: name, tab: page } : { applet: name } });
+}
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
 const windowOwner = event => { const win = BrowserWindow.fromWebContents(event.sender); return win && win === controlPanelWindow ? win.getParentWindow() || undefined : win; };
@@ -234,7 +253,7 @@ function showSystemDialog(owner, data = {}) {
 function openProfileSettings() {
   if (profileWindow && !profileWindow.isDestroyed()) { profileWindow.focus(); return; }
   profileWindow = new BrowserWindow({
-    title: 'User Accounts', width: 430, height: 390, minWidth: 360, minHeight: 310, resizable: true,
+    title: 'User Accounts', width: 700, height: 520, minWidth: 460, minHeight: 360, resizable: true,
     frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -904,12 +923,14 @@ const updateAsset = () => process.platform === 'win32' ? (process.env.PORTABLE_E
   : process.platform === 'linux' ? (process.env.APPIMAGE ? /\.AppImage$/i : /\.deb$/i) : null;
 function sendUpdateStatus(status) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', status); }
 let updater;
-async function installUpdate(release = {}) {
+async function installUpdate(release = {}, options = {}) {
   const tag = String(release.tag || '');
   if (!/^[\w.-]+$/.test(tag)) throw new Error('Invalid release.');
   const assets = Array.isArray(release.assets) ? release.assets : [];
   const pattern = updateAsset();
   const asset = pattern && assets.find(item => pattern.test(String(item?.name || '')));
+  // A quiet (automatic) download never opens the browser where the app cannot update itself.
+  if (options?.quiet && (updateMode() !== 'install' || !app.isPackaged)) return { mode: 'none' };
   if (updateMode() !== 'install' || !app.isPackaged) {
     // Only GitHub links of this repository are opened.
     const url = asset && String(asset.url || '').startsWith(`${UPDATE_RELEASES}/download/`) ? asset.url : `${UPDATE_RELEASES}/tag/${encodeURIComponent(tag)}`;
@@ -923,6 +944,8 @@ async function installUpdate(release = {}) {
     updater.on('update-downloaded', info => sendUpdateStatus({ state: 'downloaded', version: info.version }));
     updater.on('error', error => sendUpdateStatus({ state: 'error', message: error?.message || String(error) }));
   }
+  // Automatic Updates → Automatic: the downloaded version installs when the app quits.
+  updater.autoInstallOnAppQuit = Boolean(options?.installOnQuit);
   updater.setFeedURL({ provider: 'generic', url: `${UPDATE_RELEASES}/download/${tag}` });
   const result = await updater.checkForUpdates();
   if (!result?.isUpdateAvailable) return { mode: 'none' };
@@ -1020,6 +1043,7 @@ app.whenReady().then(async () => {
   ipcMain.on('notification:message', (_, data) => { showMessageNotification(data); });
   ipcMain.on('theme:open-settings', (e, tab) => openThemeSettings(windowOwner(e), tab));
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
   ipcMain.on('theme:open-editor', e => openThemeEditor(windowOwner(e)));
   ipcMain.handle('theme-editor:load', (_, id, scheme) => loadThemeForEditor(String(id || ''), scheme ? String(scheme) : undefined));
@@ -1061,7 +1085,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('backup:restore-themes', (_, archive) => restoreUserThemes(archive));
   ipcMain.on('app:relaunch', () => { quitting = true; app.relaunch(); app.exit(0); });
   ipcMain.handle('update:info', () => ({ mode: updateMode(), platform: process.platform, packaged: app.isPackaged }));
-  ipcMain.handle('update:install', (_, release) => installUpdate(release || {}));
+  ipcMain.handle('update:install', (_, release, options) => installUpdate(release || {}, options || {}));
   ipcMain.on('update:restart', () => { if (!updater) return; quitting = true; updater.quitAndInstall(false, true); });
   ipcMain.on('balloon:click', () => { hideBalloon(); showMainWindow(); });
   ipcMain.on('balloon:close', hideBalloon);

@@ -1,5 +1,94 @@
 {
   "theme": "Windows Classic",
-  "schemes": [{ "id": "classic", "name": "Windows Classic" }],
+  "schemes": [
+    {
+      "id": "classic",
+      "name": "Windows Classic"
+    },
+    {
+      "id": "windows-standard",
+      "name": "Windows Standard"
+    },
+    {
+      "id": "brick",
+      "name": "Brick"
+    },
+    {
+      "id": "desert",
+      "name": "Desert"
+    },
+    {
+      "id": "eggplant",
+      "name": "Eggplant"
+    },
+    {
+      "id": "high-contrast-1",
+      "name": "High Contrast #1"
+    },
+    {
+      "id": "high-contrast-2",
+      "name": "High Contrast #2"
+    },
+    {
+      "id": "high-contrast-black",
+      "name": "High Contrast Black"
+    },
+    {
+      "id": "high-contrast-white",
+      "name": "High Contrast White"
+    },
+    {
+      "id": "lilac",
+      "name": "Lilac"
+    },
+    {
+      "id": "maple",
+      "name": "Maple"
+    },
+    {
+      "id": "marine-high-color",
+      "name": "Marine (high color)"
+    },
+    {
+      "id": "plum-high-color",
+      "name": "Plum (high color)"
+    },
+    {
+      "id": "pumpkin-large",
+      "name": "Pumpkin (large)"
+    },
+    {
+      "id": "rainy-day",
+      "name": "Rainy Day"
+    },
+    {
+      "id": "red-white-and-blue-vga",
+      "name": "Red, White, and Blue (VGA)"
+    },
+    {
+      "id": "rose",
+      "name": "Rose"
+    },
+    {
+      "id": "slate",
+      "name": "Slate"
+    },
+    {
+      "id": "spruce",
+      "name": "Spruce"
+    },
+    {
+      "id": "storm-vga",
+      "name": "Storm (VGA)"
+    },
+    {
+      "id": "teal-vga",
+      "name": "Teal (VGA)"
+    },
+    {
+      "id": "wheat",
+      "name": "Wheat"
+    }
+  ],
   "defaultScheme": "classic"
 }

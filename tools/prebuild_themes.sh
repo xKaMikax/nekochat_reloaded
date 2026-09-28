@@ -19,17 +19,8 @@ import_one() {
 rm -rf "$OUT_ROOT"
 mkdir -p "$OUT_ROOT"
 
-# Windows Classic is a pure CSS theme, kept in the same runtime layout.
-CLASSIC_OUT="$OUT_ROOT/Classic/schemes/classic"
-mkdir -p "$CLASSIC_OUT"
-cp "$SOURCE_ROOT/classic/theme.css" "$CLASSIC_OUT/theme.css"
-cat > "$OUT_ROOT/Classic/theme.json" <<'JSON'
-{
-  "theme": "Windows Classic",
-  "schemes": [{ "id": "classic", "name": "Windows Classic" }],
-  "defaultScheme": "classic"
-}
-JSON
+# Windows Classic is a pure CSS theme: one stylesheet per classic colour scheme of Windows XP.
+python3 "$ROOT/tools/classic_schemes.py" "$SOURCE_ROOT/classic" "$OUT_ROOT/Classic"
 
 # Every other theme directory (including user-built ones like "zune") maps one
 # to one prebuilt bundle, mirroring main.js discoverThemes().
