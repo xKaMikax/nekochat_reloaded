@@ -81,8 +81,8 @@ Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online',
   updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
   updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
   updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
-Object.assign(translations.ru, { adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера' });
-Object.assign(translations.en, { adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel' });
+Object.assign(translations.ru, { adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
+Object.assign(translations.en, { adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
 Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
@@ -169,6 +169,24 @@ const ICON_BELL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
 const unread = new Map();
 let mutedChats = new Set();
+// Favourite chats stay at the top of the list; drafts keep unsent text per chat. Both are per
+// account and shared between devices through the companion (settings, /drafts).
+let favoriteChats = new Set(); let drafts = {};
+const isFavorite = key => favoriteChats.has(key);
+function saveFavorites() { try { localStorage.setItem(`nk_favorites:${API}|${me?.id}`, JSON.stringify([...favoriteChats])); } catch {} }
+function loadFavorites() { try { favoriteChats = new Set(JSON.parse(localStorage.getItem(`nk_favorites:${API}|${me?.id}`) || '[]')); } catch { favoriteChats = new Set(); } }
+function toggleFavorite(key) { if (favoriteChats.has(key)) favoriteChats.delete(key); else favoriteChats.add(key); saveFavorites(); renderList(); renderConversationHeader(); pushCompanionSettings(); }
+function saveDrafts() { try { localStorage.setItem(`nk_drafts:${API}|${me?.id}`, JSON.stringify(drafts)); } catch {} }
+function loadDrafts() { try { drafts = JSON.parse(localStorage.getItem(`nk_drafts:${API}|${me?.id}`) || '{}') || {}; } catch { drafts = {}; } }
+let draftTimer = null;
+function setDraft(key, text, sync = true) {
+  const value = String(text || '').slice(0, 4000);
+  if ((drafts[key] || '') === value) return;
+  if (value.trim()) drafts[key] = value; else delete drafts[key];
+  saveDrafts(); renderList();
+  if (!sync) return;
+  clearTimeout(draftTimer); draftTimer = setTimeout(() => companionFetch('PUT', '/drafts', { chat: key, text: value }), 1000);
+}
 // ---- Nekochat Reloaded companion server ------------------------------------------------------
 // Optional (Display Properties → "Nekochat Reloaded server"). It keeps settings and the read
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
@@ -209,6 +227,9 @@ function applyCompanionBundle(bundle) {
   if (!bundle) return;
   const settings = bundle.settings || {};
   if (Array.isArray(settings.muted)) { mutedChats = new Set(settings.muted.map(String)); saveMuted(); }
+  if (Array.isArray(settings.favorites)) { favoriteChats = new Set(settings.favorites.map(String)); saveFavorites(); }
+  // Drafts from other devices; text typed here and not synced yet wins.
+  if (bundle.drafts && typeof bundle.drafts === 'object') { drafts = { ...bundle.drafts, ...drafts }; saveDrafts(); }
   // Other windows (Display Properties) follow through the storage event.
   for (const key of SYNCED_KEYS) { if (settings[key] !== undefined && settings[key] !== null) try { localStorage.setItem(key, String(settings[key])); } catch {} }
   applyWallpaper();
@@ -332,7 +353,7 @@ function pushCompanionSettings() {
   if (!companion.token) return;
   clearTimeout(companion.pushTimer);
   companion.pushTimer = setTimeout(() => {
-    const settings = { muted: [...mutedChats] };
+    const settings = { muted: [...mutedChats], favorites: [...favoriteChats] };
     for (const key of SYNCED_KEYS) { try { const value = localStorage.getItem(key); if (value !== null) settings[key] = value; } catch {} }
     companionFetch('PUT', '/settings', settings);
   }, 800);
@@ -347,6 +368,7 @@ window.addEventListener('storage', event => {
   if (event.key === 'nk_reloaded_server' || event.key === 'nk_reloaded_enabled') companionConnect();
   else if (SYNCED_KEYS.includes(event.key)) pushCompanionSettings();
 });
+function loadMutedAndMore() { loadMuted(); loadFavorites(); loadDrafts(); }
 function loadMuted() { try { mutedChats = new Set(JSON.parse(localStorage.getItem(`nk_muted:${API}|${me?.id}`) || '[]')); } catch { mutedChats = new Set(); } }
 function saveMuted() { try { localStorage.setItem(`nk_muted:${API}|${me?.id}`, JSON.stringify([...mutedChats])); } catch {} }
 const isMuted = key => mutedChats.has(key);
@@ -362,7 +384,10 @@ function updateUnread() {
   document.querySelectorAll('.tab').forEach(tab => { const kind = tab.dataset.tab === 'rooms' ? 'room' : 'dm'; let count = tab.querySelector('.unread-count'); if (!sums[kind]) { count?.remove(); return; } if (!count) { count = document.createElement('span'); count.className = 'unread-count'; tab.append(count); } count.textContent = ` (${sums[kind] > 99 ? '99+' : sums[kind]})`; });
 }
 function clearUnread(key) { if (!unread.delete(key)) return; renderList(); updateUnread(); }
-const formatTime = value => new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+// The server sends UTC times without a zone ("2026-09-28T10:58:00"); without the Z the browser
+// would read them as local time, so the sender's own message and the others' differed by hours.
+const parseTime = value => new Date(typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?$/.test(value) ? `${value}Z` : value);
+const formatTime = value => parseTime(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const displayName = user => user?.display_name || user?.username || t('user');
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
 function fitXpLogonBackground() {
@@ -372,7 +397,7 @@ function fitXpLogonBackground() {
 }
 
 function setLoggedIn(user, announceLogin = false) {
-  me = user; rememberSession(user); loadMuted(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
+  me = user; rememberSession(user); loadMutedAndMore(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
   setProfileAvatarFrame(me);
   $('#me-avatar').innerHTML = avatar(me); $('#me-name').textContent = me.display_name; $('#me-handle').textContent = `@${me.username}`;
   $('#profile-avatar').innerHTML = avatar(me); $('#profile-name').textContent = me.display_name; $('#profile-bio').textContent = me.bio || t('noBio'); $('#profile-status').textContent = me.status || `● ${t('profileOnline')}`;
@@ -422,13 +447,16 @@ function showRoomMembers(room) {
 function renderList() {
   const query = $('#search').value.trim().toLowerCase(); const list = $('#chat-list');
   const items = activeTab === 'rooms' ? rooms.filter(room => String(room.name ?? '').toLowerCase().includes(query)).map(room => ({ id: room.id, title: String(room.name ?? ''), sub: t('memberCount', { count: room.member_count ?? 0 }), icon: '#', kind: 'room', member: !Array.isArray(room.members) || room.members.some(user => Number(user.id) === Number(me?.id)) })) : users.filter(user => user.id !== me?.id && `${user.username ?? ''} ${user.display_name ?? ''}`.toLowerCase().includes(query)).sort(byConversation).map(user => ({ id: user.id, title: displayName(user), sub: `@${user.username}`, icon: avatar(user), online: userOnline(user), status: ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : null, client: userClient(user.id), kind: 'dm', frame: avatarFrameAttributes(user) }));
+  // Favourites first, the rest keeps its order.
+  items.sort((a, b) => Number(isFavorite(chatKey(b.kind, b.id))) - Number(isFavorite(chatKey(a.kind, a.id))));
   list.innerHTML = items.map(item => {
     const key = chatKey(item.kind, item.id); const count = unread.get(key) || 0; const muted = isMuted(key);
+    const draft = drafts[key] && !(current?.kind === item.kind && current?.data.id === item.id) ? drafts[key] : '';
     // Rooms whose voice channel is on show a speaker and how many people are in it.
     const channel = item.kind === 'room' ? activeChannel(item.id) : null;
     const voice = channel ? `<span class="voice-badge" title="${esc(t('voiceNow', { count: channel.members.size }))}">${ICON_SPEAKER}${channel.members.size}</span>` : '';
     const badge = count ? `<span class="unread-count${muted ? ' muted' : ''}"> (${count > 99 ? '99+' : count})</span>` : '';
-    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}</b><small>${esc(item.sub)}${voice}</small></span></button>`;
+    return `<button class="chat-item ${item.kind === 'room' && !item.member ? 'not-member' : ''} ${current?.kind === item.kind && current?.data.id === item.id ? 'active' : ''} ${count ? 'has-unread' : ''}" data-kind="${item.kind}" data-id="${item.id}"><span class="avatar${item.frame || ''} ${item.kind === 'dm' ? (item.online ? 'is-online' : 'is-offline') : ''}">${item.icon}${item.kind === 'dm' ? `<i class="presence-dot ${item.online ? (item.status || 'online') : 'offline'}" title="${esc(statusLabel(item.online ? (item.status || 'online') : 'offline') + (item.online && item.client ? ` · ${item.client}` : ''))}"></i>` : ''}</span><span class="chat-name"><b>${esc(item.title)}${badge}${muted ? ' <span class="muted-icon" title="' + esc(t('muted')) + '">' + ICON_BELL_OFF + '</span>' : ''}${isFavorite(key) ? ` <span class="favorite-icon" title="${esc(t('favorite'))}">★</span>` : ''}</b><small>${draft ? `<span class="draft-label">${esc(t('draft'))}:</span> ${esc(draft.split('\n')[0].slice(0, 60))}` : esc(item.sub)}${voice}</small></span></button>`;
   }).join('') || `<p style="padding:12px;color:#777">${esc(t('nothingFound'))}</p>`;
 }
 function showUserProfile(user) {
@@ -452,6 +480,13 @@ function showUserProfile(user) {
   banner.classList.toggle('has-user-banner', Boolean(user.banner));
   $('#user-profile-dialog').showModal();
 }
+// A reply starts with "> Author: quoted text" lines (plain text, so official clients show it as a
+// quote too); Reloaded draws those lines as a quote block above the answer.
+function renderMessageContent(content) {
+  const lines = String(content ?? '').split('\n'); const quote = [];
+  while (lines.length > 1 && lines[0].startsWith('> ')) quote.push(lines.shift().slice(2));
+  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${esc(lines.join('\n'))}</p>`;
+}
 function messageKey(message) { return `${message.id ?? ''}:${message.created_at ?? ''}:${message.content ?? ''}`; }
 // "Today", "Yesterday" or the date, shown between messages of different days.
 function dayLabel(date) {
@@ -468,11 +503,13 @@ function appendMessage(message, mine, key = messageKey(message), pending = false
   const list = $('#messages');
   // Only follow the conversation when the reader is already at the bottom.
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-  const created = new Date(message.created_at || Date.now());
+  const created = parseTime(message.created_at || Date.now());
   const day = Number.isNaN(created.getTime()) ? '' : created.toDateString();
   const lastArticle = [...list.querySelectorAll('article')].pop();
   if (day && lastArticle?.dataset.day !== day) list.insertAdjacentHTML('beforeend', `<div class="day-separator"><span>${esc(dayLabel(created))}</span></div>`);
-  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time></div><p>${esc(message.content)}</p></div></article>`);
+  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time>${mine && current?.kind === 'dm' ? '<span class="receipt"></span>' : ''}</div>${renderMessageContent(message.content)}<div class="reactions"></div></div></article>`);
+  const added = list.lastElementChild; if (/^\d+$/.test(String(message.id ?? ''))) added.dataset.id = String(message.id); added.dataset.author = displayName(sender);
+  window.chatExtras?.decorate(added);
   if (!incoming || atBottom || mine) { list.scrollTop = list.scrollHeight; hideNewMessages(); }
   else showNewMessages();
 }
@@ -492,7 +529,7 @@ function renderConversationHeader() {
   const { kind, data } = current;
   const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
   const profileId = kind === 'dm' ? ` data-profile-id="${data.id}"` : '';
-  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button mute-chat-button" id="mute-chat" type="button" aria-label="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}" title="${esc(isMuted(chatKey(kind, data.id)) ? t('unmuteChat') : t('muteChat'))}">${isMuted(chatKey(kind, data.id)) ? ICON_BELL_OFF : ICON_BELL}</button><button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
+  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
 }
 async function openChat(kind, id, { force = false } = {}) {
   const data = kind === 'room' ? rooms.find(room => room.id === id) : users.find(user => user.id === id); if (!data) return;
@@ -565,8 +602,11 @@ function socketMessage(payload) {
   const roomId = payload.room_id ?? message.room_id;
   const otherId = payload.to_id ?? payload.user_id ?? message.to_id ?? message.user_id;
   const matchingRoom = current?.kind === 'room' && Number(roomId) === Number(current.data.id);
-  const matchingDirect = current?.kind === 'dm' && [message.user_id, message.sender_id, message.to_id, payload.from_id, payload.to_id].some(id => Number(id) === Number(current.data.id));
   const mine = Number(message.user?.id || message.sender?.id || message.user_id || message.sender_id) === Number(me?.id);
+  // The server echoes our own direct message without to_id: it belongs to the open chat when
+  // a message with the same text is waiting there for its confirmation.
+  const ownEcho = mine && type === 'direct_message' && current?.kind === 'dm' && [...document.querySelectorAll('#messages article[data-pending="true"], #messages article[data-failed="true"]')].some(node => node.dataset.content === String(message.content));
+  const matchingDirect = current?.kind === 'dm' && (ownEcho || [message.user_id, message.sender_id, message.to_id, payload.from_id, payload.to_id].some(id => Number(id) === Number(current.data.id)));
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id || payload.from_id) || { display_name: t('user') };
   // An open conversation is already the notification: do not interrupt the user
   // with a toast for messages they can see immediately. A hidden window (tray on PC,
