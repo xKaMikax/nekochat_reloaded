@@ -452,7 +452,7 @@ final class ThemeManager {
             var cursors: [String: Any] = [:]
             for (kind, value) in readJSON(folder.appendingPathComponent("cursors/cursors.json")) as? [String: Any] ?? [:] {
                 let spec = value as? [String: Any]; let file = spec?["file"] as? String ?? value as? String ?? ""
-                if let url = urls["cursors/\(file)"] { cursors[kind] = ["url": url, "x": spec?["x"] as? Int ?? 0, "y": spec?["y"] as? Int ?? 0] }
+                if let url = urls["cursors/\(file)"] { var cursor: [String: Any] = ["url": url]; if let x = spec?["x"] as? Int, let y = spec?["y"] as? Int { cursor["x"] = x; cursor["y"] = y }; cursors[kind] = cursor }
             }
             var icons: [String: String] = [:]
             for (name, file) in readJSON(folder.appendingPathComponent("icons/icons.json")) as? [String: String] ?? [:] { if let url = urls["icons/\(file)"] { icons[name] = url } }
