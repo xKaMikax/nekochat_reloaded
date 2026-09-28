@@ -81,8 +81,8 @@ Object.assign(translations.en, { dndOn: 'Do not disturb', dndOff: 'Back online',
   updateInstall: 'Update', updateDownload: 'Download', updateAltStore: 'Open AltStore', updateReload: 'Reload',
   updateDownloading: 'Downloading version {version}. When it is done, the app offers to restart.', updateReady: 'Version {version} is downloaded. Restart Nekochat Reloaded and install it?', updateRestart: 'Restart', updateDownloadingPhone: 'Downloading version {version}; the Android installer opens next.',
   updatePermission: 'Allow Nekochat Reloaded to install apps (the settings open now), then click Update again.', updateFailed: 'The update failed: {error}' });
-Object.assign(translations.ru, { adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
-Object.assign(translations.en, { adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
+Object.assign(translations.ru, { noMessagesYet: 'Сообщений пока нет. Напишите первым!', adminPanel: 'Админ-панель', adminPanelTitle: 'Админ-панель сервера', favorite: 'Избранное', draft: 'Черновик' });
+Object.assign(translations.en, { noMessagesYet: 'No messages yet. Say hello!', adminPanel: 'Admin panel', adminPanelTitle: 'Server admin panel', favorite: 'Favourite', draft: 'Draft' });
 Object.assign(translations.ru, { today: 'Сегодня', yesterday: 'Вчера', newMessages: 'Новые сообщения: {count}', muteChat: 'Выключить уведомления', unmuteChat: 'Включить уведомления', muted: 'Уведомления выключены', voiceNow: 'В голосовом канале: {count}', addMember: 'Добавить', addMemberPlaceholder: 'Имя пользователя' });
 Object.assign(translations.en, { today: 'Today', yesterday: 'Yesterday', newMessages: 'New messages: {count}', muteChat: 'Mute notifications', unmuteChat: 'Unmute notifications', muted: 'Notifications muted', voiceNow: 'In the voice channel: {count}', addMember: 'Add', addMemberPlaceholder: 'User name' });
 Object.assign(translations.ru, { retrying: 'Повторная попытка через 5 секунд…' });
@@ -500,7 +500,7 @@ function dayLabel(date) {
 function appendMessage(message, mine, key = messageKey(message), pending = false, { incoming = false } = {}) {
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id) || { display_name: t('unknown') };
   const profileId = sender.id ? ` data-profile-id="${sender.id}"` : '';
-  const list = $('#messages');
+  const list = $('#messages'); list.querySelector('.messages-empty')?.remove();
   // Only follow the conversation when the reader is already at the bottom.
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
   const created = parseTime(message.created_at || Date.now());
@@ -557,9 +557,13 @@ async function refreshCurrentHistory() {
     const history = await fetchHistory(selected);
     if (current !== selected) return;
     const key = history.map(message => `${message.id}:${message.created_at}:${message.content}`).join('|');
-    if (key === historyKey) return;
-    historyKey = key; $('#messages').innerHTML = '';
+    // An empty chat has an empty key too: mark it so it still gets rendered once.
+    const stamp = key || 'empty';
+    if (stamp === historyKey) return;
+    historyKey = stamp; $('#messages').innerHTML = '';
     history.forEach(message => appendMessage(message, (message.user?.id || message.sender?.id) === me.id));
+    // An empty chat keeps the message area (and the composer at the bottom) with a hint.
+    if (!history.length) $('#messages').innerHTML = `<p class="messages-empty">${esc(t('noMessagesYet'))}</p>`;
     const last = history[history.length - 1]; if (last) markRead(chatKey(selected.kind, selected.data.id), last.id);
   } catch (error) {
     $('#messages').innerHTML = '';
