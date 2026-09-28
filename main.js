@@ -70,7 +70,8 @@ const userPacksRoot = path.join(app.getPath('userData'), 'packs');
 const runtimeThemesRoot = path.join(app.getPath('temp'), 'nekochat-msstyles');
 const themeStatePath = path.join(app.getPath('userData'), 'theme-selection.json');
 const displayStatePath = path.join(app.getPath('userData'), 'display-settings.json');
-const themeCatalogRoot = 'https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded_themes/main';
+// NEKOCHAT_CATALOG points the app at another catalog (a local copy for testing).
+const themeCatalogRoot = process.env.NEKOCHAT_CATALOG || 'https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded_themes/main';
 const builtInThemes = [
   { id: 'Classic', classic: true, source: path.join(themesRoot, 'classic', 'theme.css') },
   { id: 'Luna', source: path.join(themesRoot, 'luna', 'Luna.theme') },
@@ -578,7 +579,9 @@ function packEntries(manifest) {
     const type = PACK_TYPES.includes(String(entry.type || entry.Type).toLowerCase()) ? String(entry.type || entry.Type).toLowerCase() : 'combo';
     return {
       id, type, directory, kind: 'pack', displayName: entry.DisplayName || entry.displayName || id,
-      contains: Array.isArray(entry.Contains || entry.contains) ? (entry.Contains || entry.contains).map(String) : [type],
+      // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
+      includes: type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? Object.fromEntries(Object.entries(entry.Includes || entry.includes).filter(([part, id]) => ['theme', 'cursors', 'sounds', 'icons'].includes(part) && id).map(([part, id]) => [part, String(id)])) : null,
+      contains: type === 'combo' && (entry.Includes || entry.includes) ? Object.keys(entry.Includes || entry.includes) : Array.isArray(entry.Contains || entry.contains) ? (entry.Contains || entry.contains).map(String) : [type],
       author: details.Author || details.author || entry.Author || entry.author || 'Unknown',
       added: String(details.Added || details.added || entry.Added || entry.added || ''),
       version: details.Version || details.version || entry.Version || entry.version || '',
@@ -618,13 +621,19 @@ async function listPacks() {
     const files = {};
     const walk = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) { if (name !== 'theme') await walk(path.join(dir, item.name), name); } else files[name] = pathToFileURL(path.join(dir, item.name)).href; } };
     await walk(folder, '');
-    packs.push({ id: entry.name, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || entry.name, author: info.author || '', contains: info.contains || [], theme: info.theme || null, files, ...(await packContents(folder, files)) });
+    // A combo's own folder has no files: it points at the packs it installed.
+    const own = await packContents(folder, files);
+    const parts = Array.isArray(info.parts) ? await Promise.all(info.parts.map(async part => { try { const partFolder = packFolder(part); const partFiles = {}; const walkPart = async (dir, relative) => { for (const item of await fs.readdir(dir, { withFileTypes: true })) { const name = relative ? `${relative}/${item.name}` : item.name; if (item.isDirectory()) await walkPart(path.join(dir, item.name), name); else partFiles[name] = pathToFileURL(path.join(dir, item.name)).href; } }; await walkPart(partFolder, ''); return packContents(partFolder, partFiles); } catch { return { sounds: {}, cursors: {}, icons: {} }; } })) : [];
+    const merged = parts.reduce((all, part) => ({ sounds: { ...all.sounds, ...part.sounds }, cursors: { ...all.cursors, ...part.cursors }, icons: { ...all.icons, ...part.icons } }), own);
+    packs.push({ id: entry.name, catalogId: info.catalogId || null, type: info.type || 'combo', name: info.name || entry.name, author: info.author || '', contains: info.contains || [], theme: info.theme || null, parts: info.parts || [], files, ...merged });
   }
   return packs;
 }
 async function installCatalogPack(id) {
-  const item = (await fetchCatalogPacks()).find(pack => pack.id === id);
+  const catalog = await fetchCatalogPacks();
+  const item = catalog.find(pack => pack.id === id);
   if (!item) throw new Error('The pack no longer exists in the catalog.');
+  if (item.includes) return installCombo(item, catalog);
   const response = await fetch(item.zipUrl);
   if (!response.ok) throw new Error(`Unable to download Pack.ZIP (${response.status}).`);
   const temporary = await fs.mkdtemp(path.join(app.getPath('temp'), 'nekochat-pack-'));
@@ -656,10 +665,32 @@ async function installCatalogPack(id) {
     return { id: safeId, packs: await listPacks(), themes: await listThemes() };
   } finally { await fs.rm(temporary, { recursive: true, force: true }).catch(() => {}); }
 }
+// Installs every item a combo lists (skipping what is already installed) and remembers them.
+async function installCombo(item, catalog) {
+  const installed = { theme: null, packs: [] };
+  if (item.includes.theme) {
+    const existing = (await listThemes()).find(theme => theme.catalogId === item.includes.theme);
+    installed.theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id;
+  }
+  const packs = await listPacks();
+  for (const part of ['cursors', 'sounds', 'icons']) {
+    const ref = item.includes[part]; if (!ref) continue;
+    if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new Error(`The combo lists a missing ${part} pack: ${ref}`);
+    const existing = packs.find(pack => pack.catalogId === ref);
+    installed.packs.push(existing ? existing.id : (await installCatalogPack(ref)).id);
+  }
+  const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const destination = packFolder(safeId);
+  await fs.mkdir(destination, { recursive: true });
+  await fs.writeFile(path.join(destination, 'pack.json'), JSON.stringify({ catalogId: item.id, type: 'combo', name: item.displayName, author: item.author, contains: Object.keys(item.includes), theme: installed.theme, parts: installed.packs }, null, 1));
+  return { id: safeId, packs: await listPacks(), themes: await listThemes() };
+}
 async function removePack(id) {
   const folder = packFolder(id);
   let info = {}; try { info = JSON.parse(await fs.readFile(path.join(folder, 'pack.json'), 'utf8')); } catch {}
   if (info.theme) await removeTheme(info.theme).catch(() => {});
+  // A combo takes the items it installed with it.
+  for (const part of Array.isArray(info.parts) ? info.parts : []) await fs.rm(packFolder(part), { recursive: true, force: true }).catch(() => {});
   await fs.rm(folder, { recursive: true, force: true });
   return { packs: await listPacks(), themes: await listThemes() };
 }
