@@ -9,6 +9,7 @@
     cancelReply: 'Отменить ответ', pinned: 'Закреплено', typingOne: '{name} печатает…', typingMany: '{names} печатают…', typingDm: 'печатает…',
     searchChat: 'Поиск в чате', searchNone: 'Ничего не найдено', searchOf: '{n} из {total}', favoriteAdd: 'В избранное', favoriteRemove: 'Убрать из избранного',
     quickSwitch: 'Перейти к чату', quickHint: 'Имя чата или человека…', read: 'Прочитано', sent: 'Отправлено', messageActions: 'Действия',
+    newMessagesLine: 'Новые сообщения', note: 'Заметка', notePlaceholder: 'Ваша заметка об этом человеке — её видите только вы', archive: 'В архив', unarchive: 'Вернуть из архива', mentionHint: 'Упомянуть',
     searchIn: 'Поиск: {name}', pinnedMessages: 'Закреплённые сообщения', noPinsDm: 'В этой переписке пока нет закреплённых сообщений.', noPinsRoom: 'В этой комнате пока нет закреплённых сообщений.', pinsHint: 'Закрепить сообщение можно через его меню (⋯ или правая кнопка мыши).', openChat: 'Открыть', close: 'Закрыть',
   });
   Object.assign(translations.en, {
@@ -16,6 +17,7 @@
     cancelReply: 'Cancel reply', pinned: 'Pinned', typingOne: '{name} is typing…', typingMany: '{names} are typing…', typingDm: 'typing…',
     searchChat: 'Search in chat', searchNone: 'Nothing found', searchOf: '{n} of {total}', favoriteAdd: 'Add to favourites', favoriteRemove: 'Remove from favourites',
     quickSwitch: 'Go to chat', quickHint: 'Chat or person name…', read: 'Read', sent: 'Sent', messageActions: 'Actions',
+    newMessagesLine: 'New messages', note: 'Note', notePlaceholder: 'Your note about this person — only you can see it', archive: 'Archive', unarchive: 'Unarchive', mentionHint: 'Mention',
     searchIn: 'Search {name}', pinnedMessages: 'Pinned messages', noPinsDm: 'This conversation has no pinned messages yet.', noPinsRoom: 'This room has no pinned messages yet.', pinsHint: 'Pin a message from its menu (⋯ or right click).', openChat: 'Open', close: 'Close',
   });
   const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -29,6 +31,7 @@
     star: svg('<path d="m8 1.3 2 4.3 4.7.5-3.5 3.2 1 4.6L8 11.5l-4.2 2.4 1-4.6L1.3 6.1 6 5.6z"/>'),
     starOff: svg('<path d="m8 1.3 2 4.3 4.7.5-3.5 3.2 1 4.6L8 11.5l-4.2 2.4 1-4.6L1.3 6.1 6 5.6zm0 3.3-1 2.2-2.4.3 1.8 1.6-.5 2.4L8 9.9l2.1 1.2-.5-2.4 1.8-1.6-2.4-.3z"/>'),
     pinBig: '<svg viewBox="0 0 16 16" class="pins-empty-icon" aria-hidden="true"><path d="M10.2 1.5 14.5 5.8l-1 1-.9-.4-2.7 2.7.3 2.6-1 1-2.8-2.8-3.7 3.7-.7-.7 3.7-3.7-2.8-2.8 1-1 2.6.3 2.7-2.7-.4-.9z"/></svg>',
+    archive: svg('<path d="M1.5 2.5h13v3h-13zm1 4h11v7h-11zm3.5 2v1h4v-1z"/>'),
     open: svg('<path d="M2 3h5v1.5H3.5v8h8V9H13v5H2zm7-1h5v5h-1.5V4.6L7.8 9.3 6.7 8.2l4.7-4.7H9z"/>'),
     bell: svg('<path d="M8 1.5a4 4 0 0 1 4 4v3l1.5 2.5h-11L4 8.5v-3a4 4 0 0 1 4-4zM6.3 12.5h3.4a1.7 1.7 0 0 1-3.4 0z"/>'),
     bellOff: svg('<path d="M8 1.5a4 4 0 0 1 4 4v3l1.5 2.5H5.6zM4 6.2l6.9 6.3H2.5L4 8.5zM6.3 13h3.4a1.7 1.7 0 0 1-3.4 0zM1.5 2.5l1-1 12 12-1 1z"/>'),
@@ -44,6 +47,19 @@
     // In the name/time line, after the time, so it never covers the text or the time.
     if (!article.querySelector('.message-actions')) article.querySelector('.message-meta')?.insertAdjacentHTML('beforeend', `<button class="message-actions" type="button" title="${esc(t('messageActions'))}" aria-label="${esc(t('messageActions'))}">${ICONS.more}</button>`);
     renderReactions(article); renderReceipt(article);
+    article.classList.toggle('mentions-me', Boolean(article.querySelector('.message-body > p .mention.me')));
+    addPreview(article);
+  }
+  // ---- link previews (the companion reads the page; cached per link) ----------------------------
+  const previews = new Map();
+  async function addPreview(article) {
+    const link = article.querySelector('.message-body > p a[href]'); if (!link || article.querySelector('.link-preview') || !companion.token) return;
+    const url = link.href;
+    if (!previews.has(url)) previews.set(url, companionFetch('GET', `/preview?url=${encodeURIComponent(url)}`, undefined, true));
+    const data = await previews.get(url);
+    if (!data || (!data.title && !data.description) || article.querySelector('.link-preview') || !article.isConnected) return;
+    const card = `<a class="link-preview" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${data.image ? `<img src="${esc(data.image)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span><small>${esc(data.site || '')}</small><b>${esc(data.title || url)}</b>${data.description ? `<span>${esc(data.description)}</span>` : ''}</span></a>`;
+    article.querySelector('.message-body > p').insertAdjacentHTML('afterend', card);
   }
   function renderReactions(article) {
     const holder = article.querySelector('.reactions'); if (!holder) return;
@@ -85,6 +101,18 @@
     const index = people.map(Number).indexOf(Number(change.user));
     if (change.on && index < 0) people.push(Number(change.user)); if (!change.on && index >= 0) people.splice(index, 1);
     const article = document.querySelector(`#messages article[data-id="${CSS.escape(String(change.message))}"]`); if (article) renderReactions(article);
+  }
+
+  // "New messages" line above the first unread message, which the chat opens at.
+  function markFirstUnread({ count, lastRead }) {
+    $('#messages .unread-separator')?.remove();
+    const others = articles().filter(article => !article.classList.contains('mine'));
+    let first = null;
+    if (lastRead !== undefined && lastRead !== null) first = others.find(article => Number(article.dataset.id) > Number(lastRead));
+    else if (count) first = others[others.length - count];
+    if (!first || (!count && lastRead === undefined)) return;
+    first.insertAdjacentHTML('beforebegin', `<div class="unread-separator"><span>${esc(t('newMessagesLine'))}</span></div>`);
+    first.previousElementSibling.scrollIntoView({ block: 'start' });
   }
 
   // ---- pinned messages: a button in the header opens the list, like Discord ------------------
@@ -190,12 +218,14 @@
   document.addEventListener('click', event => { if (!event.target.closest('#message-menu')) closeMenu(); if (!event.target.closest('#pins-popover, #pins-button')) closePins(); });
 
   // ---- search in the chat: a field in the header, like Discord ------------------------------
-  function clearMarks() { document.querySelectorAll('#messages mark.search-hit').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent))); document.querySelectorAll('#messages .message-body > p').forEach(p => p.normalize()); }
+  // Highlighting works on the plain text; the formatted text comes back when the search ends.
+  function clearMarks() { document.querySelectorAll('#messages .message-body > p[data-html]').forEach(p => { p.innerHTML = p.dataset.html; delete p.dataset.html; }); }
   function runSearch(query) {
     clearMarks(); state.search = { hits: [], index: -1 };
     const needle = query.trim().toLowerCase();
     if (needle) for (const p of document.querySelectorAll('#messages .message-body > p')) {
       const text = p.textContent; const lower = text.toLowerCase(); if (!lower.includes(needle)) continue;
+      p.dataset.html ??= p.innerHTML;
       const parts = []; let at = 0, found;
       while ((found = lower.indexOf(needle, at)) >= 0) { parts.push(document.createTextNode(text.slice(at, found))); const mark = document.createElement('mark'); mark.className = 'search-hit'; mark.textContent = text.slice(found, found + needle.length); parts.push(mark); state.search.hits.push(mark); at = found + needle.length; }
       parts.push(document.createTextNode(text.slice(at))); p.replaceChildren(...parts);
@@ -262,9 +292,10 @@
     cancelReply(); closeSearch(); closeMenu(); closePins();
     const target = chatKey(kind, id);
     if (target !== before) $('#message-input').value = drafts[target] || '';
+    const unreadBefore = { count: unread.get(target) || 0, lastRead: companion.readState?.[target] };
     const result = await originalOpenChat(kind, id, options);
     const after = currentKey();
-    if (after && after !== before) loadChat();
+    if (after && after !== before) { loadChat(); markFirstUnread(unreadBefore); }
     return result;
   };
   const originalSend = sendChatMessage;
@@ -299,10 +330,10 @@
   };
   // Right click (long press on phones) on a chat: favourite and mute, which left the header.
   $('#chat-list').addEventListener('contextmenu', event => {
-    const item = event.target.closest('.chat-item'); if (!item) return; event.preventDefault(); closeMenu();
+    const item = event.target.closest('.chat-item[data-kind]'); if (!item) return; event.preventDefault(); closeMenu();
     const key = chatKey(item.dataset.kind, item.dataset.id);
     const menu = document.createElement('div'); menu.id = 'message-menu'; menu.className = 'message-menu'; menu.setAttribute('role', 'menu');
-    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button>`;
+    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button><button type="button" data-action="archive">${ICONS.archive}${esc(t(isArchived(key) ? 'unarchive' : 'archive'))}</button>`;
     document.body.append(menu);
     const box = menu.getBoundingClientRect(); menu.style.left = `${Math.min(event.clientX, innerWidth - box.width - 4)}px`; menu.style.top = `${Math.min(event.clientY, innerHeight - box.height - 4)}px`;
     menu.onclick = click => {
@@ -310,6 +341,7 @@
       if (action === 'open') item.click();
       if (action === 'favorite') toggleFavorite(key);
       if (action === 'mute') toggleMuted(key);
+      if (action === 'archive') toggleArchived(key);
     };
   });
   const originalEvents = openCompanionEvents;
@@ -325,6 +357,57 @@
   // A message from someone ends their "typing…".
   const originalAppend = appendMessage;
   appendMessage = (message, mine, ...rest) => { const sender = Number(message.user?.id || message.sender?.id || message.user_id || message.sender_id); if (state.typing.delete(sender)) renderTyping(); return originalAppend(message, mine, ...rest); };
+
+  // ---- @mention suggestions ----------------------------------------------------------------------
+  let mentionIndex = 0;
+  function mentionQuery() { const input = $('#message-input'); const before = input.value.slice(0, input.selectionStart ?? input.value.length); return before.match(/(^|\s)@([\w.-]{0,32})$/)?.[2] ?? null; }
+  function mentionCandidates(query) {
+    const people = current?.kind === 'room' ? (Array.isArray(current.data.members) && current.data.members.length ? current.data.members.map(member => userFor?.(member.id) || member) : users) : current ? [current.data] : [];
+    const needle = query.toLowerCase();
+    return people.filter(user => user && user.id !== me?.id && user.username && `${user.username} ${user.display_name || ''}`.toLowerCase().includes(needle)).slice(0, 8);
+  }
+  function renderMentions() {
+    const query = mentionQuery(); let box = $('#mention-box');
+    const people = query === null ? [] : mentionCandidates(query);
+    if (!people.length) { box?.remove(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'mention-box'; box.className = 'mention-box'; $('#composer').before(box); }
+    mentionIndex = Math.min(mentionIndex, people.length - 1);
+    box.innerHTML = people.map((user, index) => `<button type="button" class="mention-item${index === mentionIndex ? ' selected' : ''}" data-username="${esc(user.username)}"><b>${esc(displayName(user))}</b> <small>@${esc(user.username)}</small></button>`).join('');
+    box.onmousedown = event => { const item = event.target.closest('[data-username]'); if (item) { event.preventDefault(); insertMention(item.dataset.username); } };
+  }
+  function insertMention(username) {
+    const input = $('#message-input'); const caret = input.selectionStart ?? input.value.length;
+    const before = input.value.slice(0, caret).replace(/@[\w.-]*$/, `@${username} `);
+    input.value = before + input.value.slice(caret); input.setSelectionRange(before.length, before.length); input.focus();
+    $('#mention-box')?.remove(); input.dispatchEvent(new Event('input'));
+  }
+  $('#message-input').addEventListener('keydown', event => {
+    const box = $('#mention-box'); if (!box) return;
+    const items = [...box.querySelectorAll('.mention-item')];
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); mentionIndex = (mentionIndex + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; renderMentions(); }
+    else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); event.stopPropagation(); insertMention(items[mentionIndex]?.dataset.username); }
+    else if (event.key === 'Escape') { event.stopPropagation(); box.remove(); }
+  }, true);
+  $('#message-input').addEventListener('input', () => { mentionIndex = 0; renderMentions(); });
+  $('#message-input').addEventListener('blur', () => setTimeout(() => $('#mention-box')?.remove(), 150));
+
+  // ---- notes about people (in their profile, only you see them) ----------------------------------
+  const originalProfile = showUserProfile;
+  showUserProfile = user => {
+    originalProfile(user); if (!user) return;
+    let note = $('#user-profile-note');
+    if (!note) { $('#user-profile-bio').insertAdjacentHTML('afterend', `<label class="profile-note"><span>${esc(t('note'))}</span><textarea id="user-profile-note" rows="2" maxlength="1000"></textarea></label>`); note = $('#user-profile-note'); }
+    note.placeholder = t('notePlaceholder'); note.value = userNotes[String(user.id)] || ''; note.dataset.user = String(user.id);
+    note.oninput = () => { clearTimeout(note.timer); note.timer = setTimeout(() => setUserNote(note.dataset.user, note.value), 600); };
+  };
+  // Last seen in the header, refreshed with the statuses without redrawing the header.
+  const originalStatuses = refreshStatuses;
+  refreshStatuses = async (...args) => {
+    const result = await originalStatuses(...args);
+    const small = document.querySelector('#conversation-header small');
+    if (small && current?.kind === 'dm') { small.dataset.base = !userOnline(current.data) ? lastSeenText(current.data.id) || `@${current.data.username}` : `@${current.data.username}`; renderTyping(); }
+    return result;
+  };
 
   // Typing notice at most every 3 s, and the draft of the open chat.
   $('#message-input').addEventListener('input', () => {

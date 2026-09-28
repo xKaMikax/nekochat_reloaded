@@ -868,6 +868,12 @@ async function installUpdate(release = {}) {
   updater.downloadUpdate().catch(error => sendUpdateStatus({ state: 'error', message: error?.message || String(error) }));
   return { mode: 'install', version: result.updateInfo.version };
 }
+// Links in messages (target=_blank) and any http(s) navigation open in the system browser,
+// never inside an app window.
+app.on('web-contents-created', (_, contents) => {
+  contents.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  contents.on('will-navigate', (event, url) => { if (/^https?:\/\//i.test(url)) { event.preventDefault(); shell.openExternal(url); } });
+});
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) { createWindow(); return; }
   if (mainWindow.isMinimized()) mainWindow.restore();

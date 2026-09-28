@@ -275,4 +275,26 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
   .header-search.open svg, .header-search.active svg { margin: 0 5px; fill: #5a6b82; }
   .header-actions .header-search { margin-left: 0; }
 }
+/* Formatting, mentions, link previews, unread line, archive, notes. */
+.message-body > p code, .reply-quote code { padding: 0 3px; border: 1px solid #d5dde8; border-radius: 2px; background: #f3f6fa; font: 12px 'Lucida Console', Consolas, monospace; }
+.code-block { margin: 3px 0; padding: 6px 8px; overflow-x: auto; border: 1px solid #c9d6e6; background: #f6f8fb; white-space: pre; }
+.code-block code { font: 12px 'Lucida Console', Consolas, monospace; }
+.message-body > p a { color: #0645ad; text-decoration: underline; word-break: break-all; }
+.mention { padding: 0 2px; border-radius: 2px; background: #e3ecfb; color: #1d4fa8; font-weight: bold; }
+.mention.me { background: #ffe680; color: #6b4b00; }
+.message.mentions-me .message-body { box-shadow: inset 3px 0 0 #f0b400; background: #fffbe6; }
+.link-preview { display: flex; gap: 8px; max-width: 420px; margin-top: 5px; padding: 6px; border: 1px solid #c9d6e6; border-left: 3px solid var(--xp-theme-highlight, #316ac5); background: #f7f9fc; color: inherit; text-decoration: none; }
+.link-preview img { width: 64px; height: 64px; flex: none; object-fit: cover; border: 1px solid #d5dde8; }
+.link-preview > span { display: grid; gap: 2px; min-width: 0; font-size: 11px; }
+.link-preview small { color: #6a7a92; }.link-preview b { color: #0645ad; font-size: 12px; }
+.link-preview > span > span { display: -webkit-box; overflow: hidden; color: #444; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.unread-separator { display: flex; align-items: center; gap: 8px; color: #d0342c; font: bold 11px Tahoma, sans-serif; }
+.unread-separator::before, .unread-separator::after { content: ''; flex: 1; border-top: 1px solid #d0342c; }
+.archive-row .archive-icon { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border: 1px solid #9cb6d5; background: #eef3fa; color: #245edb; font-weight: bold; }
+.archive-row .archive-icon svg { width: 16px; height: 16px; fill: #245edb; }
+.profile-note { display: grid; gap: 3px; margin: 8px 0 0; font: 11px Tahoma, sans-serif; color: #555; }
+.profile-note textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid #7f9db9; font: 12px Tahoma, sans-serif; }
+.mention-box { display: grid; max-height: 200px; overflow-y: auto; border: 1px solid #7f9db9; border-bottom: 0; background: #fff; }
+.mention-item { padding: 4px 10px; border: 0; background: transparent; text-align: left; font: 12px Tahoma, sans-serif; cursor: pointer; }
+.mention-item small { color: #777; }.mention-item.selected, .mention-item:hover { background: var(--xp-theme-highlight, #316ac5); color: #fff; }.mention-item.selected small { color: #dde; }
 
