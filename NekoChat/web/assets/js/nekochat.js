@@ -568,6 +568,77 @@ function socketMessage(payload) {
   appendMessage(message, mine, messageId, false, { incoming: !mine });
   if (seen) markRead(key, message.id);
 }
+// ---- /ws/media: calls and screen sharing as binary frames (Nekochat servers from 2026-09-27) --
+// Frame, little-endian: u8 version 1 | u8 kind (1 audio, 2 video) | u16 flags (bit 0: room) |
+// u32 target (room or user id; from the server: the sender's id) | u32 length | payload.
+// The payload is the Opus / video chunk that call_audio / screen_frame carry in base64.
+// Signalling stays on /ws; without the socket (older servers, SSE transport, turned off in
+// Display Properties) frames go over /ws as before.
+const MEDIA_AUDIO = 1; const MEDIA_VIDEO = 2; const MEDIA_ROOM = 1; const MEDIA_HEADER = 12;
+const media = { socket: null, open: false, wanted: false, retry: null, attempts: 0, failures: 0, probeAfter: 0, audioSeq: new Map(), videoSeq: 0 };
+function mediaEnabled() { try { return localStorage.getItem('nk_media_socket') !== '0'; } catch { return true; } }
+function mediaUrl() { const url = new URL(websocketUrl()); url.pathname = url.pathname.replace(/\/ws$/, '/ws/media'); return url.href; }
+function openMediaSocket() {
+  if (!token || callTransport !== 'ws' || !mediaEnabled() || media.socket) return;
+  // A server without /ws/media fails the handshake; ask again only every 10 minutes.
+  if (Date.now() < media.probeAfter) return;
+  media.wanted = true; clearTimeout(media.retry);
+  let ws; try { ws = new WebSocket(mediaUrl()); } catch { return; }
+  ws.binaryType = 'arraybuffer'; media.socket = ws;
+  const session = token; let opened = false;
+  const handshake = setTimeout(() => { if (ws.readyState === WebSocket.CONNECTING) try { ws.close(); } catch {} }, 10000);
+  ws.onopen = () => { clearTimeout(handshake); opened = true; media.open = true; media.attempts = 0; media.failures = 0; };
+  ws.onmessage = event => { if (typeof event.data !== 'string') receiveMediaFrame(event.data); };
+  ws.onerror = () => {};
+  ws.onclose = event => {
+    clearTimeout(handshake);
+    if (media.socket === ws) { media.socket = null; media.open = false; }
+    if (!media.wanted || token !== session) return;
+    if (event.code === 4401 || event.code === 4403) return; // the /ws connection reports the session problem
+    if (!opened && (event.code === 4404 || ++media.failures >= 2)) { media.failures = 0; media.probeAfter = Date.now() + 10 * 60 * 1000; return; }
+    media.retry = setTimeout(openMediaSocket, Math.min(1000 * 2 ** Math.min(media.attempts++, 2), 4000) + Math.random() * 300);
+  };
+}
+function closeMediaSocket() { media.wanted = false; clearTimeout(media.retry); const ws = media.socket; media.socket = null; media.open = false; media.probeAfter = 0; try { ws?.close(); } catch {} }
+function sendMediaFrame(kind, payload) {
+  const ws = media.socket; const target = activeCall?.target;
+  if (!media.open || !ws || ws.readyState !== WebSocket.OPEN || !target) return false;
+  const room = target.room_id != null; const id = Number(room ? target.room_id : target.to_id); if (!Number.isFinite(id)) return false;
+  const frame = new Uint8Array(MEDIA_HEADER + payload.byteLength); const view = new DataView(frame.buffer);
+  view.setUint8(0, 1); view.setUint8(1, kind); view.setUint16(2, room ? MEDIA_ROOM : 0, true); view.setUint32(4, id >>> 0, true); view.setUint32(8, payload.byteLength, true);
+  frame.set(payload, MEDIA_HEADER);
+  try { ws.send(frame); return true; } catch { return false; }
+}
+// Binary frames carry no key-frame flag: read it from the bitstream (VP8, VP9, AV1).
+function isKeyFrame(codec, bytes) {
+  const first = bytes[0] ?? 0xff; const name = String(codec || '').toLowerCase();
+  if (name.startsWith('vp8')) return (first & 1) === 0;
+  if (name.startsWith('vp09') || name === 'vp9') {
+    const profile = ((first >> 5) & 1) | (((first >> 4) & 1) << 1); const bit = profile === 3 ? 2 : 3;
+    if ((first >> bit) & 1) return false; // show_existing_frame
+    return ((first >> (bit - 1)) & 1) === 0;
+  }
+  if (name.startsWith('av01')) { let at = 0; while (at < bytes.length) { const type = (bytes[at] >> 3) & 15; if (type === 1) return true; if (type === 6 || type === 3) return false; const extension = (bytes[at] >> 2) & 1; at += 1 + extension; let size = 0; let shift = 0; while (at < bytes.length) { const byte = bytes[at++]; size |= (byte & 127) << shift; shift += 7; if (!(byte & 128)) break; } at += size; } return false; }
+  return true;
+}
+function receiveMediaFrame(buffer) {
+  if (buffer.byteLength < MEDIA_HEADER) return;
+  const view = new DataView(buffer); if (view.getUint8(0) !== 1) return;
+  const kind = view.getUint8(1); const flags = view.getUint16(2, true); const from = view.getUint32(4, true); const length = view.getUint32(8, true);
+  if (buffer.byteLength < MEDIA_HEADER + length || !activeCall || activeCall.incoming || !from || from === Number(me?.id)) return;
+  // The frame names only the sender; it belongs to the current call or channel.
+  if (Boolean(flags & MEDIA_ROOM) !== Boolean(activeCall.room)) return;
+  if (!activeCall.room && from !== Number(activeCall.target.to_id)) return;
+  const bytes = new Uint8Array(buffer, MEDIA_HEADER, length);
+  if (kind === MEDIA_AUDIO) {
+    if (!callAudio) return;
+    if (activeCall.room) { noteRoomPresence({ room_id: activeCall.target.room_id }, from); addParticipant(from); }
+    const seq = media.audioSeq.get(from) || 0; media.audioSeq.set(from, seq + 1);
+    playCallAudio(from, seq, bytes);
+  } else if (kind === MEDIA_VIDEO && remoteScreen && (!remoteScreen.senderId || remoteScreen.senderId === from)) {
+    decodeScreenFrame(isKeyFrame(remoteScreen.codec, bytes), media.videoSeq++, bytes);
+  }
+}
 function openWebSocketConnection() {
   return new Promise((resolve, reject) => {
     let ws;
@@ -697,10 +768,11 @@ async function connectSocket() {
   startHeartbeat(connection);
   try { connection.send({ type: 'ping' }); } catch {}
   flushPendingCallSignals();
+  openMediaSocket();
   // Messages sent while the connection was down never arrive as events: load what was missed.
   if (reconnected) { refresh().catch(() => {}); catchUpHistory(); }
 }
-function disconnectSocket() { clearTimeout(socketRetry); socketRetryDelay = 1000; stopHeartbeat(); pendingCallSignals.clear(); const connection = socket; socket = null; connection?.close(); }
+function disconnectSocket() { closeMediaSocket(); clearTimeout(socketRetry); socketRetryDelay = 1000; stopHeartbeat(); pendingCallSignals.clear(); const connection = socket; socket = null; connection?.close(); }
 function sendSocketMessage(payload) {
   if (!socket) {
     connectSocket();
@@ -773,7 +845,7 @@ function setCallTransport(value) {
   const next = value === 'sse' ? 'sse' : 'ws';
   if (next === callTransport) return;
   callTransport = next; localStorage.setItem('nk_call_transport', next);
-  if (next === 'sse') connectEventStream(); else disconnectEventStream();
+  if (next === 'sse') { connectEventStream(); closeMediaSocket(); } else { disconnectEventStream(); if (socket) openMediaSocket(); }
   updateCallWindow();
 }
 function callId() { return globalThis.crypto?.randomUUID?.() || `call-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
@@ -791,7 +863,7 @@ function releaseCallAudio(state) {
   state.denoiser?.destroy(); state.denoiser = null;
   if (state.context && state.context.state !== 'closed') state.context.close().catch(() => {});
 }
-function stopCallAudio() { const state = callAudio; if (!state) return; callAudio = null; releaseCallAudio(state); }
+function stopCallAudio() { media.audioSeq.clear(); const state = callAudio; if (!state) return; callAudio = null; releaseCallAudio(state); }
 function setCallSpeaking(side, value) { if (!activeCall || activeCall[`${side}Speaking`] === value) return; activeCall[`${side}Speaking`] = value; updateCallWindow(); }
 // Each remote speaker has its own Opus decoder and playback clock; their buffers play into the
 // same AudioContext, which mixes them (N−1 in a room voice channel, one peer in a direct call).
@@ -869,7 +941,9 @@ async function startCallAudio() {
     state.encoder = new AudioEncoder({ output: chunk => {
       if (!activeCall || activeCall !== state.call || chunk.byteLength === 0) return;
       const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes);
-      sendCallMessage({ type: 'call_audio', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, audio: bytesToBase64(bytes) }).catch(() => {});
+      // Binary /ws/media frame when the server has it; JSON over /ws otherwise.
+      const seq = state.sequence++;
+      if (!sendMediaFrame(MEDIA_AUDIO, bytes)) sendCallMessage({ type: 'call_audio', ...activeCall.target, call_id: activeCall.callId, seq, audio: bytesToBase64(bytes) }).catch(() => {});
     }, error: error => console.warn('Opus encode failed:', error) });
     state.encoder.configure(opus);
     const display = await desktopControls?.getDisplaySettings?.(); if (cancelled()) return;
@@ -924,8 +998,11 @@ function receiveCallAudio(payload) {
   if (!callAudio || !activeCall || !payload.audio || !sameCall(payload) || (senderId && senderId === Number(me?.id))) return;
   // A late participant is picked up by their first audio frame (from_id).
   if (activeCall.room && senderId) addParticipant(senderId);
+  playCallAudio(senderId, Number(payload.seq || 0), base64ToBytes(payload.audio));
+}
+function playCallAudio(senderId, seq, bytes) {
   const peer = peerFor(senderId || 'remote'); if (!peer) return;
-  try { peer.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Number(payload.seq || 0) * 20000, data: base64ToBytes(payload.audio) })); } catch (error) { console.warn('Invalid Opus frame:', error); }
+  try { peer.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: seq * 20000, data: bytes })); } catch (error) { console.warn('Invalid Opus frame:', error); }
 }
 // Both sides can share at once: each keeps its own picture and the call window shows the one
 // chosen with the button under that person, so the two streams no longer overwrite each other.
@@ -978,7 +1055,7 @@ async function toggleScreenShare() {
   const config = await screenEncoderConfig(width, height);
   if (!config) { stream.getTracks().forEach(item => item.stop()); throw new Error(t('screenCodecUnsupported')); }
   const state = { stream, sequence: 0, lastPreview: 0 }; screenShare = state;
-  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); sendCallMessage({ type: 'screen_frame', ...activeCall.target, call_id: activeCall.callId, seq: state.sequence++, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('Screen encode failed:', error) });
+  state.encoder = new VideoEncoder({ output: chunk => { if (screenShare !== state || !activeCall) return; const bytes = new Uint8Array(chunk.byteLength); chunk.copyTo(bytes); const seq = state.sequence++; if (!sendMediaFrame(MEDIA_VIDEO, bytes)) sendCallMessage({ type: 'screen_frame', ...activeCall.target, call_id: activeCall.callId, seq, key: chunk.type === 'key', data: bytesToBase64(bytes) }).catch(() => {}); }, error: error => console.warn('Screen encode failed:', error) });
   state.encoder.configure(config); state.reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
   refreshScreenView('self');
   try { await sendCallMessage({ type: 'screen_start', ...activeCall.target, call_id: activeCall.callId, codec: config.codec, width, height }); }
@@ -991,8 +1068,8 @@ function handleScreenSignal(payload) {
   const senderId = senderOf(payload); if (senderId && senderId === Number(me?.id)) return;
   if (payload.type === 'screen_start') {
     // A room has one sharer: a new screen_start switches the screen to that person.
-    stopRemoteScreen(); const state = { lastPreview: 0, senderId };
-    const codec = payload.codec || 'vp8';
+    stopRemoteScreen(); const codec = payload.codec || 'vp8'; const state = { lastPreview: 0, senderId, codec };
+    media.videoSeq = 0;
     const config = { codec, codedWidth: Number(payload.width) || 1280, codedHeight: Number(payload.height) || 720 };
     remoteScreen = state;
     (globalThis.VideoDecoder ? VideoDecoder.isConfigSupported(config).catch(() => ({ supported: false })) : Promise.resolve({ supported: false })).then(support => {
@@ -1013,7 +1090,11 @@ function handleScreenSignal(payload) {
     stopRemoteScreen(); refreshScreenView(); return;
   }
   if (!remoteScreen?.decoder || !payload.data) return;
-  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: payload.key ? 'key' : 'delta', timestamp: Number(payload.seq || 0) * 83333, data: base64ToBytes(payload.data) })); } catch (error) { console.warn('Invalid screen frame:', error); }
+  decodeScreenFrame(Boolean(payload.key), Number(payload.seq || 0), base64ToBytes(payload.data));
+}
+function decodeScreenFrame(key, seq, bytes) {
+  if (!remoteScreen?.decoder || remoteScreen.decoder.state !== 'configured') return;
+  try { remoteScreen.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: seq * 83333, data: bytes })); } catch (error) { console.warn('Invalid screen frame:', error); }
 }
 function updateCallWindow() {
   if (!activeCall) return;
@@ -1546,6 +1627,8 @@ desktopControls?.onUpdateStatus?.(status => {
 });
 // "Check now" in Display Properties → Settings.
 window.addEventListener('storage', event => { if (event.key === 'nk_update_check' && event.newValue) checkForUpdates(true); });
+// Binary media socket turned on or off in Display Properties → Settings.
+window.addEventListener('storage', event => { if (event.key !== 'nk_media_socket') return; if (mediaEnabled()) { if (socket) openMediaSocket(); } else closeMediaSocket(); });
 setTimeout(() => checkForUpdates(false), 15000);
 setInterval(() => checkForUpdates(false), UPDATE_EVERY);
 
