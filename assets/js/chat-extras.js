@@ -7,6 +7,7 @@
   Object.assign(translations.ru, {
     reply: 'Ответить', react: 'Реакция', pin: 'Закрепить', unpin: 'Открепить', copy: 'Копировать текст', replyingTo: 'Ответ на',
     cancelReply: 'Отменить ответ', pinned: 'Закреплено', typingOne: '{name} печатает…', typingMany: '{names} печатают…', typingDm: 'печатает…',
+    chatSound: 'Звук уведомлений…', chatSoundTitle: 'Звук уведомлений: {name}', chatSoundLabel: 'Звук:', chatVolume: 'Громкость:', soundNames: { notify: 'Новое сообщение (по умолчанию)', default: 'Уведомление', exclamation: 'Восклицание', navigation: 'Щелчок', logon: 'Вход в систему', ringin: 'Звонок', none: '(Нет)' }, play: 'Прослушать', ok: 'ОК', cancel: 'Отмена',
     searchChat: 'Поиск в чате', searchNone: 'Ничего не найдено', searchOf: '{n} из {total}', favoriteAdd: 'В избранное', favoriteRemove: 'Убрать из избранного',
     quickSwitch: 'Перейти к чату', quickHint: 'Имя чата или человека…', read: 'Прочитано', sent: 'Отправлено', messageActions: 'Действия',
     newMessagesLine: 'Новые сообщения', note: 'Заметка', notePlaceholder: 'Ваша заметка об этом человеке — её видите только вы', archive: 'В архив', unarchive: 'Вернуть из архива', mentionHint: 'Упомянуть',
@@ -15,6 +16,7 @@
   Object.assign(translations.en, {
     reply: 'Reply', react: 'React', pin: 'Pin', unpin: 'Unpin', copy: 'Copy text', replyingTo: 'Replying to',
     cancelReply: 'Cancel reply', pinned: 'Pinned', typingOne: '{name} is typing…', typingMany: '{names} are typing…', typingDm: 'typing…',
+    chatSound: 'Notification sound…', chatSoundTitle: 'Notification sound: {name}', chatSoundLabel: 'Sound:', chatVolume: 'Volume:', soundNames: { notify: 'New message (default)', default: 'Notification', exclamation: 'Exclamation', navigation: 'Click', logon: 'Windows Logon', ringin: 'Ring', none: '(None)' }, play: 'Play', ok: 'OK', cancel: 'Cancel',
     searchChat: 'Search in chat', searchNone: 'Nothing found', searchOf: '{n} of {total}', favoriteAdd: 'Add to favourites', favoriteRemove: 'Remove from favourites',
     quickSwitch: 'Go to chat', quickHint: 'Chat or person name…', read: 'Read', sent: 'Sent', messageActions: 'Actions',
     newMessagesLine: 'New messages', note: 'Note', notePlaceholder: 'Your note about this person — only you can see it', archive: 'Archive', unarchive: 'Unarchive', mentionHint: 'Mention',
@@ -333,7 +335,7 @@
     const item = event.target.closest('.chat-item[data-kind]'); if (!item) return; event.preventDefault(); closeMenu();
     const key = chatKey(item.dataset.kind, item.dataset.id);
     const menu = document.createElement('div'); menu.id = 'message-menu'; menu.className = 'message-menu'; menu.setAttribute('role', 'menu');
-    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button><button type="button" data-action="archive">${ICONS.archive}${esc(t(isArchived(key) ? 'unarchive' : 'archive'))}</button>`;
+    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button><button type="button" data-action="sound">${ICONS.bell}${esc(t('chatSound'))}</button><button type="button" data-action="archive">${ICONS.archive}${esc(t(isArchived(key) ? 'unarchive' : 'archive'))}</button>`;
     document.body.append(menu);
     const box = menu.getBoundingClientRect(); menu.style.left = `${Math.min(event.clientX, innerWidth - box.width - 4)}px`; menu.style.top = `${Math.min(event.clientY, innerHeight - box.height - 4)}px`;
     menu.onclick = click => {
@@ -342,8 +344,28 @@
       if (action === 'favorite') toggleFavorite(key);
       if (action === 'mute') toggleMuted(key);
       if (action === 'archive') toggleArchived(key);
+      if (action === 'sound') openChatSound(key, item.querySelector('.chat-name b')?.textContent?.trim() || '');
     };
   });
+  // Notification sound of one chat: a small XP dialog with the sound, Play and the volume.
+  function openChatSound(key, name) {
+    let dialog = $('#chat-sound-dialog');
+    if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'chat-sound-dialog'; dialog.className = 'xp-dialog chat-sound-dialog'; document.body.append(dialog); }
+    const own = chatSoundSettings()[key] || {};
+    const names = (translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru).soundNames;
+    dialog.innerHTML = `<div class="dialog-title">${esc(t('chatSoundTitle', { name }))}</div><div class="chat-sound-body"><label>${esc(t('chatSoundLabel'))}<span class="chat-sound-row"><select id="chat-sound-choice">${Object.entries(names).map(([value, label]) => `<option value="${value}"${(own.sound || 'notify') === value ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select><button type="button" class="xp-button" id="chat-sound-play">▶ ${esc(t('play'))}</button></span></label><label>${esc(t('chatVolume'))}<span class="chat-sound-row"><input id="chat-sound-volume" type="range" min="0" max="100" step="5" value="${Number.isFinite(Number(own.volume)) ? Number(own.volume) : 100}"><span id="chat-sound-volume-value"></span></span></label><div class="chat-sound-actions"><button type="button" class="xp-button" id="chat-sound-ok">${esc(t('ok'))}</button><button type="button" class="xp-button" id="chat-sound-cancel">${esc(t('cancel'))}</button></div></div>`;
+    const volume = dialog.querySelector('#chat-sound-volume'), value = dialog.querySelector('#chat-sound-volume-value');
+    const show = () => { value.textContent = `${volume.value}%`; }; show(); volume.oninput = show;
+    dialog.querySelector('#chat-sound-play').onclick = () => { const sound = dialog.querySelector('#chat-sound-choice').value; if (sound === 'none') return; const audio = playSound(sound); audio.volume = Math.min(1, audio.volume * Number(volume.value) / 100); };
+    dialog.querySelector('#chat-sound-cancel').onclick = () => dialog.close();
+    dialog.querySelector('#chat-sound-ok').onclick = () => {
+      const all = chatSoundSettings(); const sound = dialog.querySelector('#chat-sound-choice').value; const level = Number(volume.value);
+      if (sound === 'notify' && level === 100) delete all[key]; else all[key] = { sound, volume: level };
+      try { localStorage.setItem('nk_chat_sounds', JSON.stringify(all)); } catch {}
+      pushCompanionSettings(); dialog.close();
+    };
+    dialog.showModal();
+  }
   const originalEvents = openCompanionEvents;
   openCompanionEvents = () => {
     originalEvents();
