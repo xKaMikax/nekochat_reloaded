@@ -13,7 +13,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 /* The Catalog as Windows Update / Microsoft Update. */
 .wu .cp-menu { margin: 0; flex: none; }
 .wu-banner { position: relative; flex: none; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 18px; background: linear-gradient(90deg, #fff 0%, #fff 42%, #c9d3ee 100%); border-bottom: 1px solid #b9c3de; overflow: hidden; }
-.wu-globe { width: 48px; height: 48px; flex: none; }
+.wu-globe { width: 48px; height: 48px; flex: none; object-fit: contain; }
 .wu-brand { font: 400 30px 'Trebuchet MS', Tahoma, sans-serif; color: #222; white-space: nowrap; }
 .wu-tag { flex: 1; max-width: 300px; margin-left: 18px; color: #4a5a86; font: 14px 'Trebuchet MS', Tahoma, sans-serif; line-height: 1.15; }
 .wu-body { display: flex; flex: 1 1 auto; min-height: 0; background: #fff; }
