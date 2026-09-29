@@ -29,7 +29,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.8.0"
+VERSION = "0.9.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -54,6 +54,7 @@ TAGS = [
     {"name": "sync", "description": "Settings and read state shared between devices"},
     {"name": "status", "description": "Online, away, do-not-disturb and invisible statuses"},
     {"name": "chats", "description": "Reactions, pinned messages, typing and read receipts of rooms and direct chats"},
+    {"name": "games", "description": "Games between users (Reversi, Checkers, Backgammon, Hearts, Spades...): sessions with an ordered log of moves"},
     {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
 ]
@@ -234,7 +235,7 @@ def health():
 
 @app.get("/api/info", tags=["server"])
 def info():
-    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status"]}
+    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status", "games"]}
 
 
 @app.post("/link", tags=["account"])
@@ -400,10 +401,13 @@ def publish(server: str, event: dict[str, Any]) -> None:
     if _loop is None:
         return
     pair = dm_pair(event.get("chat", ""))
+    audience = event.get("_to")  # a list of user ids: only they get the event (never sent on)
     for queue, owner in list(_listeners.get(server, ())):
         if pair and owner not in pair:
             continue
-        data = dict(event)
+        if audience is not None and owner not in audience:
+            continue
+        data = {key: value for key, value in event.items() if key != "_to"}
         if pair:
             data["chat"] = f"dm:{pair[1] if owner == pair[0] else pair[0]}"
         _loop.call_soon_threadsafe(lambda q=queue, d=data: q.full() or q.put_nowait(d))
@@ -676,6 +680,141 @@ def get_presence(ids: str = "", account: sqlite3.Row = Depends(current_account))
         ).fetchall()
     seen = lambda row: 0 if row["hide_last_seen"] else row["last_seen"]
     return {str(row["nekochat_id"]): {"status": "offline", "client": "", "last_seen": seen(row)} if row["status"] == "invisible" else {"status": row["status"], "client": row["client"], "last_seen": seen(row)} for row in rows}
+
+
+# ---- games ------------------------------------------------------------------------------------
+# A game is a session with an ordered log. Clients send moves as entries ({kind, payload}); the server
+# numbers them (seq), keeps them and passes them on live over /events, so everyone replays the same
+# log and a player who joins late (or reopens the window) catches up with GET /games/<id>. The server
+# knows no game rules. An entry can be addressed to some players only (`to`): that is how a dealer
+# hands out hidden cards. Sessions live in memory and end after a few hours without moves.
+GAME_TTL = 6 * 3600
+MAX_GAME_ENTRIES = 3000
+MAX_GAME_PAYLOAD = 6000
+MAX_GAME_PLAYERS = 8
+MAX_OPEN_GAMES = 5
+_games: dict[str, dict[str, Any]] = {}
+_game_rate: dict[int, list[float]] = {}
+
+
+def sweep_games() -> None:
+    limit = time.time() - GAME_TTL
+    for game_id in [key for key, game in _games.items() if game["touched"] < limit or (game["closed"] and game["touched"] < time.time() - 60)]:
+        _games.pop(game_id, None)
+
+
+def player_name(account: sqlite3.Row) -> str:
+    profile = json.loads(account["profile"])
+    return str(profile.get("display_name") or profile.get("username") or account["nekochat_id"])[:60]
+
+
+def game_entry_visible(entry: dict[str, Any], user: int) -> bool:
+    return "to" not in entry or user in entry["to"] or entry["from"] == user
+
+
+def game_for(game_id: str, account: sqlite3.Row) -> dict[str, Any]:
+    game = _games.get(game_id)
+    if not game or game["server"] != account["server"]:
+        raise HTTPException(404, "No such game (it may have ended)")
+    return game
+
+
+def game_view(game: dict[str, Any], user: int, log: bool = True) -> dict[str, Any]:
+    view = {"id": game["id"], "game": game["game"], "chat": game["chat"], "host": game["host"], "host_name": game["host_name"], "players": sorted(game["audience"]),
+            "closed": game["closed"], "created": game["created"], "seq": game["seq"]}
+    if log:
+        view["log"] = [entry for entry in game["log"] if game_entry_visible(entry, user)]
+    return view
+
+
+class GameIn(BaseModel):
+    game: str = Field(pattern=r"^[a-z0-9-]{1,40}$", description="The add-on's id, e.g. `reversi`")
+    chat: str = Field(max_length=40, description='Where to invite: "dm:<user id>" or "room:<id>"')
+
+
+class GameEntryIn(BaseModel):
+    kind: str = Field(pattern=r"^[a-z0-9_-]{1,24}$")
+    payload: Any = None
+    to: list[int] | None = Field(default=None, max_length=MAX_GAME_PLAYERS, description="Only these players get the entry (default: everyone in the game)")
+
+
+@app.post("/games", tags=["games"], status_code=201)
+def create_game(payload: GameIn, account: sqlite3.Row = Depends(current_account)):
+    """Starts a game and invites the chat: the other person of a direct chat, or the members of a room (the
+    invitation goes to every Reloaded user of your server; clients show it to the room's members)."""
+    sweep_games()
+    me_id = int(account["nekochat_id"])
+    kind, _, target = payload.chat.partition(":")
+    if kind not in ("dm", "room") or not target.isdigit():
+        raise HTTPException(400, 'chat must be "dm:<user id>" or "room:<id>"')
+    mine = sorted((game for game in _games.values() if game["host"] == me_id and game["server"] == account["server"] and not game["closed"]), key=lambda game: game["touched"])
+    for old in mine[: max(0, len(mine) - MAX_OPEN_GAMES + 1)]:
+        old["closed"] = True
+        publish(old["server"], {"type": "game_end", "session": old["id"], "_to": sorted(old["audience"])})
+    game_id = secrets.token_urlsafe(9)
+    name = player_name(account)
+    audience = {me_id, int(target)} if kind == "dm" else {me_id}
+    _games[game_id] = {"id": game_id, "server": account["server"], "game": payload.game, "chat": payload.chat, "host": me_id, "host_name": name, "audience": audience,
+                       "log": [], "seq": 0, "closed": False, "created": now(), "touched": time.time()}
+    invite = {"type": "game_invite", "session": game_id, "game": payload.game, "from": me_id, "name": name}
+    if kind == "dm":
+        publish(account["server"], {**invite, "chat": f"dm:{min(me_id, int(target))}-{max(me_id, int(target))}"})
+    else:
+        publish(account["server"], {**invite, "chat": f"room:{int(target)}"})
+    return game_view(_games[game_id], me_id)
+
+
+@app.get("/games/{game_id}", tags=["games"])
+def get_game(game_id: str, account: sqlite3.Row = Depends(current_account)):
+    """The game and its log (the entries meant for you), for someone who joins late."""
+    return game_view(game_for(game_id, account), int(account["nekochat_id"]))
+
+
+@app.post("/games/{game_id}/send", tags=["games"])
+def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Depends(current_account)):
+    """Adds an entry to the log and passes it on to the players at once. `join` makes you a player."""
+    game = game_for(game_id, account)
+    me_id = int(account["nekochat_id"])
+    if game["closed"]:
+        raise HTTPException(409, "This game has ended")
+    stamps = [stamp for stamp in _game_rate.get(me_id, []) if stamp > time.time() - 2]
+    if len(stamps) >= 40:
+        raise HTTPException(429, "Too many moves at once")
+    _game_rate[me_id] = stamps + [time.time()]
+    if len(json.dumps(entry.payload)) > MAX_GAME_PAYLOAD:
+        raise HTTPException(413, "Entry too large")
+    if entry.kind == "join":
+        if me_id not in game["audience"] and len(game["audience"]) >= MAX_GAME_PLAYERS:
+            raise HTTPException(409, "The game is full")
+        game["audience"].add(me_id)
+    elif me_id not in game["audience"]:
+        raise HTTPException(403, "Join the game first")
+    if len(game["log"]) >= MAX_GAME_ENTRIES:
+        raise HTTPException(409, "This game is too long")
+    game["seq"] += 1
+    item: dict[str, Any] = {"seq": game["seq"], "from": me_id, "name": player_name(account), "kind": entry.kind, "payload": entry.payload, "at": now()}
+    audience = sorted(game["audience"])
+    if entry.to is not None:
+        item["to"] = sorted({int(user) for user in entry.to if int(user) in game["audience"]})
+        audience = sorted(set(item["to"]) | {me_id})
+    game["log"].append(item)
+    game["touched"] = time.time()
+    publish(game["server"], {"type": "game", "session": game_id, **item, "_to": audience})
+    return {"seq": item["seq"]}
+
+
+@app.delete("/games/{game_id}", tags=["games"])
+def end_game(game_id: str, account: sqlite3.Row = Depends(current_account)):
+    """Ends the game (the host, or anyone in a game of two)."""
+    game = game_for(game_id, account)
+    me_id = int(account["nekochat_id"])
+    if me_id != game["host"] and me_id not in game["audience"]:
+        raise HTTPException(403, "Not your game")
+    if not game["closed"]:
+        game["closed"] = True
+        game["touched"] = time.time()
+        publish(game["server"], {"type": "game_end", "session": game_id, "_to": sorted(game["audience"])})
+    return {"ok": True}
 
 
 # ---- backups ---------------------------------------------------------------------------------
