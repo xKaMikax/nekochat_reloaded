@@ -1,0 +1,57 @@
+/* The HTML Help viewer of Windows XP: a toolbar with labels, the tabbed navigation pane on the
+   left and the white topic pane on the right. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.hh-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.hh-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.hh-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.hh-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.hh { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; background: var(--xp-theme-window, #ece9d8); color: #000; }
+.hh-toolbar { display: flex; gap: 2px; padding: 2px 4px; border-bottom: 1px solid #d6d2c2; }
+.hh-toolbar button { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; min-width: 44px; padding: 2px 4px; border: 1px solid transparent; border-radius: 3px; background: none; color: #000; font: inherit; }
+.hh-toolbar button img { width: 20px; height: 20px; }
+.hh-toolbar button:not(:disabled):hover { border-color: #cecec3; background: linear-gradient(#fff, #f0efe8); }
+.hh-toolbar button:disabled { color: #aca899; }
+.hh-toolbar button:disabled img { filter: grayscale(1) opacity(.5); }
+.hh-body { display: flex; flex: 1; min-height: 0; gap: 4px; padding: 4px; }
+.hh-nav { display: flex; flex: none; width: 230px; flex-direction: column; min-height: 0; }
+.hh-nav-hidden .hh-nav { display: none; }
+.hh-tabs { display: flex; gap: 1px; padding-left: 2px; }
+.hh-tabs button { position: relative; top: 1px; height: 20px; padding: 0 7px; border: 1px solid #919b9c; border-bottom: 0; border-radius: 3px 3px 0 0; background: linear-gradient(#fff, #ecebe5); color: #000; font: inherit; }
+.hh-tabs button.active { z-index: 1; height: 22px; top: 1px; border-top: 2px solid #ffc83c; background: #fcfcfe; }
+.hh-panel { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 6px; padding: 6px; border: 1px solid #919b9c; background: #fcfcfe; }
+.hh-tree, .hh-list { flex: 1; min-height: 0; overflow: auto; padding: 3px; border: 1px solid #7f9db9; background: #fff; }
+.hh-node { display: flex; align-items: center; gap: 4px; padding: 1px 2px; color: #000; text-decoration: none; white-space: nowrap; }
+.hh-node img { flex: none; width: 16px; height: 16px; }
+.hh-node:hover { color: #0000ee; text-decoration: underline; }
+.hh-node.selected { background: #ece9d8; }
+.hh-children { padding-left: 18px; }
+.hh-list a { display: block; padding: 1px 3px; color: #000; text-decoration: none; }
+.hh-list a.selected, .hh-list a:hover { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.hh-label { display: flex; flex-direction: column; gap: 3px; }
+.hh-label input { height: 20px; box-sizing: border-box; border: 1px solid #7f9db9; font: inherit; }
+.hh-panel-buttons { display: flex; justify-content: flex-end; }
+.hh-panel-buttons button { min-width: 75px; height: 23px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: inherit; }
+.hh-count { margin: 0; }
+/* The topic pane, styled like the coUA.css of Windows XP's Help. */
+.hh-topic { flex: 1; min-width: 0; overflow: auto; padding: 10px 16px; border: 1px solid #919b9c; background: #fff; font: 11px Verdana, Tahoma, sans-serif; line-height: 1.4; }
+.hh-topic h1 { margin: 6px 0 10px; font: bold 13px Verdana, Tahoma, sans-serif; }
+.hh-topic .hh-proc { margin: 6px 0 8px; font-weight: bold; font-size: 12px; }
+.hh-topic .hh-note { margin: 12px 0 4px; padding-left: 20px; background: url('../images/hh/note.png') 0 50% no-repeat; font-weight: bold; }
+.hh-topic ol, .hh-topic ul { padding-left: 22px; }
+.hh-topic li { margin: 3px 0; }
+.hh-topic a { color: #0000ee; }
+.hh-expand { margin: 8px 0 2px; }
+.hh-expand a { display: inline-flex; align-items: center; gap: 6px; color: #000; font-weight: bold; text-decoration: none; }
+.hh-expand a:hover { color: #0000ee; text-decoration: underline; }
+.hh-expanded { padding-left: 18px; }
+.hh-table { border-collapse: collapse; }
+.hh-table th, .hh-table td { padding: 3px 10px 3px 0; border-bottom: 1px solid #ddd; text-align: left; vertical-align: top; }
+.hh-related { margin-top: 16px; }
+.hh-related-list { margin: 2px 0; padding: 4px 22px; border: 1px solid #ccc; background: #fffff0; }
+.hh-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; min-width: 150px; padding: 2px; border: 1px solid #aca899; background: #fff; box-shadow: 2px 2px 3px rgba(0, 0, 0, .3); }
+.hh-menu button { height: 20px; padding: 0 20px; border: 0; background: none; font: inherit; text-align: left; }
+.hh-menu button:hover:not(:disabled) { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.hh-menu button:disabled { color: #aca899; }
+.hh-menu hr { margin: 3px 1px; border: 0; border-top: 1px solid #aca899; }
+@media (max-width: 560px) { .hh-body { flex-direction: column; } .hh-nav { width: auto; max-height: 40%; } }
+@media print { .hh-toolbar, .hh-nav, .xp-titlebar { display: none !important; } .hh-topic { border: 0; } }

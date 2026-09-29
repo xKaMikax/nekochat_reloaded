@@ -7,10 +7,10 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&a
 const words = {
   ru: { title: 'Центр справки и поддержки', back: 'Назад', forward: 'Вперёд', home: 'Домой', index: 'Указатель', favorites: 'Избранное', history: 'Журнал', support: 'Поддержка', options: 'Параметры', search: 'Поиск', searchHint: 'Введите слово и нажмите стрелку', addFavorite: 'Добавить в избранное', changeView: 'Изменить вид', print: 'Печать...', locate: 'Найти в содержании', close: 'Закрыть',
     contents: 'Разделы справки', seeAlso: 'См. также', pickTopic: 'Выберите раздел справки', tasks: 'Выберите задание', results: 'Результаты поиска', noResults: 'Ничего не найдено. Попробуйте другое слово.', indexTitle: 'Указатель', indexHint: 'Введите слово, чтобы найти его в указателе:', favoritesTitle: 'Избранное', favoritesEmpty: 'В избранном пока ничего нет. Откройте раздел и нажмите «Добавить в избранное».', historyTitle: 'Журнал', historyEmpty: 'Вы ещё не открывали разделы справки.', remove: 'Удалить', added: 'Раздел добавлен в избранное.', optionsTitle: 'Параметры', optionsText: 'Язык справки совпадает с языком приложения (Панель управления → Язык и региональные стандарты). Размер шрифта задаётся в Панели управления → Экран → Оформление.',
-    taskUpdates: 'Проверить обновления', taskControl: 'Открыть Панель управления', taskCatalog: 'Открыть Каталог', taskBug: 'Сообщить об ошибке', seeKeys: 'Сочетания клавиш', seeTrouble: 'Устранение неполадок', seeGithub: 'Nekochat Reloaded на GitHub' },
+    taskUpdates: 'Проверить обновления', askTitle: 'Помощь', askBug: 'Сообщить о проблеме в <b>разделе Issues</b> на GitHub', askProject: 'Узнать о новых версиях на <b>странице Nekochat Reloaded</b>', taskUpdates2: 'Поддерживайте клиент в актуальном состоянии с помощью <b>Автоматического обновления</b>', taskControl2: 'Настройте внешний вид и звуки в <b>Панели управления</b>', taskCatalog2: 'Установите темы, курсоры, звуки и помощников из <b>Каталога</b>', taskBackup: 'Сохраните настройки с помощью <b>Архивации</b>', didYouKnow: 'А вы знаете?', suggested: 'Предлагаемые разделы', helpTopics: 'Разделы справки', tipsLink: 'Советы', browseTitle: 'Просмотр результатов поиска', browse1: 'Щёлкните результат, чтобы открыть раздел.', browse2: 'Щёлкайте заголовки, чтобы увидеть результаты из разных источников.', browse3: 'Не нашли нужного? Попробуйте другое слово.', browse4: 'Ищете способ быстрее находить разделы? Попробуйте', options1: 'С помощью параметров можно настроить Центр справки и поддержки.', options2: 'Измените, как выглядит Центр справки и поддержки.', options3: 'Настройте поиск, чтобы находить нужное быстрее.', optionsCenter: 'Изменить параметры Центра справки и поддержки', optionsSearch: 'Настроить параметры поиска', optionsSearchText: 'Выберите, как искать разделы справки.', optHighlight: 'Подсвечивать найденные слова', optTitle: 'Искать только в заголовках и ключевых словах', taskControl: 'Открыть Панель управления', taskCatalog: 'Открыть Каталог', taskBug: 'Сообщить об ошибке', seeKeys: 'Сочетания клавиш', seeTrouble: 'Устранение неполадок', seeGithub: 'Nekochat Reloaded на GitHub' },
   en: { title: 'Help and Support Center', back: 'Back', forward: 'Forward', home: 'Home', index: 'Index', favorites: 'Favorites', history: 'History', support: 'Support', options: 'Options', search: 'Search', searchHint: 'Type a word and click the arrow', addFavorite: 'Add to Favorites', changeView: 'Change View', print: 'Print...', locate: 'Locate in Contents', close: 'Close',
     contents: 'Help Contents', seeAlso: 'See Also', pickTopic: 'Pick a Help topic', tasks: 'Ask for assistance', results: 'Search Results', noResults: 'Nothing found. Try another word.', indexTitle: 'Index', indexHint: 'Type in the keyword to find:', favoritesTitle: 'Favorites', favoritesEmpty: 'There is nothing in Favorites yet. Open a topic and click Add to Favorites.', historyTitle: 'History', historyEmpty: 'You have not opened any Help topics yet.', remove: 'Remove', added: 'The topic was added to Favorites.', optionsTitle: 'Options', optionsText: 'Help uses the language of the app (Control Panel → Regional and Language Options). The font size is set in Control Panel → Display → Appearance.',
-    taskUpdates: 'Check for updates', taskControl: 'Open Control Panel', taskCatalog: 'Open the Catalog', taskBug: 'Report a problem', seeKeys: 'Keyboard shortcuts', seeTrouble: 'Troubleshooting', seeGithub: 'Nekochat Reloaded on GitHub' },
+    taskUpdates: 'Check for updates', askTitle: 'Ask for assistance', askBug: 'Report a problem in the <b>Issues</b> on GitHub', askProject: 'Read about new versions on the <b>Nekochat Reloaded page</b>', taskUpdates2: 'Keep the client up-to-date with <b>Automatic Updates</b>', taskControl2: 'Change the look and sounds in the <b>Control Panel</b>', taskCatalog2: 'Install themes, cursors, sounds and assistants from the <b>Catalog</b>', taskBackup: 'Save your settings with <b>Backup</b>', didYouKnow: 'Did you know?', suggested: 'Suggested Topics', helpTopics: 'Help Topics', tipsLink: 'Tips', browseTitle: 'Browse the search results', browse1: 'Click a result to display the information.', browse2: 'Click the headers to see search results from different sources.', browse3: 'Didn\'t find what you\'re looking for? Try another word.', browse4: 'Looking for more ways to find Help topics quickly and easily? Try the', options1: 'Use options to define settings and configure Help and Support Center.', options2: 'Change how you use and view Help and Support Center.', options3: 'Set search options to find help faster.', optionsCenter: 'Change Help and Support Center options', optionsSearch: 'Set search options', optionsSearchText: 'Choose how Help topics are searched.', optHighlight: 'Turn on search highlight', optTitle: 'Search in titles and keywords only', taskControl: 'Open Control Panel', taskCatalog: 'Open the Catalog', taskBug: 'Report a problem', seeKeys: 'Keyboard shortcuts', seeTrouble: 'Troubleshooting', seeGithub: 'Nekochat Reloaded on GitHub' },
 };
 // Topics: id, title, text (HTML, may link to other topics with data-topic), children.
 const TOPICS = {
@@ -82,18 +82,50 @@ function tree(current) {
     + `<section class="cp-box help-box"><h2><span>${esc(t('seeAlso'))}</span></h2><div class="cp-box-body"><button class="cp-link" type="button" data-topic="keys"><img src="assets/images/help/topic.png" alt=""><span>${esc(t('seeKeys'))}</span></button><button class="cp-link" type="button" data-topic="trouble"><img src="assets/images/help/topic.png" alt=""><span>${esc(t('seeTrouble'))}</span></button><button class="cp-link" type="button" data-link="github"><img src="assets/images/help/topic.png" alt=""><span>${esc(t('seeGithub'))}</span></button></div></section>`;
 }
 function remember(id) { const list = stored('nk_help_history', []).filter(item => item !== id); list.unshift(id); save('nk_help_history', list.slice(0, 30)); }
+// Home, like XP's: no task pane; "Pick a Help topic" in groups with big icons, then "Ask for
+// assistance", "Pick a task" and "Did you know?" on the right.
+const HOME_GROUPS = [['users-48', ['start', 'privacy', 'backups']], ['network-48', ['chats', 'calls', 'assistant']], ['appearance-48', ['control', 'catalog']], ['performance-48', ['keys', 'trouble']]];
+const TIPS = {
+  ru: ['Ctrl+K открывает любой чат по названию.', 'Щёлкните помощника, чтобы найти сообщения во всех чатах сразу.', 'Шапку чата можно вытащить мышью — чат откроется в своём окне.', 'Правой кнопкой по чату можно выбрать для него свой звук уведомлений.', 'В теме Classic есть 22 классические цветовые схемы Windows XP.', 'Вызовите друга на «Сапёра» правой кнопкой по чату.'],
+  en: ['Ctrl+K opens any chat by its name.', 'Click the assistant to search messages in all chats at once.', 'Drag the chat header out to open the chat in its own window.', 'Right-click a chat to give it its own notification sound.', 'The Classic theme has the 22 classic colour schemes of Windows XP.', 'Challenge a friend to Minesweeper from a chat\'s right-click menu.'],
+};
+const searchOptions = () => ({ highlight: true, titleOnly: false, ...stored('nk_help_search', {}) });
+let lastResults = null; // { query, suggested: [ids], topics: [ids] } shown in the pane while you read them
+function resultsPane(results) {
+  const list = (ids, key) => `<div class="help-results-group"><h3>${esc(t(key))} (${ids.length})</h3>${ids.length ? `<ol>${ids.map(id => `<li><a href="#" data-topic="${id}">${esc(topicById(id)?.title || id)}</a></li>`).join('')}</ol>` : ''}</div>`;
+  return `<section class="cp-box help-box help-results"><h2><span>${esc(t('results'))}</span><small>${esc(t('tipsLink'))}</small></h2><div class="cp-box-body">${list(results.suggested, 'suggested')}${list(results.topics, 'helpTopics')}</div></section>`;
+}
+function optionsPane() {
+  return `<section class="cp-box help-box"><h2><span>${esc(t('optionsTitle'))}</span></h2><div class="cp-box-body"><button class="cp-link" type="button" data-page="options-center"><img src="assets/images/help/topic.png" alt=""><span>${esc(t('optionsCenter'))}</span></button><button class="cp-link" type="button" data-page="options-search"><img src="assets/images/help/topic.png" alt=""><span>${esc(t('optionsSearch'))}</span></button></div></section>`;
+}
+function highlight(html, query) {
+  if (!query || !searchOptions().highlight) return html;
+  const pattern = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return html.split(/(<[^>]+>)/).map(part => part.startsWith('<') ? part : part.replace(pattern, '<mark>$1</mark>')).join('');
+}
 function render() {
   const pageNode = $('#hc-page'); const [kind, ...rest] = page.split(':'); const arg = rest.join(':');
-  let current = kind === 'topic' ? arg : '';
+  const center = document.querySelector('.help-center');
+  center.classList.toggle('help-home-view', kind === 'home' || !kind);
+  pageNode.className = 'help-page';
   if (kind === 'topic' && topicById(arg)?.children) open.add(arg);
   if (kind === 'topic' && topicById(arg)?.parent) open.add(topicById(arg).parent);
-  $('#hc-pane').innerHTML = tree(current);
+  const fromSearch = kind === 'topic' && lastResults && [...lastResults.suggested, ...lastResults.topics].includes(arg);
+  $('#hc-pane').innerHTML = kind === 'search' ? '' : fromSearch ? resultsPane(lastResults) : kind.startsWith('options') ? optionsPane() : tree(kind === 'topic' ? arg : '');
   if (kind === 'topic' && topicById(arg)) {
     const topic = topicById(arg); remember(topic.id);
-    pageNode.innerHTML = `<h1>${esc(topic.title)}</h1>${topic.text}${topic.children ? `<ul class="help-links">${topic.children.map(child => `<li><a href="#" data-topic="${child.id}">${esc(child.title)}</a></li>`).join('')}</ul>` : ''}`;
+    // A topic with sub-topics is an overview on blue; a topic itself is a white page.
+    if (!topic.children) pageNode.classList.add('help-white');
+    pageNode.innerHTML = `${topic.children ? '' : '<img class="help-logo" src="assets/images/nekochat_icon.png" alt="">'}<h1>${esc(topic.title)}</h1>${highlight(topic.text, fromSearch ? lastResults.query : '')}${topic.children ? `<ul class="help-links">${topic.children.map(child => `<li><a href="#" data-topic="${child.id}">${esc(child.title)}</a></li>`).join('')}</ul>` : ''}`;
   } else if (kind === 'search') {
-    const needle = arg.toLowerCase(); const hits = flat().filter(topic => [topic.title, topic.text.replace(/<[^>]+>/g, ' '), ...(topic.keys || [])].join(' ').toLowerCase().includes(needle));
-    pageNode.innerHTML = `<h1>${esc(t('results'))}: «${esc(arg)}»</h1>${hits.length ? `<ul class="help-links">${hits.map(topic => `<li><a href="#" data-topic="${topic.id}">${esc(topic.title)}</a></li>`).join('')}</ul>` : `<p>${esc(t('noResults'))}</p>`}`;
+    const needle = arg.toLowerCase(); const { titleOnly } = searchOptions();
+    const inTitle = topic => topic.title.toLowerCase().includes(needle) || (topic.keys || []).some(key => key.toLowerCase().includes(needle));
+    const inText = topic => topic.text.replace(/<[^>]+>/g, ' ').toLowerCase().includes(needle);
+    const suggested = flat().filter(inTitle).map(topic => topic.id);
+    const topics = titleOnly ? [] : flat().filter(topic => !suggested.includes(topic.id) && inText(topic)).map(topic => topic.id);
+    lastResults = { query: arg, suggested, topics };
+    $('#hc-pane').innerHTML = resultsPane(lastResults);
+    pageNode.innerHTML = `<h1>${esc(t('browseTitle'))}</h1><p>${esc(t('browse1'))}</p><p>${esc(t('browse2'))}</p><p>${esc(t('browse3'))}</p><p>${esc(t('browse4'))} <a href="#" data-page="index">${esc(t('index'))}</a>.</p>`;
   } else if (kind === 'index') {
     const entries = flat().flatMap(topic => (topic.keys || []).map(key => [key, topic])).sort((a, b) => a[0].localeCompare(b[0], language));
     pageNode.innerHTML = `<h1>${esc(t('indexTitle'))}</h1><p>${esc(t('indexHint'))}</p><input class="help-index-filter" type="search" id="hc-index-filter"><ul class="help-index">${entries.map(([key, topic]) => `<li data-key="${esc(key)}"><a href="#" data-topic="${topic.id}">${esc(key)}</a> <small>— ${esc(topic.title)}</small></li>`).join('')}</ul>`;
@@ -102,13 +134,24 @@ function render() {
     const list = stored(kind === 'favorites' ? 'nk_help_favorites' : 'nk_help_history', []).map(topicById).filter(Boolean);
     pageNode.innerHTML = `<h1>${esc(t(kind === 'favorites' ? 'favoritesTitle' : 'historyTitle'))}</h1>${list.length ? `<ul class="help-links">${list.map(topic => `<li><a href="#" data-topic="${topic.id}">${esc(topic.title)}</a>${kind === 'favorites' ? ` <button type="button" class="help-remove" data-remove="${topic.id}">${esc(t('remove'))}</button>` : ''}</li>`).join('')}</ul>` : `<p>${esc(t(kind === 'favorites' ? 'favoritesEmpty' : 'historyEmpty'))}</p>`}`;
   } else if (kind === 'options') {
-    pageNode.innerHTML = `<h1>${esc(t('optionsTitle'))}</h1><p>${esc(t('optionsText'))}</p>`;
+    pageNode.innerHTML = `<h1>${esc(t('optionsTitle'))}</h1><p>${esc(t('options1'))}</p><p>${esc(t('options2'))}</p><p>${esc(t('options3'))}</p>`;
+  } else if (kind === 'options-center') {
+    pageNode.classList.add('help-white');
+    pageNode.innerHTML = `<h1>${esc(t('optionsCenter'))}</h1><p>${esc(t('optionsText'))}</p><p><a href="#" data-link="control">${esc(t('taskControl'))}</a></p>`;
+  } else if (kind === 'options-search') {
+    const options = searchOptions(); pageNode.classList.add('help-white');
+    pageNode.innerHTML = `<h1>${esc(t('optionsSearch'))}</h1><p>${esc(t('optionsSearchText'))}</p><label class="help-check"><input type="checkbox" id="hc-opt-highlight"${options.highlight ? ' checked' : ''}> ${esc(t('optHighlight'))}</label><label class="help-check"><input type="checkbox" id="hc-opt-title"${options.titleOnly ? ' checked' : ''}> ${esc(t('optTitle'))}</label>`;
+    pageNode.querySelectorAll('input').forEach(input => { input.onchange = () => save('nk_help_search', { highlight: $('#hc-opt-highlight').checked, titleOnly: $('#hc-opt-title').checked }); });
   } else {
     page = 'home';
-    pageNode.innerHTML = `<h1>${esc(t('pickTopic'))}</h1><div class="help-home"><ul class="help-home-topics">${topics().map(topic => `<li><img src="${cpIcon(topic.icon)}" alt=""><a href="#" data-topic="${topic.id}">${esc(topic.title)}</a></li>`).join('')}</ul><div><h2>${esc(t('tasks'))}</h2><ul class="help-home-tasks"><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="updates">${esc(t('taskUpdates'))}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="control">${esc(t('taskControl'))}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="catalog">${esc(t('taskCatalog'))}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="bug">${esc(t('taskBug'))}</a></li></ul></div></div>`;
+    const tips = TIPS[language]; const tip = tips[Math.floor(Math.random() * tips.length)];
+    pageNode.innerHTML = `<div class="help-home"><div><h1>${esc(t('pickTopic'))}</h1>${HOME_GROUPS.map(([icon, ids]) => `<div class="help-home-group"><img src="${cpIcon(icon)}" alt=""><ul>${ids.map(id => `<li><a href="#" data-topic="${id}">${esc(topicById(id)?.title || id)}</a></li>`).join('')}</ul></div>`).join('')}</div>`
+      + `<div><h1>${esc(t('askTitle'))}</h1><ul class="help-home-tasks"><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="bug">${t('askBug')}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="github">${t('askProject')}</a></li></ul>`
+      + `<h1>${esc(t('tasks'))}</h1><ul class="help-home-tasks"><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="updates">${t('taskUpdates2')}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="control">${t('taskControl2')}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="catalog">${t('taskCatalog2')}</a></li><li><img src="assets/images/help/arrow.png" alt=""><a href="#" data-link="backup">${t('taskBackup')}</a></li></ul>`
+      + `<h1>${esc(t('didYouKnow'))}</h1><p class="help-tip">${esc(tip)}</p></div></div>`;
   }
   $('#hc-back').disabled = !back.length; $('#hc-forward').disabled = !forward.length;
-  $('#hc-add-favorite').disabled = kind !== 'topic'; $('#hc-locate').disabled = kind !== 'topic';
+  $('#hc-add-favorite').disabled = kind !== 'topic'; $('#hc-locate').disabled = kind !== 'topic'; $('#hc-print').disabled = kind !== 'topic';
 }
 const LINKS = {
   github: () => window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener'),
@@ -116,6 +159,7 @@ const LINKS = {
   updates: () => { try { localStorage.setItem('nk_update_check', String(Date.now())); } catch {} },
   control: () => controls.openControlPanel?.(),
   catalog: () => controls.openThemeBrowser?.(),
+  backup: () => (controls.openApplet ? controls.openApplet('backups') : controls.openThemeSettings?.()),
 };
 document.addEventListener('click', event => {
   const toggle = event.target.closest('[data-toggle]');
@@ -124,6 +168,7 @@ document.addEventListener('click', event => {
   if (remove) { save('nk_help_favorites', stored('nk_help_favorites', []).filter(id => id !== remove.dataset.remove)); render(); return; }
   const topic = event.target.closest('[data-topic]'); if (topic) { event.preventDefault(); go(`topic:${topic.dataset.topic}`); return; }
   const link = event.target.closest('[data-link]'); if (link) { event.preventDefault(); LINKS[link.dataset.link]?.(); return; }
+  const target = event.target.closest('[data-page]'); if (target) { event.preventDefault(); go(target.dataset.page); return; }
   const header = event.target.closest('.cp-box h2'); if (header) header.parentElement.classList.toggle('collapsed');
 });
 $('#hc-back').onclick = () => step(back, forward);
@@ -138,7 +183,7 @@ $('#hc-search').onsubmit = event => { event.preventDefault(); const query = $('#
 $('#hc-add-favorite').onclick = () => { const id = page.split(':')[1]; if (!id) return; const list = stored('nk_help_favorites', []).filter(item => item !== id); list.unshift(id); save('nk_help_favorites', list); window.nkPlaySound?.('default'); };
 $('#hc-view').onclick = () => document.querySelector('.help-center').classList.toggle('help-pane-hidden');
 $('#hc-print').onclick = () => window.print();
-$('#hc-locate').onclick = () => { document.querySelector('.help-center').classList.remove('help-pane-hidden'); render(); document.querySelector('.help-node.selected')?.scrollIntoView({ block: 'center' }); };
+$('#hc-locate').onclick = () => { document.querySelector('.help-center').classList.remove('help-pane-hidden'); lastResults = null; render(); document.querySelector('.help-node.selected')?.scrollIntoView({ block: 'center' }); };
 document.addEventListener('keydown', event => { if (event.altKey && event.key === 'ArrowLeft') step(back, forward); if (event.altKey && event.key === 'ArrowRight') step(forward, back); });
 controls.onHelpTopic?.(topic => go(`topic:${topic}`));
 $('#close').onclick = () => controls.close();

@@ -181,7 +181,7 @@ function openGame(owner, options = {}) {
   const query = { ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) };
   if (gameWindow && !gameWindow.isDestroyed()) gameWindow.close();
   const [width, height] = { intermediate: [300, 390], expert: [530, 390] }[level] || [230, 320];
-  gameWindow = new BrowserWindow({ title: 'Minesweeper', width, height, minWidth: 200, minHeight: 260, resizable: true, parent: owner, frame: false, transparent: false, backgroundColor: '#c0c0c0', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  gameWindow = new BrowserWindow({ title: 'Minesweeper', width, height, minWidth: 120, minHeight: 150, resizable: true, parent: owner, frame: false, transparent: false, backgroundColor: '#c0c0c0', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
   gameWindow.on('closed', () => { gameWindow = null; });
   gameWindow.loadFile(path.join(__dirname, 'assets', 'html', 'minesweeper.html'), { query });
 }
@@ -193,6 +193,14 @@ function openAbout(owner, appName) {
   aboutWindow = new BrowserWindow({ title: 'About', width: 420, height: 380, minWidth: 380, minHeight: 340, resizable: false, parent: owner || undefined, frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
   aboutWindow.on('closed', () => { aboutWindow = null; });
   aboutWindow.loadFile(path.join(__dirname, 'assets', 'html', 'about.html'), { query: { app: name } });
+}
+// The HTML Help viewer of XP, for a program's own Help (Minesweeper).
+let helpViewerWindow;
+function openHelpViewer(owner) {
+  if (helpViewerWindow && !helpViewerWindow.isDestroyed()) { helpViewerWindow.focus(); return; }
+  helpViewerWindow = new BrowserWindow({ title: 'Help', width: 620, height: 460, minWidth: 380, minHeight: 300, resizable: true, parent: owner || undefined, frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  helpViewerWindow.on('closed', () => { helpViewerWindow = null; });
+  helpViewerWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_viewer.html'));
 }
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
@@ -1088,6 +1096,7 @@ app.whenReady().then(async () => {
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
   ipcMain.on('help:open', (e, topic) => openHelp(windowOwner(e), topic));
+  ipcMain.on('help-viewer:open', e => openHelpViewer(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('about:open', (e, appName) => openAbout(windowOwner(e), appName));
   ipcMain.on('game:open', (e, options) => openGame(windowOwner(e), options && typeof options === 'object' ? options : {}));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));

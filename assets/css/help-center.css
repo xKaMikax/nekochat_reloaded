@@ -50,11 +50,41 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .help-links li { margin: 4px 0; }
 .help-table { border-collapse: collapse; }
 .help-table td { padding: 4px 16px 4px 0; border-bottom: 1px solid rgba(255, 255, 255, .25); }
-.help-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
-.help-home ul { list-style: none; padding: 0; margin: 0; }
-.help-home-topics li, .help-home-tasks li { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
-.help-home-topics img { width: 32px; height: 32px; }
-.help-home-tasks img { width: 20px; height: 20px; }
+/* Home, like XP's: no task pane and no page toolbar; topic groups on the left, assistance,
+   tasks and a tip on the right. */
+.help-home-view .help-pane, .help-home-view .help-actions { display: none; }
+.help-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 10px 28px; }
+.help-home h1 { margin: 2px 0 14px; color: var(--xp-cp-title, #d6dff5); font-size: 20px; }
+.help-home ul { margin: 0; }
+.help-home-group { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 20px; }
+.help-home-group img { flex: none; width: 48px; height: 48px; }
+.help-home-group ul { padding-left: 16px; list-style: square; }
+.help-home-group li { margin: 0 0 4px; }
+.help-home-group a, .help-home-tasks a { color: #fff; font-weight: bold; text-decoration: none; }
+.help-home-group a:hover, .help-home-tasks a:hover { text-decoration: underline; }
+.help-home-tasks { padding: 0; list-style: none; }
+.help-home-tasks li { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; }
+.help-home-tasks a { font-weight: normal; }
+.help-home-tasks img { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+.help-tip { color: #e8eeff; }
+/* A topic itself is a white page with dark text, like XP's; overviews stay blue. */
+.help-page.help-white { position: relative; background: #fff; color: #000; }
+.help-page.help-white h1 { color: #000; font: bold 15px Verdana, Tahoma, sans-serif; }
+.help-page.help-white h3 { color: #000; }
+.help-page.help-white a { color: #0000ee; }
+.help-page.help-white code { background: #f0f0f0; }
+.help-page.help-white .help-table td { border-bottom-color: #ddd; }
+.help-logo { position: absolute; top: 12px; right: 16px; width: 32px; height: 32px; object-fit: contain; }
+.help-page mark { background: #ffff66; color: #000; }
+/* Search results in the task pane, like XP's. */
+.help-results h2 { justify-content: space-between; }
+.help-results h2 small { margin-right: 8px; font-weight: bold; }
+.help-results .cp-box-body { gap: 0 !important; padding: 0 !important; background: #fff; }
+.help-results-group h3 { margin: 0; padding: 4px 10px; border-bottom: 1px solid #d6d2c2; background: #f1efe2; font: 11px Tahoma, sans-serif; }
+.help-results-group ol { margin: 6px 0; padding-left: 30px; }
+.help-results-group li { margin: 2px 0; }
+.help-results-group a { color: #215dc6; }
+.help-check { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
 .help-index-filter { width: 220px; height: 20px; margin-bottom: 8px; border: 1px solid #7f9db9; }
 .help-index { columns: 2; }
 .help-index small { color: #dfe8ff; }
