@@ -6,3 +6,5 @@ android_client/
 tools/__pycache__/
 iphone_client/
 web_client/
+/CLAUDE.md
+/AGENTS.md
