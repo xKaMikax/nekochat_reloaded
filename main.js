@@ -273,7 +273,7 @@ function openThemeEditor(owner) { return openAddon(owner, 'theme-editor'); }
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
-    title: 'Nekochat Reloaded Catalog', width: 720, height: 540, minWidth: 520, minHeight: 360,
+    title: 'Nekochat Reloaded Catalog', width: 940, height: 660, minWidth: 640, minHeight: 420,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
