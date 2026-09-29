@@ -88,5 +88,33 @@
   if (document.body) watchErrors(); else document.addEventListener('DOMContentLoaded', watchErrors, { once: true });
   // The pointers a scheme shows (Mouse Properties → Pointers): 'xp', 'system' or a pack's cursors.
   const schemeCursors = (scheme, pack) => scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, [file, x, y]]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href, x, y }])) : scheme === 'system' ? {} : pack || {};
-  window.nkPacks = { applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
+  // Display → Appearance: font size, Effects… and Advanced… (nk_font_size, nk_effects,
+  // nk_appearance), applied in every window.
+  function applyLook() {
+    const scale = { large: 1.15, xlarge: 1.3 }[(() => { try { return localStorage.getItem('nk_font_size'); } catch { return ''; } })()] || 1;
+    const fx = read('nk_effects') || {}; const look = read('nk_appearance') || {};
+    const css = [];
+    if (scale !== 1) css.push(`.xp-body-frame, .chat-app { zoom: ${scale}; }`);
+    const menus = '.message-menu, .assistant-balloon, #mention-box, .pins-popover, .cp-menu-popup, dialog[open], .status-menu, .quick-switch';
+    if (fx.transition === 'fade') css.push(`@keyframes nk-fade { from { opacity: 0; } } ${menus} { animation: nk-fade .18s ease-out; }`);
+    if (fx.transition === 'scroll') css.push(`@keyframes nk-scroll { from { clip-path: inset(0 0 100% 0); } } ${menus} { animation: nk-scroll .2s ease-out; }`);
+    if (fx.shadows === false) css.push(`${menus} { box-shadow: none !important; }`);
+    if (fx.largeIcons) css.push('.chat-item .avatar { width: 40px !important; height: 40px !important; flex-basis: 40px !important; } .message .avatar { width: 44px !important; height: 44px !important; }');
+    if (fx.smoothing === 'none') css.push('html, body, button, input, textarea, select { -webkit-font-smoothing: none !important; font-smooth: never; }');
+    if (fx.smoothing === 'cleartype') css.push('html, body, button, input, textarea, select { -webkit-font-smoothing: subpixel-antialiased !important; }');
+    const vars = [];
+    const colour = value => /^#[0-9a-f]{6}$/i.test(value || '') ? value : '';
+    if (look.title) { const [a, b] = [colour(look.title.color1), colour(look.title.color2)]; if (a) vars.push(`--xp-title-fill: linear-gradient(270deg, ${b || a} 0%, ${a} 100%)`); if (colour(look.title.text)) css.push(`.xp-title, .dialog-title { color: ${look.title.text} !important; }`); }
+    if (look.inactive) { const [a, b] = [colour(look.inactive.color1), colour(look.inactive.color2)]; if (a) vars.push(`--xp-title-fill-inactive: linear-gradient(270deg, ${b || a} 0%, ${a} 100%)`); }
+    if (look.window) { if (colour(look.window.color1)) vars.push(`--xp-theme-window: ${look.window.color1}`); if (colour(look.window.text)) vars.push(`--xp-theme-windowtext: ${look.window.text}`); }
+    if (look.selected) { if (colour(look.selected.color1)) vars.push(`--xp-theme-highlight: ${look.selected.color1}`); if (colour(look.selected.text)) vars.push(`--xp-theme-highlighttext: ${look.selected.text}`); }
+    if (look.face && colour(look.face.color1)) vars.push(`--xp-theme-buttonface: ${look.face.color1}`, `--classic-face: ${look.face.color1}`);
+    if (look.message) { const size = Number(look.message.size); css.push(`.message-body { ${size >= 8 && size <= 28 ? `font-size: ${size}px !important;` : ''}${look.message.bold ? 'font-weight: bold;' : ''}${look.message.italic ? 'font-style: italic;' : ''}${colour(look.message.text) ? `color: ${look.message.text};` : ''} }`); }
+    if (look.tooltip) { if (colour(look.tooltip.color1)) css.push(`.assistant-balloon { background: ${look.tooltip.color1} !important; } .assistant-balloon::before { border-top-color: ${look.tooltip.color1} !important; }`); if (colour(look.tooltip.text)) css.push(`.assistant-balloon { color: ${look.tooltip.text} !important; }`); }
+    if (vars.length) css.push(`:root { ${vars.join('; ')}; }`);
+    style('nk-look').textContent = css.join('\n');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyLook, { once: true }); else applyLook();
+  window.addEventListener('storage', event => { if (['nk_font_size', 'nk_effects', 'nk_appearance'].includes(event.key)) applyLook(); });
+  window.nkPacks = { applyLook, applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
 })();
