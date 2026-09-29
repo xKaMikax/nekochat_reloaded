@@ -1,15 +1,14 @@
-// The assistant: Rover, the search companion of Windows XP, by default — the original Microsoft
-// Agent character (rover.acs from Windows XP, unpacked into assets/agent/rover: agent.json with
-// the animations, frames.png and sound<N>.wav) — or an assistant pack from the Catalog, whose
-// assistant/ folder has the same files. He shows up in the chat window, idles, searches while you
-// search, reacts to mentions, and a click opens a balloon with shortcuts.
-// nk_assistant: 'rover' (default), 'none' or 'pack:<id>' with the files in nk_assistant_pack.
+// The assistant: a Microsoft Agent character from an assistant pack of the Catalog (Rover, the
+// search companion of Windows XP, is one of them; the pack's assistant/ folder has agent.json with
+// the animations, frames.png and sound<N>.wav). Without an installed pack there is no assistant.
+// He shows up in the chat window, idles, searches while you search, reacts to mentions, and a
+// click opens a balloon with shortcuts.
+// nk_assistant: 'none' or 'pack:<id>' with the files in nk_assistant_pack.
 (() => {
-  const BUILT_IN = { json: 'assets/agent/rover/agent.json', frames: 'assets/agent/rover/frames.png', sound: index => `assets/agent/rover/sound${index}.wav` };
   function source() {
-    let choice = 'rover', pack = null; try { choice = localStorage.getItem('nk_assistant') || 'rover'; pack = JSON.parse(localStorage.getItem('nk_assistant_pack') || 'null'); } catch {}
-    if (choice.startsWith('pack:') && pack?.json && pack?.frames) return { key: choice, json: pack.json, frames: pack.frames, sound: index => pack.sounds?.[index] || '' };
-    return { key: 'rover', ...BUILT_IN };
+    let choice = '', pack = null; try { choice = localStorage.getItem('nk_assistant') || ''; pack = JSON.parse(localStorage.getItem('nk_assistant_pack') || 'null'); } catch {}
+    if (choice !== 'none' && pack?.json && pack?.frames) return { key: choice, json: pack.json, frames: pack.frames, sound: index => pack.sounds?.[index] || '' };
+    return null;
   }
   let files = source();
   const words = {
@@ -26,7 +25,7 @@
   };
   const language = () => (document.documentElement.lang === 'en' ? 'en' : 'ru');
   const t = key => words[language()][key];
-  const enabled = () => { try { return (localStorage.getItem('nk_assistant') || 'rover') !== 'none'; } catch { return true; } };
+  const enabled = () => Boolean(source());
 
   let data = null, atlas = null, host = null, canvas = null, balloon = null;
   let current = null, frameIndex = 0, timer = 0, stopping = false, queue = [], idleTimer = 0;
@@ -200,7 +199,7 @@
   const key = (keyName, options) => document.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true, ...options }));
 
   async function show() {
-    if (host || !enabled() || !document.querySelector('#chat-app')) return;
+    if (host || !files || !enabled() || !document.querySelector('#chat-app')) return;
     await load();
     host = document.createElement('div'); host.className = 'assistant-host'; host.title = data.name || 'Rover';
     canvas = document.createElement('canvas'); canvas.width = data.width; canvas.height = data.height;
@@ -243,7 +242,7 @@
   }
   // Another assistant chosen: the old one leaves, the new one comes.
   async function change() {
-    const next = source(); if (next.key === files.key && host) return;
+    const next = source(); if (!next) { await hide(false); files = null; data = null; return; } if (next.key === files?.key && host) return;
     await hide(false); files = next; data = null; if (enabled()) show();
   }
 

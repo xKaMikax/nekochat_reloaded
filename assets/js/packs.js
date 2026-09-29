@@ -118,11 +118,12 @@
   window.addEventListener('storage', event => { if (['nk_font_size', 'nk_effects', 'nk_appearance'].includes(event.key)) applyLook(); });
   // Add-ons from the Catalog (games, the Theme Editor, the Admin Panel): installed packs with
   // addon/addon.json. Each is { packId, id, name, icon, help, files } — the same on every platform.
-  let addonCache = null;
+  let addonCache = null, assistantCount = 0;
   window.nkAddons = async (fresh = false) => {
     if (addonCache && !fresh) return addonCache;
     const packs = (await (window.windowControls || window.parent?.windowControls)?.listPacks?.().catch(() => [])) || [];
     const list = [];
+    assistantCount = packs.filter(pack => pack.assistant).length;
     for (const pack of packs) {
       const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
       try {
@@ -135,6 +136,8 @@
   };
   // Synchronous check for menus drawn on the spot (after the first nkAddons()).
   window.nkAddonList = () => addonCache || [];
+  // How many assistants are installed: without one, the assistant settings are hidden.
+  window.nkHasAssistants = () => assistantCount > 0;
   window.nkAddonInstalled = id => Boolean(addonCache?.some(addon => addon.id === id));
   window.nkHasAddon = async id => Boolean((await window.nkAddons()).find(addon => addon.id === id));
   // The Catalog says when packs change, so buttons of add-ons appear and disappear at once.
