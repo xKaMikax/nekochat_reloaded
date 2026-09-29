@@ -119,6 +119,22 @@
     settingsWindow = createWindow({ url: `/assets/html/theme_settings_frame.html${page ? `?tab=${page}` : ''}`, width: 520, height: 560, minWidth: 460, minHeight: 400, parent: owner });
     settingsWindow.onClosed = () => { settingsWindow = null; };
   }
+  // The "Installing Update" window (Update window and client updates): a window of its own that gets its
+  // items from openInstallWindow and answers with what was done (see main.js).
+  const installJobs = new Map(); let installWindow;
+  function cleanInstallItems(items) {
+    return (Array.isArray(items) ? items : []).slice(0, 200).map(item => ({ id: String(item?.id || '').slice(0, 120), kind: ['pack', 'theme', 'client'].includes(item?.kind) ? item.kind : 'pack', name: String(item?.name || item?.id || '').slice(0, 200),
+      ...(item?.kind === 'client' && item.release && typeof item.release === 'object' ? { release: JSON.parse(JSON.stringify(item.release)) } : {}) })).filter(item => item.id);
+  }
+  function openInstallWindow(owner, items) {
+    return new Promise(resolve => {
+      if (!isDestroyed(installWindow)) { resolve({ ok: [], failed: [], busy: true }); return; }
+      const job = { items: cleanInstallItems(items), resolve, done: false };
+      installWindow = createWindow({ url: '/assets/html/install_update.html', width: 520, height: 420, parent: owner });
+      const opened = installWindow; installJobs.set(opened, job);
+      opened.onClosed = () => { if (!job.done) resolve({ ok: [], failed: [], closed: true }); installJobs.delete(opened); if (installWindow === opened) installWindow = null; };
+    });
+  }
   function openThemeBrowser(owner) {
     if (!isDestroyed(themeBrowserWindow)) { focus(themeBrowserWindow); return; }
     themeBrowserWindow = createWindow({ url: '/assets/html/theme_browser.html', width: 720, height: 540, minWidth: 520, minHeight: 360, parent: owner });
@@ -314,6 +330,9 @@
       openAddon: (id, query) => openAddon(windowOwner(win), String(id || ''), query && typeof query === 'object' ? clone(query) : {}),
       openGame: options => openGame(windowOwner(win), clone(options) || {}),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
+      openInstallWindow: items => openInstallWindow(windowOwner(win), items),
+      getInstallJob: () => Promise.resolve(installJobs.get(win)?.items || []),
+      finishInstall: summary => { const job = installJobs.get(win); if (!job) return; job.done = true; job.resolve(summary && typeof summary === 'object' ? clone(summary) : { ok: [], failed: [] }); close(win); },
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),
       openRoomCreate: () => openRoomCreate(win),

@@ -9,7 +9,7 @@ const words = {
     title: 'Панель управления', back: 'Назад', search: 'Поиск', folders: 'Папки', address: 'Адрес', go: 'Переход', pickCategory: 'Выберите категорию', pickTask: 'Выберите задание...', orIcon: 'или выберите значок панели управления',
     toClassic: 'Переключение к классическому виду', toCategory: 'Переключение к виду по категориям', seeAlso: 'См. также', troubleshooters: 'Устранение неполадок', update: 'Windows Update', help: 'Справка и поддержка', close: 'Закрыть',
     menus: { file: 'Файл', edit: 'Правка', view: 'Вид', favorites: 'Избранное', tools: 'Сервис', help: 'Справка' },
-    menuItems: { close: 'Закрыть', category: 'Вид по категориям', classic: 'Классический вид', refresh: 'Обновить', about: 'О программе Nekochat Reloaded', catalog: 'Каталог...', helpTopics: 'Справка и поддержка' },
+    menuItems: { close: 'Закрыть', category: 'Вид по категориям', classic: 'Классический вид', refresh: 'Обновить', about: 'О программе Nekochat Reloaded', update: 'Windows Update', helpTopics: 'Справка и поддержка' },
     categories: {
       appearance: 'Оформление и темы', network: 'Сеть и подключения к серверу', programs: 'Установка и удаление тем и пакетов', sounds: 'Звук и аудиоустройства',
       performance: 'Производительность и обслуживание', users: 'Учётные записи пользователей', regional: 'Язык и региональные стандарты',
@@ -29,7 +29,7 @@ const words = {
     title: 'Control Panel', back: 'Back', search: 'Search', folders: 'Folders', address: 'Address', go: 'Go', pickCategory: 'Pick a category', pickTask: 'Pick a task...', orIcon: 'or pick a Control Panel icon',
     toClassic: 'Switch to Classic View', toCategory: 'Switch to Category View', seeAlso: 'See Also', troubleshooters: 'Troubleshooters', update: 'Windows Update', help: 'Help and Support', close: 'Close',
     menus: { file: 'File', edit: 'Edit', view: 'View', favorites: 'Favorites', tools: 'Tools', help: 'Help' },
-    menuItems: { close: 'Close', category: 'Category View', classic: 'Classic View', refresh: 'Refresh', about: 'About Nekochat Reloaded', catalog: 'Catalog...', helpTopics: 'Help and Support' },
+    menuItems: { close: 'Close', category: 'Category View', classic: 'Classic View', refresh: 'Refresh', about: 'About Nekochat Reloaded', update: 'Windows Update', helpTopics: 'Help and Support' },
     categories: {
       appearance: 'Appearance and Themes', network: 'Network and Server Connections', programs: 'Add or Remove Themes and Packs', sounds: 'Sounds and Audio Devices',
       performance: 'Performance and Maintenance', users: 'User Accounts', regional: 'Language and Regional Options',
@@ -58,7 +58,8 @@ const ACTIONS = {
   network: () => applet('network'), assistant: () => applet('assistant'), backups: () => applet('backups'), updates: () => applet('updates'), privacy: () => applet('privacy'),
   catalog: () => controls.openThemeBrowser(), editor: () => controls.openThemeEditor(), profile: () => controls.openProfileSettings(),
   admin: () => controls.openAdminPanel(stored('nk_server_url') || 'https://nekochat.komdu.is-cool.dev'),
-  update: () => { try { localStorage.setItem('nk_update_check', String(Date.now())); } catch {} applet('updates'); },
+  // Windows Update opens the Update window: the app's own updates, themes, games and more.
+  update: () => controls.openThemeBrowser(),
   help: () => (controls.openHelp ? controls.openHelp('control') : window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener')),
   close: () => controls.close(),
   about: () => (controls.openAbout ? controls.openAbout('nekochat') : ACTIONS.help()),
@@ -68,7 +69,6 @@ const ACTIONS = {
 const ICONS = [
   { id: 'display', icon: 'display', action: 'themes' },
   { id: 'mouse', icon: 'mouse', action: 'mouse' },
-  { id: 'catalog', icon: 'catalog', action: 'catalog' },
   { id: 'editor', icon: 'theme-editor', action: 'editor', available: () => Boolean(controls.openThemeEditor) && Boolean(window.nkAddonInstalled?.('theme-editor')) },
   { id: 'sounds', icon: 'sounds', action: 'sounds' },
   { id: 'network', icon: 'network-connections', action: 'network' },
@@ -81,13 +81,12 @@ const ICONS = [
 ];
 // A category page's task pane: See Also ([icon, icon name, action]) and Troubleshooters (help topics).
 const CATEGORIES = [
-  { id: 'appearance', icon: 'appearance', tasks: [['theme', 'themes'], ['colours', 'appearance'], ['wallpaper', 'desktop'], ['cursors', 'mouse'], ['assistant', 'assistant']], icons: ['display', 'mouse', 'assistant', 'catalog', 'editor'], seeAlso: [['mouse', 'mouse', 'mouse'], ['catalog', 'catalog', 'catalog']], troubles: ['display', 'sound'] },
+  { id: 'appearance', icon: 'appearance', tasks: [['theme', 'themes'], ['colours', 'appearance'], ['wallpaper', 'desktop'], ['cursors', 'mouse'], ['assistant', 'assistant']], icons: ['display', 'mouse', 'assistant', 'editor'], seeAlso: [['mouse', 'mouse', 'mouse']], troubles: ['display', 'sound'] },
   { id: 'network', icon: 'network', tasks: [['server', 'network']], icons: ['network'], seeAlso: [['users', 'users', 'profile']], troubles: ['network'] },
-  { id: 'programs', icon: 'programs', tasks: [['catalogInstall', 'catalog'], ['catalogRemove', 'catalog']], icons: ['catalog'], seeAlso: [['updates', 'updates', 'update']], troubles: [] },
   { id: 'users', icon: 'users', tasks: [['profile', 'profile'], ['privacy', 'privacy']], icons: ['users', 'admin'], seeAlso: [['network-connections', 'network', 'network']], troubles: [] },
   { id: 'sounds', icon: 'sounds', tasks: [['soundScheme', 'sounds'], ['microphone', 'audio']], icons: ['sounds'], seeAlso: [['display', 'display', 'themes']], troubles: ['sound'] },
   { id: 'regional', icon: 'regional', tasks: [['language', 'regional']], icons: ['regional'], seeAlso: [], troubles: [] },
-  { id: 'performance', icon: 'performance', tasks: [['backup', 'backups'], ['updates', 'update']], icons: ['backups', 'updates'], seeAlso: [['catalog', 'catalog', 'catalog']], troubles: ['updates'] },
+  { id: 'performance', icon: 'performance', tasks: [['backup', 'backups'], ['updates', 'update']], icons: ['backups', 'updates'], seeAlso: [['updates', 'updates', 'update']], troubles: ['updates'] },
 ];
 const iconUrl = name => `assets/images/control-panel/${name}.png`;
 const available = id => { const item = ICONS.find(icon => icon.id === id); return item && (!item.available || item.available()); };
@@ -164,7 +163,7 @@ function applyFrame(theme) {
 const MENUS = {
   file: [['close', 'close']],
   view: [['category', 'view-category'], ['classic', 'view-classic'], null, ['refresh', 'refresh']],
-  tools: [['catalog', 'catalog']],
+  tools: [['update', 'update']],
   help: [['helpTopics', 'help'], null, ['about', 'about']],
 };
 function closeMenu() { document.querySelector('.cp-menu-popup')?.remove(); document.querySelectorAll('[data-menu].open').forEach(button => button.classList.remove('open')); }

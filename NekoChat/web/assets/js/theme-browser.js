@@ -7,27 +7,27 @@ const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { title:'Каталог Nekochat Reloaded', tag:'Темы, игры, звуки и многое другое для вашего Nekochat Reloaded', loadingInstalled:'Загрузка установленного…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных элементов.', apply:'Применить', using:'Используется', applying:'Применение…', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', byAuthor:'Автор: ', schemes:'Схемы: ', contains:'Внутри: ', open:'Открыть', close:'Закрыть', types:{ '':'Все', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Значки', wallpapers:'Обои для чата', assistants:'Помощники', addons:'Дополнения', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'значки', wallpapers:'обои', assistant:'помощник', assistants:'помощник', addon:'дополнение', addons:'дополнение' }, help:'Справка', helpTopics:'Вызов справки', about:'О программе «Каталог»',
-    home:'Главная каталога', installItems:'Установить ({n})', byType:'Выбор по типу', byAuthor2:'Выбор по автору', options:'Параметры', history:'История установки', sortBy:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', allTypes:'Все элементы',
-    welcome:'Добро пожаловать', welcomeTo:'в Каталог Nekochat Reloaded', keepUp:'Пополните свой Nekochat Reloaded', homeIntro:'Посмотрите, что нового в каталоге: темы, курсоры, звуки, значки, обои для чата, помощники и дополнения (игры, Редактор тем).', express:'Экспресс', expressText:'Показать самое новое (рекомендуется)', custom:'Выборочно', customText:'Выбрать из тем, курсоров, звуков, значков, обоев, помощников и дополнений', privacy:'Вопросы о конфиденциальности?', privacyText:'При просмотре каталога приложение только загружает список с GitHub. Сведения о вашем компьютере не отправляются.',
-    boxInstalled:'Установлено: {n}', boxInstalledText:'На этом компьютере установлено элементов каталога: {n}.', boxHistory:'Открыть историю установки.', news:'Новинки',
+  ru: { title:'Обновление Nekochat Reloaded', tag:'Новые версии, темы, игры, звуки и многое другое для вашего Nekochat Reloaded', loadingInstalled:'Загрузка установленного…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных элементов.', apply:'Применить', using:'Используется', applying:'Применение…', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', byAuthor:'Автор: ', schemes:'Схемы: ', contains:'Внутри: ', open:'Открыть', close:'Закрыть', types:{ '':'Все', client:'Обновления клиента', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Значки', wallpapers:'Обои для чата', assistants:'Помощники', addons:'Дополнения', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'значки', wallpapers:'обои', assistant:'помощник', assistants:'помощник', addon:'дополнение', addons:'дополнение' }, help:'Справка', helpTopics:'Вызов справки', about:'О программе «Обновление»',
+    home:'Главная', installItems:'Установить ({n})', byType:'Выбор по типу', byAuthor2:'Выбор по автору', options:'Параметры', history:'История установки', sortBy:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', allTypes:'Все элементы',
+    welcome:'Добро пожаловать', welcomeTo:'в Обновление Nekochat Reloaded', keepUp:'Пополните свой Nekochat Reloaded', homeIntro:'Посмотрите, что нового: обновления приложения, темы, курсоры, звуки, значки, обои для чата, помощники и дополнения (игры, Редактор тем).', express:'Экспресс', expressText:'Показать самое новое (рекомендуется)', custom:'Выборочно', customText:'Выбрать из тем, курсоров, звуков, значков, обоев, помощников и дополнений', privacy:'Вопросы о конфиденциальности?', privacyText:'При просмотре каталога приложение только загружает список с GitHub. Сведения о вашем компьютере не отправляются.',
+    boxInstalled:'Установлено: {n}', boxInstalledText:'На этом компьютере установлено элементов каталога: {n}.', boxHistory:'Открыть историю установки.', clientAvailable:'Доступно обновление приложения: {name}', installNow:'Установить сейчас', news:'Новинки',
     customize:'Настройте результаты', selectTitle:'Выберите: {type}', selectIntro:'Отметьте то, что хотите установить, и выберите «Просмотреть и установить».', reviewLink:'Просмотреть и установить', total:'Всего: {n}', clearAll:'Снять все', selectAll:'Выбрать все', installedMark:'установлено', added:'Добавлено:', version:'Версия:', type:'Тип:', noDescription:'Описание пока не добавлено.',
     reviewTitle:'Просмотр и установка', installBtn:'Установить', noneSelected:'Ничего не отмечено. Вернитесь к списку и отметьте нужное.', reviewNote:'Проверьте список и нажмите «Установить».',
-    yourResults:'Ваши результаты', resultsTitle:'Итоги установки', moreAvailable:'Доступны ещё элементы', moreAvailableText:'Загляните в каталог и установите то, что вам нужно.', summary:'Сводка установки', successful:'Успешно:', failed:'Ошибки:', remaining:'Осталось:', successfulItems:'Успешно установлено', failedItems:'Не удалось установить', historyTitle:'История установки', historyIntro:'Установленные на этом компьютере темы и элементы каталога. Luna и Classic встроены в клиент.',
-    dlTitle:'Установка обновления', dlTitleMany:'Установка обновлений: {n}', dlHeading:'Обновления загружаются и устанавливаются', dlStatus:'Состояние установки:', dlDownloading:'Загрузка:', dlInstalling:'Установка:', dlCancel:'Отмена', dlDownload:'Загрузка: {name} (обновление {index} из {count})...', dlInit:'Подготовка установки...', dlInstall:'Установка: {name} (обновление {index} из {count})...', dlDone:'выполнено!', dlCancelled:'Отменено.', dlFailed:'Ошибка: {error}', dlClose:'Закрыть', dlMb:'{a} МБ из {b} МБ', dlComplete:'Установка завершена', dlConfigure:'История установки' },
-  en: { title:'Nekochat Reloaded Catalog', tag:'Get themes, games, sounds and more for your Nekochat Reloaded', loadingInstalled:'Loading what is installed…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There is nothing in the catalog yet.', apply:'Apply', using:'In use', applying:'Applying…', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', byAuthor:'By ', schemes:'Schemes: ', contains:'Contains: ', open:'Open', close:'Close', types:{ '':'All', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', assistants:'Assistants', addons:'Add-ons', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers', assistant:'assistant', assistants:'assistant', addon:'add-on', addons:'add-on' }, help:'Help', helpTopics:'Help Topics', about:'About Catalog',
-    home:'Catalog Home', installItems:'Install Items ({n})', byType:'Select by Type', byAuthor2:'Select by Author', options:'Options', history:'Review your update history', sortBy:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', allTypes:'All items',
-    welcome:'Welcome', welcomeTo:'to the Nekochat Reloaded Catalog', keepUp:'Keep your Nekochat Reloaded up to date', homeIntro:'Check what is new in the catalog: themes, cursors, sounds, icons, chat wallpapers, assistants and add-ons (games, the Theme Editor).', express:'Express', expressText:'Get the newest items (recommended)', custom:'Custom', customText:'Select from themes, cursors, sounds, icons, wallpapers, assistants and add-ons', privacy:'Concerned about privacy?', privacyText:'When you browse the catalog, the app only downloads the list from GitHub. Nothing about your computer is sent.',
-    boxInstalled:'Installed items: {n}', boxInstalledText:'Catalog items installed on this computer: {n}.', boxHistory:'View your update history.', news:'News',
+    yourResults:'Ваши результаты', resultsTitle:'Итоги установки', moreAvailable:'Доступны ещё элементы', moreAvailableText:'Загляните в каталог и установите то, что вам нужно.', summary:'Сводка установки', successful:'Успешно:', failed:'Ошибки:', remaining:'Осталось:', successfulItems:'Успешно установлено', failedItems:'Не удалось установить', historyTitle:'История установки', historyHeading:'Просмотр истории установки', colName:'Название', colType:'Тип', colStatus:'Состояние', historyIntro:'Установленные на этом компьютере темы и элементы каталога. Luna и Classic встроены в клиент.',
+  },
+  en: { title:'Nekochat Reloaded Update', tag:'Get new versions, themes, games, sounds and more for your Nekochat Reloaded', loadingInstalled:'Loading what is installed…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There is nothing in the catalog yet.', apply:'Apply', using:'In use', applying:'Applying…', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', byAuthor:'By ', schemes:'Schemes: ', contains:'Contains: ', open:'Open', close:'Close', types:{ '':'All', client:'Client updates', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', assistants:'Assistants', addons:'Add-ons', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers', assistant:'assistant', assistants:'assistant', addon:'add-on', addons:'add-on' }, help:'Help', helpTopics:'Help Topics', about:'About Update',
+    home:'Update Home', installItems:'Install Items ({n})', byType:'Select by Type', byAuthor2:'Select by Author', options:'Options', history:'Review your update history', sortBy:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', allTypes:'All items',
+    welcome:'Welcome', welcomeTo:'to Nekochat Reloaded Update', keepUp:'Keep your Nekochat Reloaded up to date', homeIntro:'Check what is new: app updates, themes, cursors, sounds, icons, chat wallpapers, assistants and add-ons (games, the Theme Editor).', express:'Express', expressText:'Get the newest items (recommended)', custom:'Custom', customText:'Select from themes, cursors, sounds, icons, wallpapers, assistants and add-ons', privacy:'Concerned about privacy?', privacyText:'When you browse the catalog, the app only downloads the list from GitHub. Nothing about your computer is sent.',
+    boxInstalled:'Installed items: {n}', boxInstalledText:'Catalog items installed on this computer: {n}.', boxHistory:'View your update history.', clientAvailable:'An update for the app is available: {name}', installNow:'Install now', news:'News',
     customize:'Customize your results', selectTitle:'Select {type}', selectIntro:'Check what you want to install, then choose Review and install items.', reviewLink:'Review and install items', total:'Total: {n} items', clearAll:'Clear All', selectAll:'Select All', installedMark:'installed', added:'Added:', version:'Version:', type:'Type:', noDescription:'No description has been added yet.',
     reviewTitle:'Review and Install Items', installBtn:'Install Items', noneSelected:'Nothing is selected. Go back to the list and check what you need.', reviewNote:'Check the list and choose Install Items.',
-    yourResults:'Your results', resultsTitle:'Review Your Installation Results', moreAvailable:'More items are available', moreAvailableText:'Look through the catalog and install what you need.', summary:'Installation Summary', successful:'Successful:', failed:'Failed:', remaining:'Remaining:', successfulItems:'Successful Items', failedItems:'Failed Items', historyTitle:'Update History', historyIntro:'Themes and catalog items installed on this computer. Luna and Classic are built into the client.',
-    dlTitle:'Installing Update', dlTitleMany:'Installing {n} Updates', dlHeading:'The updates are being downloaded and installed', dlStatus:'Installation status:', dlDownloading:'Downloading:', dlInstalling:'Installing:', dlCancel:'Cancel', dlDownload:'Downloading {name} (update {index} of {count})...', dlInit:'Initializing installation...', dlInstall:'Installing {name} (update {index} of {count})...', dlDone:'done!', dlCancelled:'Cancelled.', dlFailed:'Error: {error}', dlClose:'Close', dlMb:'{a} MB of {b} MB', dlComplete:'Installation complete', dlConfigure:'Update history' },
+    yourResults:'Your results', resultsTitle:'Review Your Installation Results', moreAvailable:'More items are available', moreAvailableText:'Look through the catalog and install what you need.', summary:'Installation Summary', successful:'Successful:', failed:'Failed:', remaining:'Remaining:', successfulItems:'Successful Items', failedItems:'Failed Items', historyTitle:'Update History', historyHeading:'Review Your Update History', colName:'Name', colType:'Type', colStatus:'Status', historyIntro:'Themes and catalog items installed on this computer. Luna and Classic are built into the client.',
+  },
 };
 let language = 'ru'; let activeTheme;
 const t = key => words[language][key];
 const fill = (text, values = {}) => String(text).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
-const TYPES = ['theme', 'cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'addons', 'combo'];
+const TYPES = ['client', 'theme', 'cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'addons', 'combo'];
 const state = { page: 'home', type: '', author: '', sort: 'date', items: [], installedThemes: [], installedPacks: [], selected: new Set(), expanded: new Set(), results: null, loaded: false };
 const descriptions = new Map();
 function applyFrame(theme) { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }
@@ -49,7 +49,38 @@ async function loadCatalog() {
   // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
   state.items = [...themes.filter(theme => !['luna', 'classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((item, position) => ({ ...item, position })).filter(fitsPlatform);
   state.installedThemes = installedThemes; state.installedPacks = installedPacks; state.loaded = true;
+  const client = await findClientUpdate(); if (client) state.items.unshift(client);
   for (const id of [...state.selected]) if (!state.items.some(item => item.id === id) || isInstalled(state.items.find(item => item.id === id))) state.selected.delete(id);
+}
+// ---- client updates: a newer release on GitHub is the first item of the list --------------------
+function versionParts(text) {
+  const match = String(text || '').match(/(\d+(?:\.\d+)*)(?:[-.]?beta[-.]?(\d+))?/i); if (!match) return null;
+  return { numbers: match[1].split('.').map(Number), beta: match[2] === undefined ? null : Number(match[2]) };
+}
+function compareVersions(a, b) {
+  for (let i = 0; i < Math.max(a.numbers.length, b.numbers.length); i += 1) { const diff = (a.numbers[i] || 0) - (b.numbers[i] || 0); if (diff) return diff; }
+  if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
+}
+async function findClientUpdate() {
+  try {
+    const info = await controls.getUpdateInfo?.(); const mode = info?.mode || 'download';
+    if (mode === 'reload' || !controls.openInstallWindow) return null;
+    const current = versionParts(window.NEKOCHAT_RELOADED_VERSION); if (!current) return null;
+    const releases = await (await fetch('https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases?per_page=20', { headers: { Accept: 'application/vnd.github+json' } })).json();
+    let beta = false; try { beta = localStorage.getItem('nk_update_beta') === '1'; } catch {}
+    let found = null;
+    for (const release of Array.isArray(releases) ? releases : []) {
+      if (release.draft || (release.prerelease && !beta)) continue;
+      const parts = versionParts(release.tag_name); if (!parts || compareVersions(parts, current) <= 0) continue;
+      if (!found || compareVersions(parts, versionParts(found.tag_name)) > 0) found = release;
+    }
+    if (!found) return null;
+    const version = found.tag_name.replace(/^build_v/i, '');
+    const notes = String(found.body || '').replace(/^\s*#[^\n]*\n+/, '');
+    descriptions.set('client-update', plainDescription(notes).slice(0, 900));
+    return { id: 'client-update', kind: 'client', type: 'client', displayName: `Nekochat Reloaded ${version}${found.prerelease ? ' (preview)' : ''}`, author: 'Nekochat Reloaded Team', version, added: String(found.published_at || '').slice(0, 10), previewUrl: '', position: -1, sortFirst: true,
+      release: { tag: found.tag_name, version, page: found.html_url, assets: (found.assets || []).map(asset => ({ name: asset.name, url: asset.browser_download_url, size: asset.size })) } };
+  } catch { return null; }
 }
 async function describe(item) {
   if (descriptions.has(item.id)) return descriptions.get(item.id);
@@ -59,7 +90,7 @@ async function describe(item) {
 }
 function sorted(list) {
   const by = { name: (a, b) => itemName(a).localeCompare(itemName(b)), author: (a, b) => itemAuthor(a).localeCompare(itemAuthor(b)) || itemName(a).localeCompare(itemName(b)), date: (a, b) => String(b.added || '').localeCompare(String(a.added || '')) || b.position - a.position }[state.sort];
-  return [...list].sort(by);
+  return [...list].sort((a, b) => (b.sortFirst ? 1 : 0) - (a.sortFirst ? 1 : 0) || by(a, b));
 }
 const visible = () => sorted(available().filter(item => (!state.type || item.type === state.type) && (!state.author || itemAuthor(item) === state.author)));
 
@@ -87,10 +118,12 @@ const rowHTML = (item, open = false) => {
   return `<div class="wu-row" data-id="${esc(item.id)}"><label class="wu-checkline"><input type="checkbox" class="wu-check" data-id="${esc(item.id)}"${checked ? ' checked' : ''}></label><button type="button" class="wu-plus" data-expand="${esc(item.id)}" aria-label="+">${expanded ? '−' : '+'}</button><a href="#" class="wu-name" data-expand="${esc(item.id)}">${esc(itemName(item))}</a><span class="wu-by">${itemAuthor(item) ? `(${esc(itemAuthor(item))})` : ''}</span>
     <div class="wu-detail"${expanded ? '' : ' hidden'}>${preview}<div class="wu-detail-text"><p data-desc="${esc(item.id)}">${esc(descriptions.get(item.id) ?? '…')}</p><p class="wu-meta">${esc(t('type'))} ${esc(t('types')[item.type] || item.type)}${item.version && item.version !== 'Unknown' ? ` · ${esc(t('version'))} ${esc(item.version)}` : ''}${item.added ? ` · ${esc(t('added'))} ${esc(item.added)}` : ''}</p></div></div></div>`;
 };
+const clientItem = () => state.items.find(item => item.kind === 'client');
+function clientNotice() { const item = clientItem(); return item ? `<div class="wu-notice"><b>${esc(fill(t('clientAvailable'), { name: itemName(item) }))}</b><p><button type="button" class="wu-btn" data-act="client">${esc(t('installNow'))}</button></p></div>` : ''; }
 function homePage() {
   const news = sorted(available()).slice(0, 3);
   return `${strip(t('welcome'), t('welcomeTo'))}<div class="wu-two"><div class="wu-content">
-    <h2 class="wu-h">${esc(t('keepUp'))}</h2><p>${esc(t('homeIntro'))}</p>
+    <h2 class="wu-h">${esc(t('keepUp'))}</h2>${clientNotice()}<p>${esc(t('homeIntro'))}</p>
     <div class="wu-choice"><button type="button" class="wu-btn" data-go="express">${esc(t('express'))}</button><span><b>${esc(t('expressText'))}</b></span></div>
     <div class="wu-choice"><button type="button" class="wu-btn" data-go="custom">${esc(t('custom'))}</button><span>${esc(t('customText'))}</span></div>
     <p><b>${esc(t('privacy'))}</b> ${esc(t('privacyText'))}</p></div>
@@ -119,42 +152,33 @@ function resultsPage() {
     ${r.ok.length ? `<h3 class="wu-h3"><img src="assets/images/wu/shield-3-32.png" alt="">${esc(t('successfulItems'))}</h3><div class="wu-groupbar">${esc(t('title'))}</div>${list(r.ok)}` : ''}
     ${r.failed.length ? `<h3 class="wu-h3"><img src="assets/images/wu/shield-5-32.png" alt="">${esc(t('failedItems'))}</h3>${list(r.failed)}` : ''}</div>`;
 }
-// One card of the history (an installed theme or pack): apply, open, remove.
-function themeCard(theme, label) {
-  const schemeList = (theme.schemes || theme.colorSchemes || []).map(item => typeof item === 'string' ? item : item.name || item.id).filter(Boolean); const schemes = schemeList.length > 1 ? t('schemes') + schemeList.join(', ') : '';
-  const author = theme.author && theme.author !== 'Unknown' ? theme.author : '';
-  const inside = theme.kind === 'pack' ? t('contains') + (theme.contains || []).map(part => t('parts')[part] || part).join(', ') : '';
-  const preview = theme.previewUrl ? `<img class="theme-preview" src="${esc(theme.previewUrl)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'theme-preview placeholder',textContent:'Theme'}))">` : '<span class="theme-preview placeholder">Theme</span>';
-  return `<article class="theme-card${theme.id === activeTheme?.id ? ' active' : ''}">${preview}<div class="theme-info"><h2>${esc(theme.name || theme.displayName || theme.id)}</h2>${author ? `<p class="theme-author">${esc(t('byAuthor') + author)}</p>` : ''}${schemes ? `<p>${esc(schemes)}</p>` : ''}${inside ? `<p>${esc(inside)}</p>` : ''}<button type="button" data-theme="${esc(theme.id)}">${esc(label)}</button></div></article>`;
-}
-function historyPage() { return `${strip(t('historyTitle'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('historyTitle'))}</h2><p>${esc(t('historyIntro'))}</p><div class="theme-grid" id="installed-list"><p class="browser-status">${esc(t('loadingInstalled'))}</p></div></div>`; }
+// The history: what is installed, with its actions (apply a theme, open an add-on, remove).
+function historyPage() { return `${strip(t('historyTitle'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('historyHeading'))}</h2><p>${esc(t('historyIntro'))}</p><table class="wu-history"><thead><tr><th>${esc(t('colName'))}</th><th>${esc(t('colType'))}</th><th>${esc(t('colStatus'))}</th><th></th></tr></thead><tbody id="history-body"><tr><td colspan="4">${esc(t('loadingInstalled'))}</td></tr></tbody></table></div>`; }
 async function fillHistory() {
-  const list = $('#installed-list'); if (!list) return;
+  const body = $('#history-body'); if (!body) return;
   try {
     activeTheme = await controls.getActiveTheme(); const themes = await controls.listThemes();
-    list.innerHTML = themes.length ? themes.map(theme => themeCard(theme, theme.removable ? t('remove') : theme.id === activeTheme?.id ? t('using') : t('apply'))).join('') : `<p class="empty-list">${t('noThemes')}</p>`;
-    list.querySelectorAll('button[data-theme]').forEach(button => {
-      const theme = themes.find(item => item.id === button.dataset.theme);
-      if (theme.removable) button.onclick = () => removeInstalled(button, () => controls.removeTheme(theme.id));
-      else if (theme.id === activeTheme?.id) button.disabled = true;
-      else button.onclick = async () => { button.disabled = true; button.textContent = t('applying'); try { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await fillHistory(); } catch (error) { button.disabled = false; button.textContent = error.message; } };
-    });
-    // Installed packs follow the themes; they are chosen in Display Properties.
     const packs = controls.listPacks ? await controls.listPacks().catch(() => []) : [];
-    if (packs.length) {
-      list.insertAdjacentHTML('beforeend', packs.map(pack => themeCard({ ...pack, kind: 'pack', displayName: pack.name, contains: pack.contains, previewUrl: pack.files?.['addon/Preview.png'] || '' }, t('remove')).replace('data-theme=', 'data-pack=')).join(''));
-      list.querySelectorAll('button[data-pack]').forEach(button => { button.onclick = () => removeInstalled(button, async () => { await controls.removePack(button.dataset.pack); packsChanged(); }); });
-      // An installed add-on (a game, the Theme Editor…) can be opened right here.
-      const addons = await (window.nkAddons?.(true) || []).catch?.(() => []) || [];
-      for (const addon of addons) { const remove = list.querySelector(`button[data-pack="${CSS.escape(addon.packId)}"]`); if (!remove || !controls.openAddon) continue; const open = document.createElement('button'); open.type = 'button'; open.textContent = t('open'); open.onclick = () => controls.openAddon(addon.id); remove.before(open); }
+    const addons = packs.some(pack => (pack.contains || []).includes('addon')) ? await (window.nkAddons?.(true) || []).catch?.(() => []) || [] : [];
+    const rows = [];
+    for (const theme of themes) rows.push({ name: theme.name || theme.displayName || theme.id, type: t('types').theme, status: theme.builtIn === true || !theme.removable ? (theme.id === activeTheme?.id ? t('using') : t('builtIn')) : (theme.id === activeTheme?.id ? t('using') : t('installedMark')), actions: [...(theme.removable ? [] : theme.id === activeTheme?.id ? [] : [[t('apply'), async () => { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await fillHistory(); }]]), ...(theme.removable ? [[t('remove'), () => controls.removeTheme(theme.id)]] : [])] });
+    for (const pack of packs) {
+      const addon = addons.find(item => item.packId === pack.id);
+      rows.push({ name: pack.name || pack.id, type: (pack.contains || []).map(part => t('parts')[part] || part).join(', '), status: t('installedMark'), actions: [...(addon && controls.openAddon ? [[t('open'), () => controls.openAddon(addon.id)]] : []), [t('remove'), async () => { await controls.removePack(pack.id); packsChanged(); }]] });
     }
-  } catch (error) { list.innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; }
+    body.innerHTML = rows.length ? '' : `<tr><td colspan="4">${esc(t('noThemes'))}</td></tr>`;
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><b>${esc(row.name)}</b></td><td>${esc(row.type)}</td><td>${esc(row.status)}</td><td class="wu-actions"></td>`;
+      for (const [label, action] of row.actions) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'wu-btn small'; button.textContent = label;
+        button.onclick = async () => { button.disabled = true; try { await action(); await loadCatalog(); render(); } catch (error) { button.disabled = false; button.textContent = error.message; } };
+        tr.lastElementChild.append(button);
+      }
+      body.append(tr);
+    }
+  } catch (error) { body.innerHTML = `<tr><td colspan="4" class="browser-status error">${esc(error.message)}</td></tr>`; }
 }
-async function removeInstalled(button, action) {
-  button.disabled = true; button.textContent = t('removing');
-  try { await action(); button.textContent = t('removed'); await loadCatalog(); render(); } catch (error) { button.disabled = false; button.textContent = error.message; }
-}
-
 // ---- rendering and navigation ---------------------------------------------------------------
 function render() {
   const page = { home: homePage, select: selectPage, review: reviewPage, results: resultsPage, history: historyPage }[state.page]();
@@ -189,6 +213,7 @@ document.addEventListener('click', event => {
   if (target.dataset.act === 'clear') { state.selected.clear(); render(); }
   if (target.dataset.act === 'all') { visible().forEach(item => state.selected.add(item.id)); render(); }
   if (target.dataset.act === 'install') installSelected();
+  if (target.dataset.act === 'client') { const item = clientItem(); if (item) { state.selected.add(item.id); go('review'); } }
 });
 document.addEventListener('change', event => {
   if (event.target.classList?.contains('wu-check')) { const id = event.target.dataset.id; if (event.target.checked) state.selected.add(id); else state.selected.delete(id); renderSide(); const total = document.querySelector('.wu-actionline span'); if (total) total.textContent = fill(t('total'), { n: state.selected.size }); if (state.page === 'review') render(); }
@@ -199,58 +224,16 @@ document.addEventListener('change', event => {
 async function installSelected() {
   const items = sorted(state.items.filter(item => state.selected.has(item.id)));
   if (!items.length) return;
-  const summary = await installQueue(items);
+  // The install runs in a window of its own (Installing Update); it answers with what was done.
+  const job = items.map(item => ({ id: item.id, kind: item.kind, name: itemName(item), ...(item.kind === 'client' ? { release: item.release } : {}) }));
+  const answer = await controls.openInstallWindow(job);
+  const byId = id => state.items.find(item => item.id === id);
+  const summary = { ok: (answer?.ok || []).map(entry => byId(entry.id)).filter(Boolean), failed: (answer?.failed || []).map(entry => ({ item: byId(entry.item?.id) || entry.item, error: entry.error })), go: answer?.go || '' };
+  if (!summary.ok.length && !summary.failed.length) return; // closed or cancelled before anything happened
   if (summary.ok.some(item => item.kind === 'pack')) packsChanged();
   summary.ok.forEach(item => state.selected.delete(item.id));
-  state.results = summary; await loadCatalog();
+  state.results = summary; await loadCatalog(); render();
   go(summary.go === 'history' ? 'history' : 'results');
-}
-// XP's "Installing Update" window: status log, MB counter, the theme's progress bar, Cancel; at the
-// end "Installation complete" with a Close button. Several items are "update 1 of N".
-function installQueue(items) {
-  return new Promise(resolve => {
-    const count = items.length, summary = { ok: [], failed: [], go: '' };
-    const veil = document.createElement('div'); veil.className = 'dl-veil';
-    veil.innerHTML = `<div class="xp-window dl-dialog" role="dialog"><header class="xp-titlebar"><span class="xp-app-icon has-icon dl-titleicon" style="background-image:url('assets/images/windows-update-16.png')"></span><span class="xp-title">${esc(count > 1 ? fill(t('dlTitleMany'), { n: count }) : t('dlTitle'))}</span></header><div class="xp-body-frame"><i class="xp-side xp-side-left"></i><div class="dl-inner"><div class="dl-panel"><div class="dl-head"><img src="assets/images/windows-update-48.png" alt=""><span>${esc(t('dlHeading'))}</span></div><div class="dl-label">${esc(t('dlStatus'))}</div><div class="dl-log"></div><div class="dl-row"><span class="dl-label dl-phase">${esc(t('dlDownloading'))}</span><span class="dl-size"></span></div><div class="dl-bar"><i></i></div><div class="dl-buttons"><button type="button" class="dl-cancel">${esc(t('dlCancel'))}</button></div></div></div><i class="xp-side xp-side-right"></i></div><i class="xp-bottom"></i></div>`;
-    document.body.append(veil);
-    const log = veil.querySelector('.dl-log'), bar = veil.querySelector('.dl-bar i'), size = veil.querySelector('.dl-size'), phase = veil.querySelector('.dl-phase'), cancel = veil.querySelector('.dl-cancel');
-    veil.querySelector('.dl-dialog').classList.toggle('classic', getComputedStyle(document.documentElement).getPropertyValue('--classic-raised').trim() !== '');
-    const line = text => { const row = document.createElement('div'); row.textContent = text; log.append(row); log.scrollTop = log.scrollHeight; return row; };
-    const mb = bytes => (bytes / 1048576).toFixed(2);
-    // Whole blocks only, like XP's progress bar.
-    const setBar = fraction => { const room = bar.parentElement.clientWidth - 6; bar.style.width = `${Math.max(0, Math.floor(Math.min(1, fraction) * room / 10) * 10)}px`; };
-    let current = null, index = 0, last = null, cancelled = false;
-    const stop = controls.onPackProgress?.(data => {
-      if (!current || data.id !== current.id) return;
-      if (data.step === 'bytes') { const total = data.total || 0; setBar(total ? data.received / total : .3); size.textContent = total ? fill(t('dlMb'), { a: mb(data.received), b: mb(total) }) : `${mb(data.received)} MB`; }
-      if (data.step === 'installing') installing();
-    });
-    const installing = () => { if (last) last.textContent += ` ${t('dlDone')}`; line(`${t('dlInit')} ${t('dlDone')}`); setBar(1); phase.textContent = t('dlInstalling'); size.textContent = ''; bar.parentElement.classList.add('busy'); last = line(fill(t('dlInstall'), { name: itemName(current), index, count })); };
-    const close = () => { stop?.(); veil.remove(); resolve(summary); };
-    cancel.onclick = () => { if (cancelled) return; cancelled = true; cancel.disabled = true; if (current?.kind === 'pack') controls.cancelPackInstall?.(current.id); };
-    (async () => {
-      for (const item of items) {
-        if (cancelled) break;
-        current = item; index += 1; setBar(0); size.textContent = ''; phase.textContent = t('dlDownloading'); bar.parentElement.classList.remove('busy');
-        last = line(fill(t('dlDownload'), { name: itemName(item), index, count }));
-        try {
-          if (item.kind === 'pack') await controls.installCatalogPack(item.id);
-          else { bar.parentElement.classList.add('busy'); await controls.installCatalogTheme(item.id); installing(); }
-          if (last) last.textContent += ` ${t('dlDone')}`; bar.parentElement.classList.remove('busy');
-          summary.ok.push(item);
-        } catch (error) {
-          const stopped = /Cancelled/i.test(String(error?.message)); bar.parentElement.classList.remove('busy');
-          const message = String(error?.message || error).replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
-          line(stopped ? t('dlCancelled') : fill(t('dlFailed'), { error: message }));
-          if (!stopped) summary.failed.push({ item, error: message });
-        }
-      }
-      // XP ends with "Installation complete", a link to what was done and Close.
-      veil.querySelector('.dl-panel').innerHTML = `<div class="dl-head done"><img src="assets/images/windows-update-48.png" alt=""><div><b>${esc(t('dlComplete'))}</b></div></div><div class="dl-buttons end"><a href="#" class="dl-link">${esc(t('dlConfigure'))}</a><button type="button" class="dl-cancel">${esc(t('dlClose'))}</button></div>`;
-      const ok = veil.querySelector('.dl-cancel'); ok.onclick = close; ok.focus();
-      veil.querySelector('.dl-link').onclick = event => { event.preventDefault(); summary.go = 'history'; close(); };
-    })();
-  });
 }
 
 // ---- Help menu, sounds and start ------------------------------------------------------------
