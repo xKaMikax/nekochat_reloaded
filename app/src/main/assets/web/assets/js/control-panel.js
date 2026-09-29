@@ -77,7 +77,7 @@ const ICONS = [
   { id: 'users', icon: 'users', action: 'profile' },
   { id: 'admin', icon: 'admin', action: 'admin', available: () => Boolean(controls.openAdminPanel) && stored('nk_show_admin_button') === '1' && Boolean(window.nkAddonInstalled?.('admin')) },
   { id: 'regional', icon: 'regional', action: 'regional' },
-  { id: 'assistant', icon: 'assistant', action: 'assistant' },
+  { id: 'assistant', icon: 'assistant', action: 'assistant', available: () => Boolean(window.nkHasAssistants?.()) },
 ];
 // A category page's task pane: See Also ([icon, icon name, action]) and Troubleshooters (help topics).
 const CATEGORIES = [
@@ -133,7 +133,7 @@ function render() {
   } else if (category) {
     const icons = category.icons.filter(available).map(id => ICONS.find(item => item.id === id));
     content.innerHTML = `<div class="cp-page-header"><img src="${iconUrl(category.icon)}" alt=""><h1>${esc(t('categories')[category.id])}</h1></div><div class="cp-page-body">`
-      + `<h2 class="cp-section">${esc(t('pickTask'))}</h2><div class="cp-tasks">${category.tasks.map(([task, action]) => `<button class="cp-task" type="button" data-action="${action}"><img src="${iconUrl('task-bullet')}" alt="">${esc(t('tasks')[task])}</button>`).join('')}</div>`
+      + `<h2 class="cp-section">${esc(t('pickTask'))}</h2><div class="cp-tasks">${category.tasks.filter(([, action]) => action !== 'assistant' || available('assistant')).map(([task, action]) => `<button class="cp-task" type="button" data-action="${action}"><img src="${iconUrl('task-bullet')}" alt="">${esc(t('tasks')[task])}</button>`).join('')}</div>`
       + (icons.length ? `<h2 class="cp-section">${esc(t('orIcon'))}</h2><div class="cp-icons cp-icons-row">${icons.map(iconButton).join('')}</div>` : '') + '</div>';
   } else {
     content.innerHTML = `<h1 class="cp-pick">${esc(t('pickCategory'))}</h1><div class="cp-categories">${CATEGORIES.map(item => `<button class="cp-category" type="button" data-category="${item.id}"><img src="${iconUrl(`${item.icon}-48`)}" alt=""><span>${esc(t('categories')[item.id])}</span></button>`).join('')}</div>`;

@@ -141,7 +141,7 @@ function renderPointers() {
   list.innerHTML = POINTER_NAMES.map(([kind, name]) => `<div class="pointer-row${kind === selected ? ' selected' : ''}" data-kind="${kind}"><span>${esc(name)}</span>${set[kind]?.url ? `<img src="${esc(set[kind].url)}" alt="">` : '<i></i>'}</div>`).join('');
   renderPointerPreview(selected);
 }
-// Assistant: Rover (built in), an assistant pack from the Catalog, or none; a preview of the first
+// Assistant: an assistant pack from the Catalog, or none; a preview of the first
 // frame. Saved on Apply as nk_assistant (+ nk_assistant_pack with the pack's files).
 function buildAssistantPage(section) {
   section.classList.add('assistant-page');
@@ -151,15 +151,15 @@ function buildAssistantPage(section) {
 const assistantPack = value => value.startsWith('pack:') ? packs.find(pack => `pack:${pack.id}` === value)?.assistant : null;
 function refreshAssistantChoice() {
   const select = $('#assistant-choice'); if (!select) return;
-  select.innerHTML = '<option value="rover">Rover (Windows XP)</option>' + packs.filter(pack => pack.assistant).map(pack => `<option value="pack:${esc(pack.id)}">${esc(pack.name)}${pack.author ? ` — ${esc(pack.author)}` : ''}</option>`).join('') + '<option value="none">(None)</option>';
-  const stored = localStorage.getItem('nk_assistant') || 'rover';
-  select.value = [...select.options].some(option => option.value === stored) ? stored : 'rover';
+  select.innerHTML = packs.filter(pack => pack.assistant).map(pack => `<option value="pack:${esc(pack.id)}">${esc(pack.name)}${pack.author ? ` — ${esc(pack.author)}` : ''}</option>`).join('') + '<option value="none">(None)</option>';
+  const stored = localStorage.getItem('nk_assistant') || 'none';
+  select.value = [...select.options].some(option => option.value === stored) ? stored : (select.options.length > 1 ? select.options[0].value : 'none');
   previewAssistant();
 }
 async function previewAssistant() {
   const value = $('#assistant-choice').value, canvas = $('#assistant-preview'), context = canvas.getContext('2d');
   context.clearRect(0, 0, 80, 80); if (value === 'none') return;
-  const files = assistantPack(value) || { json: 'assets/agent/rover/agent.json', frames: 'assets/agent/rover/frames.png' };
+  const files = assistantPack(value); if (!files) return;
   try {
     const [agent, image] = await Promise.all([fetch(files.json).then(response => response.json()), new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = files.frames; })]);
     const frame = (agent.animations.RestPose || Object.values(agent.animations)[0]).frames[0];
