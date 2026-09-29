@@ -11,7 +11,7 @@ const words = {
     home:'Главная', installItems:'Установить ({n})', byType:'Выбор по типу', byAuthor2:'Выбор по автору', options:'Параметры', history:'История установки', sortBy:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', allTypes:'Все элементы',
     welcome:'Добро пожаловать', welcomeTo:'в Обновление Nekochat Reloaded', keepUp:'Пополните свой Nekochat Reloaded', homeIntro:'Посмотрите, что нового: обновления приложения, темы, курсоры, звуки, значки, обои для чата, помощники и дополнения (игры, Редактор тем).', express:'Экспресс', expressText:'Показать самое новое (рекомендуется)', custom:'Выборочно', customText:'Выбрать из тем, курсоров, звуков, значков, обоев, помощников и дополнений', privacy:'Вопросы о конфиденциальности?', privacyText:'При просмотре каталога приложение только загружает список с GitHub. Сведения о вашем компьютере не отправляются.',
     boxInstalled:'Установлено: {n}', boxInstalledText:'На этом компьютере установлено элементов каталога: {n}.', boxHistory:'Открыть историю установки.', clientAvailable:'Доступно обновление приложения: {name}', installNow:'Установить сейчас', news:'Новинки',
-    customize:'Настройте результаты', selectTitle:'Выберите: {type}', selectIntro:'Отметьте то, что хотите установить, и выберите «Просмотреть и установить».', reviewLink:'Просмотреть и установить', total:'Всего: {n}', clearAll:'Снять все', selectAll:'Выбрать все', installedMark:'установлено', added:'Добавлено:', version:'Версия:', type:'Тип:', noDescription:'Описание пока не добавлено.',
+    customize:'Настройте результаты', selectTitle:'Выберите: {type}', selectIntro:'Отметьте то, что хотите установить, и выберите «Просмотреть и установить».', reviewLink:'Просмотреть и установить', total:'Всего: {n}', totalSize:'Всего: {n}, {size}', sizeLabel:'Размер загрузки:', sizeTotal:'Размер загрузки (всего): {size}', clearAll:'Снять все', selectAll:'Выбрать все', installedMark:'установлено', added:'Добавлено:', version:'Версия:', type:'Тип:', noDescription:'Описание пока не добавлено.',
     reviewTitle:'Просмотр и установка', installBtn:'Установить', noneSelected:'Ничего не отмечено. Вернитесь к списку и отметьте нужное.', reviewNote:'Проверьте список и нажмите «Установить».',
     yourResults:'Ваши результаты', resultsTitle:'Итоги установки', restartTitle:'Перезапустите, чтобы завершить установку', restartText:'Приложение не будет обновлено, пока вы его не перезапустите. Сохраните открытые черновики и перезапустите сейчас.', restartNow:'Перезапустить сейчас', moreAvailable:'Доступны ещё элементы', moreAvailableText:'Загляните в каталог и установите то, что вам нужно.', summary:'Сводка установки', successful:'Успешно:', failed:'Ошибки:', remaining:'Осталось:', successfulItems:'Успешно установлено', failedItems:'Не удалось установить', historyTitle:'История установки', historyHeading:'Просмотр истории установки', colName:'Название', colType:'Тип', colStatus:'Состояние', historyIntro:'Установленные на этом компьютере темы и элементы каталога. Luna и Classic встроены в клиент.',
   },
@@ -19,7 +19,7 @@ const words = {
     home:'Update Home', installItems:'Install Items ({n})', byType:'Select by Type', byAuthor2:'Select by Author', options:'Options', history:'Review your update history', sortBy:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', allTypes:'All items',
     welcome:'Welcome', welcomeTo:'to Nekochat Reloaded Update', keepUp:'Keep your Nekochat Reloaded up to date', homeIntro:'Check what is new: app updates, themes, cursors, sounds, icons, chat wallpapers, assistants and add-ons (games, the Theme Editor).', express:'Express', expressText:'Get the newest items (recommended)', custom:'Custom', customText:'Select from themes, cursors, sounds, icons, wallpapers, assistants and add-ons', privacy:'Concerned about privacy?', privacyText:'When you browse the catalog, the app only downloads the list from GitHub. Nothing about your computer is sent.',
     boxInstalled:'Installed items: {n}', boxInstalledText:'Catalog items installed on this computer: {n}.', boxHistory:'View your update history.', clientAvailable:'An update for the app is available: {name}', installNow:'Install now', news:'News',
-    customize:'Customize your results', selectTitle:'Select {type}', selectIntro:'Check what you want to install, then choose Review and install items.', reviewLink:'Review and install items', total:'Total: {n} items', clearAll:'Clear All', selectAll:'Select All', installedMark:'installed', added:'Added:', version:'Version:', type:'Type:', noDescription:'No description has been added yet.',
+    customize:'Customize your results', selectTitle:'Select {type}', selectIntro:'Check what you want to install, then choose Review and install items.', reviewLink:'Review and install items', total:'Total: {n} items', totalSize:'Total: {n} items, {size}', sizeLabel:'Download size:', sizeTotal:'Download size (total): {size}', clearAll:'Clear All', selectAll:'Select All', installedMark:'installed', added:'Added:', version:'Version:', type:'Type:', noDescription:'No description has been added yet.',
     reviewTitle:'Review and Install Items', installBtn:'Install Items', noneSelected:'Nothing is selected. Go back to the list and check what you need.', reviewNote:'Check the list and choose Install Items.',
     yourResults:'Your results', resultsTitle:'Review Your Installation Results', restartTitle:'Restart now to finish installing updates', restartText:'Nekochat Reloaded will not be up to date until you restart it. Please save any unsent messages and restart now.', restartNow:'Restart now', moreAvailable:'More items are available', moreAvailableText:'Look through the catalog and install what you need.', summary:'Installation Summary', successful:'Successful:', failed:'Failed:', remaining:'Remaining:', successfulItems:'Successful Items', failedItems:'Failed Items', historyTitle:'Update History', historyHeading:'Review Your Update History', colName:'Name', colType:'Type', colStatus:'Status', historyIntro:'Themes and catalog items installed on this computer. Luna and Classic are built into the client.',
   },
@@ -49,6 +49,7 @@ async function loadCatalog() {
   // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
   state.items = [...themes.filter(theme => !['luna', 'classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((item, position) => ({ ...item, position })).filter(fitsPlatform);
   state.installedThemes = installedThemes; state.installedPacks = installedPacks; state.loaded = true;
+  updateInfo = await controls.getUpdateInfo?.().catch(() => null);
   const client = await findClientUpdate(); if (client) state.items.unshift(client);
   for (const id of [...state.selected]) if (!state.items.some(item => item.id === id) || isInstalled(state.items.find(item => item.id === id))) state.selected.delete(id);
 }
@@ -82,6 +83,29 @@ async function findClientUpdate() {
       release: { tag: found.tag_name, version, page: found.html_url, assets: (found.assets || []).map(asset => ({ name: asset.name, url: asset.browser_download_url, size: asset.size })) } };
   } catch { return null; }
 }
+// Download sizes: a pack asks the main process (HEAD requests), the client update takes the release's asset.
+const sizes = new Map();
+const formatSize = bytes => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+let updateInfo = null;
+function clientAssetSize(item) {
+  const info = updateInfo || {}, platform = info.platform, mode = info.mode;
+  const pattern = platform === 'win32' ? (mode === 'install' ? /Setup-[^/]*\.exe$/i : /-portable\.exe$/i) : platform === 'linux' ? (mode === 'install' ? /\.AppImage$/i : /\.deb$/i) : platform === 'android' ? /\.apk$/i : platform === 'ios' ? /\.ipa$/i : null;
+  return item.release?.assets?.find(asset => pattern?.test(asset.name))?.size || 0;
+}
+async function sizeOf(item) {
+  if (sizes.has(item.id)) return sizes.get(item.id);
+  let bytes = 0;
+  if (item.kind === 'client') bytes = clientAssetSize(item);
+  else if (item.kind === 'pack') bytes = Number(await controls.getCatalogPackSize?.(item.id).catch(() => 0)) || 0;
+  sizes.set(item.id, bytes); return bytes;
+}
+async function totalOfSelected() { const items = state.items.filter(item => state.selected.has(item.id)); const list = await Promise.all(items.map(sizeOf)); return { count: items.length, bytes: list.reduce((sum, size) => sum + size, 0) }; }
+async function refreshTotal() {
+  const { count, bytes } = await totalOfSelected();
+  const line = document.querySelector('.wu-actionline span'); if (line) line.textContent = bytes ? fill(t('totalSize'), { n: count, size: formatSize(bytes) }) : fill(t('total'), { n: count });
+  const review = document.querySelector('.wu-review-size'); if (review) review.textContent = bytes ? fill(t('sizeTotal'), { size: formatSize(bytes) }) : '';
+}
+async function fillSize(id) { const item = state.items.find(entry => entry.id === id); const node = document.querySelector(`[data-size="${CSS.escape(id)}"]`); if (!item || !node) return; const bytes = await sizeOf(item); node.textContent = bytes ? `${t('sizeLabel')} ${formatSize(bytes)}` : ''; }
 async function describe(item) {
   if (descriptions.has(item.id)) return descriptions.get(item.id);
   let text = '';
@@ -116,7 +140,7 @@ const rowHTML = (item, open = false) => {
   const checked = state.selected.has(item.id), expanded = open || state.expanded.has(item.id);
   const preview = item.previewUrl ? `<img class="wu-thumb" src="${esc(item.previewUrl)}" alt="" onerror="this.remove()">` : '';
   return `<div class="wu-row" data-id="${esc(item.id)}"><label class="wu-checkline"><input type="checkbox" class="wu-check" data-id="${esc(item.id)}"${checked ? ' checked' : ''}></label><button type="button" class="wu-plus" data-expand="${esc(item.id)}" aria-label="+">${expanded ? '−' : '+'}</button><a href="#" class="wu-name" data-expand="${esc(item.id)}">${esc(itemName(item))}</a><span class="wu-by">${itemAuthor(item) ? `(${esc(itemAuthor(item))})` : ''}</span>
-    <div class="wu-detail"${expanded ? '' : ' hidden'}>${preview}<div class="wu-detail-text"><p data-desc="${esc(item.id)}">${esc(descriptions.get(item.id) ?? '…')}</p><p class="wu-meta">${esc(t('type'))} ${esc(t('types')[item.type] || item.type)}${item.version && item.version !== 'Unknown' ? ` · ${esc(t('version'))} ${esc(item.version)}` : ''}${item.added ? ` · ${esc(t('added'))} ${esc(item.added)}` : ''}</p></div></div></div>`;
+    <div class="wu-detail"${expanded ? '' : ' hidden'}>${preview}<div class="wu-detail-text"><p data-desc="${esc(item.id)}">${esc(descriptions.get(item.id) ?? '…')}</p><p class="wu-meta" data-size="${esc(item.id)}"></p><p class="wu-meta">${esc(t('type'))} ${esc(t('types')[item.type] || item.type)}${item.version && item.version !== 'Unknown' ? ` · ${esc(t('version'))} ${esc(item.version)}` : ''}${item.added ? ` · ${esc(t('added'))} ${esc(item.added)}` : ''}</p></div></div></div>`;
 };
 const clientItem = () => state.items.find(item => item.kind === 'client');
 function clientNotice() { const item = clientItem(); return item ? `<div class="wu-notice"><b>${esc(fill(t('clientAvailable'), { name: itemName(item) }))}</b><p><button type="button" class="wu-btn" data-act="client">${esc(t('installNow'))}</button></p></div>` : ''; }
@@ -140,7 +164,7 @@ function selectPage() {
 function reviewPage() {
   const items = sorted(state.items.filter(item => state.selected.has(item.id)));
   return `${strip(t('customize'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('reviewTitle'))}</h2>
-    ${items.length ? `<p>${esc(t('reviewNote'))}</p><p><button type="button" class="wu-btn" data-act="install">${esc(t('installBtn'))}</button> <span class="wu-meta">${esc(fill(t('total'), { n: items.length }))}</span></p><div class="wu-group-box">${items.map(item => rowHTML(item, true)).join('')}</div>` : `<p>${esc(t('noneSelected'))}</p>`}</div>`;
+    ${items.length ? `<p>${esc(t('reviewNote'))}</p><p><button type="button" class="wu-btn" data-act="install">${esc(t('installBtn'))}</button> <span class="wu-meta">${esc(fill(t('total'), { n: items.length }))}</span> <span class="wu-meta wu-review-size"></span></p><div class="wu-group-box">${items.map(item => rowHTML(item, true)).join('')}</div>` : `<p>${esc(t('noneSelected'))}</p>`}</div>`;
 }
 function resultsPage() {
   const r = state.results || { ok: [], failed: [] }, remaining = available().length;
@@ -184,6 +208,8 @@ function render() {
   const page = { home: homePage, select: selectPage, review: reviewPage, results: resultsPage, history: historyPage }[state.page]();
   const main = $('#wu-main'); const scroll = main.scrollTop; main.innerHTML = page; main.scrollTop = scroll; renderSide();
   main.querySelectorAll('.wu-detail:not([hidden]) [data-desc]').forEach(async element => { const item = state.items.find(entry => entry.id === element.dataset.desc); if (!item) return; const text = await describe(item); const node = main.querySelector(`[data-desc="${CSS.escape(item.id)}"]`); if (node) node.textContent = text || t('noDescription'); });
+  main.querySelectorAll('.wu-detail:not([hidden])').forEach(detail => fillSize(detail.closest('.wu-row').dataset.id));
+  if (state.page === 'select' || state.page === 'review') refreshTotal();
   if (state.page === 'history') fillHistory();
 }
 function go(page, options = {}) { Object.assign(state, { page }, options); $('#wu-main').scrollTop = 0; render(); }
@@ -207,6 +233,7 @@ document.addEventListener('click', event => {
     const id = target.dataset.expand; if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
     const row = target.closest('.wu-row'), detail = row.querySelector('.wu-detail'), open = state.expanded.has(id) || state.page === 'review';
     detail.hidden = !open; row.querySelector('.wu-plus').textContent = open ? '−' : '+';
+    if (open) fillSize(id);
     if (open) { const item = state.items.find(entry => entry.id === id); describe(item).then(text => { const node = row.querySelector('[data-desc]'); if (node) node.textContent = text || t('noDescription'); }); }
     return;
   }
@@ -217,7 +244,7 @@ document.addEventListener('click', event => {
   if (target.dataset.act === 'client') { const item = clientItem(); if (item) { state.selected.add(item.id); go('review'); } }
 });
 document.addEventListener('change', event => {
-  if (event.target.classList?.contains('wu-check')) { const id = event.target.dataset.id; if (event.target.checked) state.selected.add(id); else state.selected.delete(id); renderSide(); const total = document.querySelector('.wu-actionline span'); if (total) total.textContent = fill(t('total'), { n: state.selected.size }); if (state.page === 'review') render(); }
+  if (event.target.classList?.contains('wu-check')) { const id = event.target.dataset.id; if (event.target.checked) state.selected.add(id); else state.selected.delete(id); renderSide(); if (state.page === 'review') render(); else refreshTotal(); }
   if (event.target.id === 'wu-sort') { state.sort = event.target.value; render(); }
 });
 
