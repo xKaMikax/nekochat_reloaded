@@ -27,12 +27,11 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .wu-sort { display: block; margin: 8px 4px 0; color: #000; }
 .wu-sort select { display: block; width: 100%; margin-top: 3px; height: 21px; border: 1px solid #7f9db9; background: #fff; font: 11px Tahoma, Arial, sans-serif; }
 .wu-main { flex: 1; min-width: 0; overflow-x: hidden; overflow-y: auto; background: #fff; padding-bottom: 22px; font: 12px Tahoma, Arial, sans-serif; color: #000; }
-.wu-strip { position: relative; display: flex; align-items: flex-end; min-height: 76px; padding-left: 0; overflow: hidden; }
-.wu-strip img { position: relative; z-index: 1; height: 76px; width: auto; flex: none; }
-.wu-strip::after { content: ''; position: absolute; left: 70px; right: 0; bottom: 0; height: 28px; background: linear-gradient(90deg, #b9b9b9 0%, #dedede 55%, #fff 100%); }
-.wu-strip-text { position: relative; z-index: 1; margin: 0 0 0 40px; padding-bottom: 6px; color: #6a6a6a; font-family: 'Trebuchet MS', Tahoma, sans-serif; line-height: 1; }
-.wu-strip-text b { display: block; font-size: 34px; font-weight: 400; letter-spacing: -.5px; }
-.wu-strip-text span { display: block; margin: 0 0 0 4px; font-size: 17px; }
+.wu-strip { position: relative; height: 72px; overflow: hidden; background: url('../images/wu/welcomebanner-bg.jpg') no-repeat left top; }
+.wu-strip::after { content: ''; position: absolute; left: 318px; right: 0; top: 44px; height: 28px; background: linear-gradient(90deg, #dfdfdd 0%, #fff 100%); }
+.wu-strip-text { position: absolute; z-index: 1; left: 178px; top: 0; right: 0; color: #666; font-family: 'Trebuchet MS', Tahoma, sans-serif; line-height: 1; }
+.wu-strip-text b { display: block; margin-top: 2px; font-size: 36px; line-height: 40px; font-weight: 400; letter-spacing: -.5px; white-space: nowrap; }
+.wu-strip-text span { position: absolute; left: 4px; top: 45px; font-size: 17px; line-height: 22px; white-space: nowrap; }
 .wu-two { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 22px; padding: 0 18px 0 16px; }
 .wu-content { padding: 0 18px 0 16px; }
 .wu-content.full { padding-right: 20px; }
@@ -89,7 +88,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
   .wu-two { grid-template-columns: 1fr; }
   .wu-brand { font-size: 20px; }
   .wu-tag { display: none; }
-  .wu-strip-text b { font-size: 24px; }
+  .wu-strip-text b { font-size: 26px; }
 }
 .wu-history { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 11px; }
 .wu-history th { padding: 3px 8px; background: #c6c6c6; text-align: left; font-weight: 700; }
