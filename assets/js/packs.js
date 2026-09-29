@@ -116,5 +116,27 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyLook, { once: true }); else applyLook();
   window.addEventListener('storage', event => { if (['nk_font_size', 'nk_effects', 'nk_appearance'].includes(event.key)) applyLook(); });
+  // Add-ons from the Catalog (games, the Theme Editor, the Admin Panel): installed packs with
+  // addon/addon.json. Each is { packId, id, name, icon, help, files } — the same on every platform.
+  let addonCache = null;
+  window.nkAddons = async (fresh = false) => {
+    if (addonCache && !fresh) return addonCache;
+    const packs = (await (window.windowControls || window.parent?.windowControls)?.listPacks?.().catch(() => [])) || [];
+    const list = [];
+    for (const pack of packs) {
+      const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
+      try {
+        const info = await (await fetch(manifest)).json();
+        list.push({ packId: pack.id, id: String(info.id || pack.id), name: info.name || { en: pack.name }, version: info.version || '', author: pack.author || info.author || '', icon: pack.files[`addon/${info.icon || 'icon.png'}`] || '', icon32: pack.files[`addon/${info.icon32 || info.icon || 'icon.png'}`] || '', help: pack.files['addon/help.json'] || '', about: info.about || null });
+      } catch {}
+    }
+    addonCache = list; window.dispatchEvent(new Event('nk-addons-ready'));
+    return list;
+  };
+  // Synchronous check for menus drawn on the spot (after the first nkAddons()).
+  window.nkAddonInstalled = id => Boolean(addonCache?.some(addon => addon.id === id));
+  window.nkHasAddon = async id => Boolean((await window.nkAddons()).find(addon => addon.id === id));
+  // The Catalog says when packs change, so buttons of add-ons appear and disappear at once.
+  window.addEventListener('storage', event => { if (event.key === 'nk_packs_changed') { addonCache = null; window.dispatchEvent(new Event('nk-addons-changed')); window.nkAddons(true).catch(() => {}); } });
   window.nkPacks = { applyLook, applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
 })();

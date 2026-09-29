@@ -121,7 +121,7 @@
   const chatName = (kind, id) => { try { if (kind === 'room') return `# ${rooms.find(room => room.id === id)?.name ?? ''}`; return displayName(users.find(user => user.id === id)); } catch { return ''; } };
   function menu() {
     let count = 0; try { count = unread.size; } catch {}
-    say(t('hello'), [[t('searchAll'), 'search-all'], [fill(t('unread'), { count }), 'unread'], [t('go'), 'go'], [t('search'), 'search'], [t('status'), 'status'], [t('tip'), 'tip'], ...(window.windowControls?.openGame ? [[t('mines'), 'mines']] : []), ...(window.windowControls?.openHelp ? [[t('help'), 'help']] : []), [fill(t('hide'), { name: data.name || 'Rover' }), 'hide']]);
+    say(t('hello'), [[t('searchAll'), 'search-all'], [fill(t('unread'), { count }), 'unread'], [t('go'), 'go'], [t('search'), 'search'], [t('status'), 'status'], [t('tip'), 'tip'], ...((window.windowControls || window.parent?.windowControls)?.openGame && window.nkAddonInstalled?.('minesweeper') ? [[t('mines'), 'mines']] : []), ...((window.windowControls || window.parent?.windowControls)?.openHelp ? [[t('help'), 'help']] : []), [fill(t('hide'), { name: data.name || 'Rover' }), 'hide']]);
   }
   // Search Companion, like Windows XP's: a pane in place of the chat list with the question, the
   // words, where to look and from whom, and the results under it. Rover sits at its bottom.
@@ -215,8 +215,8 @@
       if (action === 'open-chat') { closeBalloon(); const [kind, id] = value.split(':'); try { openChat(kind, Number(id)); } catch {} return; }
       if (action === 'status') { say(t('status'), [...Object.entries(t('statuses')).map(([status, label]) => [label, 'set-status', status]), [t('back'), 'menu']]); return; }
       if (action === 'set-status') { try { chooseStatus(value); } catch {} play('Acknowledge'); say(t('statuses')[value]); return; }
-      if (action === 'mines') { closeBalloon(); window.windowControls?.openGame?.({ game: 'minesweeper' }); return; }
-      if (action === 'help') { closeBalloon(); window.windowControls?.openHelp?.(); return; }
+      if (action === 'mines') { closeBalloon(); (window.windowControls || window.parent?.windowControls)?.openGame?.({ game: 'minesweeper' }); return; }
+      if (action === 'help') { closeBalloon(); (window.windowControls || window.parent?.windowControls)?.openHelp?.(); return; }
       if (action === 'tip') { const tips = t('tips'); play('Thinking'); say(tips[Math.floor(Math.random() * tips.length)], [[t('tip'), 'tip'], [t('back'), 'menu']]); return; }
       if (action === 'search') { closeBalloon(); key('f', { ctrlKey: true }); return; }
       if (action === 'go') { closeBalloon(); key('k', { ctrlKey: true }); return; }

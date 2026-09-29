@@ -78,7 +78,6 @@ const builtInThemes = [
 ];
 let settingsWindow;
 let themeBrowserWindow;
-let themeEditorWindow;
 let emojiBrowserWindow;
 let emojiBrowserOwner;
 const systemDialogWindows = new Set();
@@ -175,32 +174,64 @@ function openHelp(owner, topic) {
   helpWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_center.html'), page ? { query: { topic: page } } : undefined);
 }
 // Games (Minesweeper): options.level, .seed and .chat play a challenge from a chat.
-let gameWindow;
 function openGame(owner, options = {}) {
   const level = ['beginner', 'intermediate', 'expert'].includes(options.level) ? options.level : '';
   const query = { ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) };
-  if (gameWindow && !gameWindow.isDestroyed()) gameWindow.close();
-  const [width, height] = { intermediate: [300, 390], expert: [530, 390] }[level] || [230, 320];
-  gameWindow = new BrowserWindow({ title: 'Minesweeper', width, height, minWidth: 120, minHeight: 150, resizable: true, parent: owner, frame: false, transparent: false, backgroundColor: '#c0c0c0', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
-  gameWindow.on('closed', () => { gameWindow = null; });
-  gameWindow.loadFile(path.join(__dirname, 'assets', 'html', 'minesweeper.html'), { query });
+  return openAddon(owner, 'minesweeper', query);
 }
-// About box (XP's ShellAbout look): 'nekochat' or 'minesweeper'.
+// Add-ons from the Catalog: a pack with addon/addon.json (id, name, entry, window) and its files.
+// The entry page and style sheets say {{APP}} for the app, {{ADDON}}file for their own files and
+// {{BRIDGE}} for a platform's bridge; they are filled in into a copy under userData.
+async function findAddon(id) {
+  for (const pack of await listPacks()) {
+    if (!pack.files?.['addon/addon.json']) continue;
+    const folder = path.join(packFolder(pack.id), 'addon');
+    let info; try { info = JSON.parse(await fs.readFile(path.join(folder, 'addon.json'), 'utf8')); } catch { continue; }
+    if (String(info.id || pack.id) === id || pack.id === id) return { info, folder };
+  }
+  return null;
+}
+const addonWindows = new Map();
+async function openAddon(owner, id, query = {}) {
+  const found = await findAddon(String(id || '')); if (!found) return false;
+  const { info, folder } = found; const key = String(info.id || id);
+  const existing = addonWindows.get(key);
+  if (existing && !existing.isDestroyed()) { if (!Object.keys(query).length) { existing.focus(); return true; } existing.close(); }
+  const runtime = path.join(app.getPath('userData'), 'addons-runtime', key.replace(/[^\w.-]/g, '_'));
+  await fs.rm(runtime, { recursive: true, force: true }); await fs.mkdir(runtime, { recursive: true });
+  const names = (await fs.readdir(folder)).filter(name => /^[\w.-]+$/.test(name));
+  const processed = new Map();
+  const fill = text => text.replace(/\{\{APP\}\}/g, `${pathToFileURL(__dirname).href}/`).replace(/\{\{BRIDGE\}\}/g, '').replace(/\{\{ADDON\}\}([\w.-]+)/g, (_, name) => processed.get(name) || pathToFileURL(path.join(folder, name)).href);
+  for (const name of names.filter(item => /\.css$/i.test(item))) { const out = path.join(runtime, name); await fs.writeFile(out, fill(await fs.readFile(path.join(folder, name), 'utf8'))); processed.set(name, pathToFileURL(out).href); }
+  const files = Object.fromEntries(names.map(name => [name, processed.get(name) || pathToFileURL(path.join(folder, name)).href]));
+  const entryName = String(info.entry || 'index.html').replace(/[^\w.-]/g, '');
+  const html = fill(await fs.readFile(path.join(folder, entryName), 'utf8')).replace(/<head>/i, `<head><script>window.NK_ADDON = ${JSON.stringify({ id: key, files }).replace(/</g, '\\u003c')};</script>`);
+  const entry = path.join(runtime, entryName); await fs.writeFile(entry, html);
+  const size = info.window || {};
+  const win = new BrowserWindow({ title: String(info.name?.en || key), width: size.width || 640, height: size.height || 480, minWidth: size.minWidth || 200, minHeight: size.minHeight || 150, resizable: size.resizable !== false, parent: owner || undefined, frame: false, transparent: false, backgroundColor: size.background || '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  addonWindows.set(key, win); win.on('closed', () => { if (addonWindows.get(key) === win) addonWindows.delete(key); });
+  const safeQuery = Object.fromEntries(Object.entries(query || {}).filter(([name, value]) => /^\w+$/.test(name) && typeof value === 'string' && value.length < 300));
+  win.loadFile(entry, { query: safeQuery });
+  return true;
+}
+// About box (XP's ShellAbout look): 'nekochat', 'catalog' or 'addon:<id>'.
 let aboutWindow;
 function openAbout(owner, appName) {
-  const name = appName === 'minesweeper' ? 'minesweeper' : 'nekochat';
+  const name = /^(nekochat|catalog|addon:[\w.-]+)$/.test(appName || '') ? appName : 'nekochat';
   if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
   aboutWindow = new BrowserWindow({ title: 'About', width: 420, height: 380, minWidth: 380, minHeight: 340, resizable: false, parent: owner || undefined, frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
   aboutWindow.on('closed', () => { aboutWindow = null; });
   aboutWindow.loadFile(path.join(__dirname, 'assets', 'html', 'about.html'), { query: { app: name } });
 }
-// The HTML Help viewer of XP, for a program's own Help (Minesweeper).
+// The HTML Help viewer of XP, for a program's own Help (the Catalog, an add-on).
 let helpViewerWindow;
-function openHelpViewer(owner) {
-  if (helpViewerWindow && !helpViewerWindow.isDestroyed()) { helpViewerWindow.focus(); return; }
+// spec: 'catalog' or 'addon:<id>' (the Help an add-on brings).
+function openHelpViewer(owner, spec) {
+  const query = /^addon:[\w.-]+$/.test(spec || '') ? { addon: spec.slice(6) } : /^[a-z-]+$/.test(spec || '') ? { book: spec } : {};
+  if (helpViewerWindow && !helpViewerWindow.isDestroyed()) helpViewerWindow.close();
   helpViewerWindow = new BrowserWindow({ title: 'Help', width: 620, height: 460, minWidth: 380, minHeight: 300, resizable: true, parent: owner || undefined, frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
   helpViewerWindow.on('closed', () => { helpViewerWindow = null; });
-  helpViewerWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_viewer.html'));
+  helpViewerWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_viewer.html'), { query });
 }
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
@@ -219,19 +250,11 @@ function openControlPanel(owner) {
 // Server admin panel (/admin/*). Its session is an HttpOnly SameSite=Lax cookie, which a page
 // on file:// never sends to the server, so the requests go through the main process and the
 // cookie is kept here, per server, until the app quits.
-let adminWindow;
 const adminCookies = new Map();
 function openAdminPanel(owner, server) {
   const url = typeof server === 'string' && /^https?:\/\//.test(server) ? server.replace(/\/$/, '') : '';
   if (!url) return;
-  if (adminWindow && !adminWindow.isDestroyed()) { adminWindow.focus(); return; }
-  adminWindow = new BrowserWindow({
-    title: 'Nekochat Reloaded Admin', width: 860, height: 600, minWidth: 620, minHeight: 420,
-    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
-  });
-  adminWindow.on('closed', () => { adminWindow = null; });
-  adminWindow.loadFile(path.join(__dirname, 'assets', 'html', 'admin.html'), { query: { server: url } });
+  return openAddon(owner, 'admin', { server: url });
 }
 async function adminRequest({ server, method = 'GET', path: route = '', body } = {}) {
   const url = typeof server === 'string' && /^https?:\/\//.test(server) ? server.replace(/\/$/, '') : '';
@@ -246,16 +269,7 @@ async function adminRequest({ server, method = 'GET', path: route = '', body } =
   const data = await response.json().catch(() => ({}));
   return { status: response.status, ok: response.ok, data };
 }
-function openThemeEditor(owner) {
-  if (themeEditorWindow && !themeEditorWindow.isDestroyed()) { themeEditorWindow.focus(); return; }
-  themeEditorWindow = new BrowserWindow({
-    title: 'Theme Editor', width: 860, height: 600, minWidth: 620, minHeight: 420,
-    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
-  });
-  themeEditorWindow.on('closed', () => { themeEditorWindow = null; });
-  themeEditorWindow.loadFile(path.join(__dirname, 'assets', 'html', 'theme_editor.html'));
-}
+function openThemeEditor(owner) { return openAddon(owner, 'theme-editor'); }
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
@@ -645,7 +659,9 @@ async function fetchCatalog() {
 // ---- Catalog packs: cursors, sounds, icons and combos (any of those plus a theme) -------------
 // packs.json lists them; each directory holds Pack.ZIP with pack.json and the folders sounds/,
 // cursors/ (cursors.json), icons/ (icons.json) and theme/.
-const PACK_TYPES = ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'combo'];
+const PACK_TYPES = ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'addons', 'combo'];
+// The folder a plain-files pack is installed in: an assistant in assistant/, an add-on in addon/.
+const packTypeFolder = type => ({ assistants: 'assistant', addons: 'addon' })[type] || type;
 const packFileList = entry => (Array.isArray(entry.Files || entry.files) ? (entry.Files || entry.files) : []).map(String).filter(name => /^[^/\\]+$/.test(name) && name !== '.' && name !== '..');
 function packEntries(manifest) {
   const entries = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.packs) ? manifest.packs : [];
@@ -664,6 +680,8 @@ function packEntries(manifest) {
       version: details.Version || details.version || entry.Version || entry.version || '',
       // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
       files: packFileList(entry),
+      // Add-ons (like the Theme Editor) may need the desktop app: "Platforms": ["desktop"].
+      platforms: Array.isArray(entry.Platforms || entry.platforms) ? (entry.Platforms || entry.platforms).map(String) : null,
       previewUrl: entry.Preview || entry.preview || (type === 'wallpapers' && packFileList(entry)[0] ? `${themeCatalogRoot}/${directory}/${encodeURIComponent(packFileList(entry)[0])}` : `${themeCatalogRoot}/${directory}/Preview.png`),
       descriptionUrl: entry.Description || entry.description || `${themeCatalogRoot}/${directory}/Description.md`,
       zipUrl: entry.PackZIP || entry.packZip || `${themeCatalogRoot}/${directory}/Pack.ZIP`,
@@ -724,7 +742,7 @@ async function installCatalogPack(id) {
   try {
     if (item.files.length) {
       // No Pack.ZIP: download the listed files into the folder of the pack's type.
-      const folder = item.type === 'assistants' ? 'assistant' : item.type;
+      const folder = packTypeFolder(item.type);
       await fs.mkdir(path.join(temporary, folder), { recursive: true });
       for (const name of item.files) {
         const response = await fetch(`${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`);
@@ -738,7 +756,7 @@ async function installCatalogPack(id) {
     }
     let info = {}; try { info = JSON.parse(await fs.readFile(path.join(temporary, 'pack.json'), 'utf8')); } catch {}
     const contains = [];
-    for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'assistant', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
+    for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'assistant', 'addon', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
     // The theme of a combo goes to the installed themes, like a catalog theme.
     let themeId = null;
     if (contains.includes('theme')) {
@@ -1096,7 +1114,8 @@ app.whenReady().then(async () => {
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
   ipcMain.on('help:open', (e, topic) => openHelp(windowOwner(e), topic));
-  ipcMain.on('help-viewer:open', e => openHelpViewer(BrowserWindow.fromWebContents(e.sender)));
+  ipcMain.handle('addon:open', (e, id, query) => openAddon(windowOwner(e), String(id || ''), query && typeof query === 'object' ? query : {}));
+  ipcMain.on('help-viewer:open', (e, spec) => openHelpViewer(BrowserWindow.fromWebContents(e.sender), typeof spec === 'string' ? spec : ''));
   ipcMain.on('about:open', (e, appName) => openAbout(windowOwner(e), appName));
   ipcMain.on('game:open', (e, options) => openGame(windowOwner(e), options && typeof options === 'object' ? options : {}));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
