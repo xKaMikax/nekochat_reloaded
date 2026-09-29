@@ -96,3 +96,4 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .wu-history td { padding: 6px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
 .wu-actions { text-align: right; white-space: nowrap; }
 .wu-actions .wu-btn { margin-left: 4px; }
+.wu-choice .wu-btn { min-width: 92px; }
