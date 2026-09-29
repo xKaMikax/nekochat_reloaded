@@ -354,3 +354,11 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .search-companion-dog { display: flex; justify-content: center; padding: 4px 0 8px; }
 .assistant-host.in-pane { position: static !important; }
 .assistant-host.in-pane .assistant-balloon { display: none; }
+/* Welcome screen, like Windows XP's: the picture's frame lights up orange and a band runs
+   from it under the pointer; the note under the name is like "5 programs running". */
+.saved-user { position: relative; border-radius: 6px 0 0 6px; }
+.saved-user:hover { background: linear-gradient(90deg, rgba(0, 48, 156, .9), rgba(0, 48, 156, .35) 70%, transparent); }
+.saved-user:hover .xp-user-avatar { border-color: #ffc34e; }
+.saved-user .xp-user-avatar { background: #fff; }
+.saved-user-note { color: #c8d8ff; }
+.saved-user-note.unread { color: #ffe36e; font-weight: bold; }
