@@ -121,14 +121,13 @@ const rowHTML = (item, open = false) => {
 const clientItem = () => state.items.find(item => item.kind === 'client');
 function clientNotice() { const item = clientItem(); return item ? `<div class="wu-notice"><b>${esc(fill(t('clientAvailable'), { name: itemName(item) }))}</b><p><button type="button" class="wu-btn" data-act="client">${esc(t('installNow'))}</button></p></div>` : ''; }
 function homePage() {
-  const news = sorted(available()).slice(0, 3);
   return `${strip(t('welcome'), t('welcomeTo'))}<div class="wu-two"><div class="wu-content">
     <h2 class="wu-h">${esc(t('keepUp'))}</h2>${clientNotice()}<p>${esc(t('homeIntro'))}</p>
     <div class="wu-choice"><button type="button" class="wu-btn" data-go="express">${esc(t('express'))}</button><span><b>${esc(t('expressText'))}</b></span></div>
     <div class="wu-choice"><button type="button" class="wu-btn" data-go="custom">${esc(t('custom'))}</button><span>${esc(t('customText'))}</span></div>
     <p><b>${esc(t('privacy'))}</b> ${esc(t('privacyText'))}</p></div>
     <div class="wu-boxes"><div class="wu-box ok"><header><img src="assets/images/wu/shield-3-32.png" alt=""><b>${esc(fill(t('boxInstalled'), { n: state.installedPacks.filter(pack => pack.catalogId).length + state.installedThemes.filter(theme => theme.catalogId).length }))}</b></header><p>${esc(fill(t('boxInstalledText'), { n: state.installedPacks.filter(pack => pack.catalogId).length + state.installedThemes.filter(theme => theme.catalogId).length }))}</p><p><a href="#" data-go="history">${esc(t('boxHistory'))}</a></p></div>
-    <div class="wu-box news"><header><img src="assets/images/wu/info.png" alt=""><b>${esc(t('news'))}</b></header>${news.map(item => `<p><a href="#" data-open="${esc(item.id)}">${esc(itemName(item))}</a></p>`).join('')}</div></div></div>`;
+</div></div>`;
 }
 function selectPage() {
   const list = visible(), typeLabel = state.author ? state.author : t('types')[state.type] || t('allTypes');
