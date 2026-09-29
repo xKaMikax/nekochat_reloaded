@@ -77,6 +77,7 @@
   function focus(win) {
     if (!win || win.destroyed) return;
     win.element.classList.remove('hidden');
+    if (win.minimized) { win.minimized = false; win.element.style.display = ''; renderTray(); }
     win.element.style.zIndex = String(++zIndex);
     focusedWindow = win;
     markFocus();
@@ -86,6 +87,31 @@
     windows.forEach(item => { try { item.frame.contentDocument?.documentElement.classList.toggle('xp-inactive', item !== focusedWindow); } catch {} });
   }
   function show(win) { focus(win); }
+  // Minimise hides only that window (the others stay); a chip at the bottom brings it back. The main
+  // window still sends the app to the background.
+  const trayStyle = document.createElement('style');
+  trayStyle.textContent = '.nk-tray{position:absolute;left:0;right:0;bottom:0;z-index:99999;display:flex;gap:4px;padding:3px;overflow-x:auto;background:#ece9d8;border-top:1px solid #808080}.nk-tray-chip{flex:none;max-width:48%;padding:5px 10px;overflow:hidden;border:1px solid #003c74;border-radius:3px;background:linear-gradient(#fff,#ece9d8);color:#000;font:12px Tahoma,Arial,sans-serif;text-overflow:ellipsis;white-space:nowrap}';
+  document.head.append(trayStyle);
+  function renderTray() {
+    const hidden = [...windows].filter(item => item.minimized && !item.destroyed);
+    let tray = document.querySelector('.nk-tray');
+    if (!hidden.length) { tray?.remove(); return; }
+    if (!tray) { tray = document.createElement('div'); tray.className = 'nk-tray'; desktop.append(tray); }
+    tray.innerHTML = '';
+    for (const item of hidden) {
+      const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'nk-tray-chip';
+      let title = ''; try { title = item.frame.contentDocument?.title || ''; } catch {}
+      chip.textContent = title || 'Window'; chip.onclick = () => focus(item); tray.append(chip);
+    }
+  }
+  function minimizeWindow(win) {
+    if (isDestroyed(win)) return;
+    if (win === mainWindow) { native.moveToBack(); return; }
+    win.minimized = true; win.element.style.display = 'none';
+    const next = [...windows].reverse().find(item => !item.minimized && !item.destroyed);
+    if (next) focus(next);
+    renderTray();
+  }
   function isDestroyed(win) { return !win || win.destroyed; }
 
   function send(win, channel, data) {
@@ -108,6 +134,7 @@
     // Electron closes child windows together with their parent.
     allWindows().filter(child => child.parent === win).forEach(child => { child.closingSilently = true; close(child); });
     win.onClosed?.();
+    renderTray();
     win.element.remove();
   }
 
@@ -317,7 +344,7 @@
     };
     return {
       // No minimise on a phone screen: like hiding to the tray, the app goes to the background.
-      minimize: () => native.moveToBack(),
+      minimize: () => minimizeWindow(win),
       maximize: () => { win.element.classList.remove('auto-maximized'); win.element.classList.toggle('maximized'); fitToScreen(win); },
       close: () => close(win),
       setWindowMeta: () => {},
