@@ -6,10 +6,10 @@ const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const LEVELS = { beginner: [9, 9, 10], intermediate: [16, 16, 40], expert: [30, 16, 99] };
 const words = {
-  ru: { title: 'Сапёр', game: 'Игра', help: 'Справка', new: 'Новая игра', beginner: 'Новичок', intermediate: 'Любитель', expert: 'Профессионал', sound: 'Звук', best: 'Чемпионы...', exit: 'Выход', about: 'О программе «Сапёр»', rules: 'Как играть',
+  ru: { title: 'Сапёр', game: 'Игра', help: 'Справка', new: 'Новая игра', beginner: 'Новичок', intermediate: 'Любитель', expert: 'Профессионал', sound: 'Звук', best: 'Чемпионы...', exit: 'Выход', about: 'О программе «Сапёр»', rules: 'Вызов справки',
     rulesText: 'Откройте все клетки без мин. Цифра — сколько мин рядом. Правая кнопка ставит флажок, повторно — «?». Двойной щелчок или средняя кнопка по цифре открывает соседние клетки, если флажков вокруг столько же.',
     bestTitle: 'Чемпионы', none: 'ещё никого', seconds: '{time} с', challenge: 'Вызов из чата: у всех одно и то же поле. Кто пройдёт быстрее?', won: '💣 Сапёр ({level}): прошёл за {time} с', lost: '💥 Сапёр ({level}): подорвался на {time} с', sent: 'Результат отправлен в чат.', close: 'Закрыть' },
-  en: { title: 'Minesweeper', game: 'Game', help: 'Help', new: 'New', beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert', sound: 'Sound', best: 'Best Times...', exit: 'Exit', about: 'About Minesweeper', rules: 'How to play',
+  en: { title: 'Minesweeper', game: 'Game', help: 'Help', new: 'New', beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert', sound: 'Sound', best: 'Best Times...', exit: 'Exit', about: 'About Minesweeper', rules: 'Contents',
     rulesText: 'Open every square that has no mine. A number tells how many mines touch it. Right-click flags a square, again for "?". Double-click or middle-click a number to open its neighbours when as many flags are around it.',
     bestTitle: 'Fastest Mine Sweepers', none: 'nobody yet', seconds: '{time} seconds', challenge: 'Challenge from a chat: everyone gets the same field. Who is fastest?', won: '💣 Minesweeper ({level}): cleared in {time} s', lost: '💥 Minesweeper ({level}): blew up at {time} s', sent: 'The result was sent to the chat.', close: 'Close' },
 };
@@ -19,7 +19,8 @@ const params = new URLSearchParams(location.search);
 const challenge = { level: LEVELS[params.get('level')] ? params.get('level') : '', seed: Number(params.get('seed')) || 0, chat: /^(room|dm):\d+$/.test(params.get('chat') || '') ? params.get('chat') : '' };
 let level = challenge.level || (() => { try { return localStorage.getItem('nk_mine_level') || 'beginner'; } catch { return 'beginner'; } })();
 if (!LEVELS[level]) level = 'beginner';
-let soundOn = (() => { try { return localStorage.getItem('nk_mine_sound') !== '0'; } catch { return true; } })();
+// Like XP's, the game is silent until Game → Sound is turned on.
+let soundOn = (() => { try { return localStorage.getItem('nk_mine_sound') === '1'; } catch { return false; } })();
 
 // Pictures: cells.png (16 × 16 each, top to bottom), digits.png (13 × 23), faces.png (24 × 24).
 const CELL = { hidden: 0, flag: 1, question: 2, exploded: 3, wrong: 4, mine: 5, questionOpen: 6, open: 15 };
@@ -39,6 +40,7 @@ function newGame() {
   state = Array(cols * rows).fill('hidden'); flags = 0; seconds = 0; started = false; finished = false;
   clearInterval(timer); renderGrid(); renderStatus(); setFace('smile');
   document.title = t('title');
+  requestAnimationFrame(fitWindow);
 }
 const neighbours = index => { const x = index % cols, y = Math.floor(index / cols), list = []; for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < cols && ny < rows) list.push(ny * cols + nx); } return list; };
 const around = index => neighbours(index).filter(i => field[i]).length;
@@ -91,6 +93,13 @@ function report(won) {
   const note = $('#mine-challenge'); note.hidden = false; note.textContent = t('sent');
 }
 
+// The window fits the board exactly, like XP's (it changes with the level).
+function fitWindow() {
+  const main = document.querySelector('.mine-app'), menu = $('#mine-menu'), board = document.querySelector('.mine-board-frame'), note = $('#mine-challenge');
+  const width = board.offsetWidth + 12, height = menu.offsetHeight + board.offsetHeight + 12 + (note.hidden ? 0 : note.offsetHeight + 8);
+  const dx = width - main.clientWidth, dy = height - main.clientHeight;
+  if (dx || dy) controls.resize?.('se', dx, dy);
+}
 function renderGrid() {
   const grid = $('#mine-grid');
   grid.style.gridTemplateColumns = `repeat(${cols}, 16px)`;
@@ -138,16 +147,20 @@ document.addEventListener('click', event => {
   if (command.startsWith('level:')) { level = command.slice(6); try { localStorage.setItem('nk_mine_level', level); } catch {} newGame(); }
   if (command === 'sound') { soundOn = !soundOn; try { localStorage.setItem('nk_mine_sound', soundOn ? '1' : '0'); } catch {} }
   if (command === 'best') { const best = (() => { try { return JSON.parse(localStorage.getItem('nk_mine_best') || '{}'); } catch { return {}; } })(); alert(`${t('bestTitle')}\n\n${['beginner', 'intermediate', 'expert'].map(name => `${t(name)}: ${best[name] ? t('seconds', { time: best[name] }) : t('none')}`).join('\n')}`); }
-  if (command === 'rules') alert(t('rulesText'));
+  if (command === 'rules') { if (controls.openHelpViewer) controls.openHelpViewer('minesweeper'); else alert(t('rulesText')); }
   if (command === 'about') { if (controls.openAbout) controls.openAbout('minesweeper'); else alert('Minesweeper — Windows XP. Nekochat Reloaded.'); }
   if (command === 'exit') controls.close();
 });
 document.addEventListener('keydown', event => { if (event.key === 'F2') newGame(); if (event.key === 'Escape') closeMenu(); });
 $('#close').onclick = () => controls.close();
+// Minimize works; Maximize is greyed out, as in XP's Minesweeper.
+document.querySelector('.xp-window-controls').insertAdjacentHTML('afterbegin', '<button id="minimize" aria-label="Свернуть"></button><button id="maximize" aria-label="Развернуть" disabled></button>');
+$('#minimize').onclick = () => controls.minimize();
 
 function applyText() {
   document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title');
   document.querySelectorAll('[data-menu]').forEach(button => { button.textContent = t(button.dataset.menu); });
+  $('#minimize')?.setAttribute('aria-label', language === 'en' ? 'Minimize' : 'Свернуть');
   $('#close').setAttribute('aria-label', t('close'));
   if (challenge.chat) { const note = $('#mine-challenge'); note.hidden = false; note.textContent = t('challenge'); }
 }

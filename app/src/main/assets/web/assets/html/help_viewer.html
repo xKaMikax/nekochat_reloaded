@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Minesweeper</title><link id="frame-style" rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/help-viewer.css">
+<script src="assets/js/android-bridge.js"></script><link rel="stylesheet" href="assets/css/android.css">
+</head>
+<body>
+  <div class="xp-window hh-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/hh/book-open.png')"></span><span class="xp-title" id="hh-title"></span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="hh">
+      <div class="hh-toolbar">
+        <button type="button" id="hh-hide"><img src="assets/images/hh/hide.png" alt=""><span></span></button>
+        <button type="button" id="hh-back" disabled><img src="assets/images/hh/back.png" alt=""><span></span></button>
+        <button type="button" id="hh-forward" disabled><img src="assets/images/hh/forward.png" alt=""><span></span></button>
+        <button type="button" id="hh-options"><img src="assets/images/hh/options.png" alt=""><span></span></button>
+      </div>
+      <div class="hh-body">
+        <aside class="hh-nav" id="hh-nav">
+          <div class="hh-tabs"><button type="button" class="active" data-tab="contents"></button><button type="button" data-tab="index"></button><button type="button" data-tab="search"></button></div>
+          <div class="hh-panel" id="hh-panel"></div>
+        </aside>
+        <article class="hh-topic" id="hh-topic"></article>
+      </div>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <script src="assets/js/packs.js"></script>
+  <script src="assets/js/help-viewer.js"></script>
+</body>
+</html>
