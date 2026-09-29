@@ -362,3 +362,9 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .saved-user .xp-user-avatar { background: #fff; }
 .saved-user-note { color: #c8d8ff; }
 .saved-user-note.unread { color: #ffe36e; font-weight: bold; }
+/* Game challenge in a message (Minesweeper), and pictures in chat menus. */
+.game-challenge { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px 3px 4px; border: 1px solid #003c74; border-radius: 3px; background: linear-gradient(#fff, #ece9d8); color: #000; font: bold 11px Tahoma, sans-serif; cursor: pointer; }
+.game-challenge img { width: 24px; height: 24px; }
+.game-challenge:hover { background: linear-gradient(#fff, #f5f3e8); border-color: #e5a01a; }
+.message-menu .menu-picture { width: 16px; height: 16px; }
+.challenge-level { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; margin: 4px 0 !important; }

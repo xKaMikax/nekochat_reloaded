@@ -173,6 +173,17 @@ function openHelp(owner, topic) {
   helpWindow.on('closed', () => { helpWindow = null; });
   helpWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_center.html'), page ? { query: { topic: page } } : undefined);
 }
+// Games (Minesweeper): options.level, .seed and .chat play a challenge from a chat.
+let gameWindow;
+function openGame(owner, options = {}) {
+  const level = ['beginner', 'intermediate', 'expert'].includes(options.level) ? options.level : '';
+  const query = { ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) };
+  if (gameWindow && !gameWindow.isDestroyed()) gameWindow.close();
+  const [width, height] = { intermediate: [300, 390], expert: [530, 390] }[level] || [230, 320];
+  gameWindow = new BrowserWindow({ title: 'Minesweeper', width, height, minWidth: 200, minHeight: 260, resizable: true, parent: owner, frame: false, transparent: false, backgroundColor: '#c0c0c0', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  gameWindow.on('closed', () => { gameWindow = null; });
+  gameWindow.loadFile(path.join(__dirname, 'assets', 'html', 'minesweeper.html'), { query });
+}
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
 const windowOwner = event => { const win = BrowserWindow.fromWebContents(event.sender); return win && win === controlPanelWindow ? win.getParentWindow() || undefined : win; };
@@ -1061,6 +1072,7 @@ app.whenReady().then(async () => {
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
   ipcMain.on('help:open', (e, topic) => openHelp(windowOwner(e), topic));
+  ipcMain.on('game:open', (e, options) => openGame(windowOwner(e), options && typeof options === 'object' ? options : {}));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
   ipcMain.on('theme:open-editor', e => openThemeEditor(windowOwner(e)));
   ipcMain.handle('theme-editor:load', (_, id, scheme) => loadThemeForEditor(String(id || ''), scheme ? String(scheme) : undefined));

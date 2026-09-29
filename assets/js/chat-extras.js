@@ -7,6 +7,7 @@
   Object.assign(translations.ru, {
     reply: 'Ответить', react: 'Реакция', pin: 'Закрепить', unpin: 'Открепить', copy: 'Копировать текст', replyingTo: 'Ответ на',
     cancelReply: 'Отменить ответ', pinned: 'Закреплено', typingOne: '{name} печатает…', typingMany: '{names} печатают…', typingDm: 'печатает…',
+    challengeMine: 'Вызвать на «Сапёр»…', challengeTitle: 'Вызов на «Сапёр»', challengeText: 'У всех будет одно и то же поле. Выберите уровень:', levels: { beginner: 'Новичок', intermediate: 'Любитель', expert: 'Профессионал' }, challengeSend: 'Отправить вызов',
     chatSound: 'Звук уведомлений…', chatSoundTitle: 'Звук уведомлений: {name}', chatSoundLabel: 'Звук:', chatVolume: 'Громкость:', soundNames: { notify: 'Новое сообщение (по умолчанию)', default: 'Уведомление', exclamation: 'Восклицание', navigation: 'Щелчок', logon: 'Вход в систему', ringin: 'Звонок', none: '(Нет)' }, play: 'Прослушать', ok: 'ОК', cancel: 'Отмена',
     searchChat: 'Поиск в чате', searchNone: 'Ничего не найдено', searchOf: '{n} из {total}', favoriteAdd: 'В избранное', favoriteRemove: 'Убрать из избранного',
     quickSwitch: 'Перейти к чату', quickHint: 'Имя чата или человека…', read: 'Прочитано', sent: 'Отправлено', messageActions: 'Действия',
@@ -16,6 +17,7 @@
   Object.assign(translations.en, {
     reply: 'Reply', react: 'React', pin: 'Pin', unpin: 'Unpin', copy: 'Copy text', replyingTo: 'Replying to',
     cancelReply: 'Cancel reply', pinned: 'Pinned', typingOne: '{name} is typing…', typingMany: '{names} are typing…', typingDm: 'typing…',
+    challengeMine: 'Challenge to Minesweeper…', challengeTitle: 'Minesweeper challenge', challengeText: 'Everyone gets the same field. Choose the level:', levels: { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }, challengeSend: 'Send challenge',
     chatSound: 'Notification sound…', chatSoundTitle: 'Notification sound: {name}', chatSoundLabel: 'Sound:', chatVolume: 'Volume:', soundNames: { notify: 'New message (default)', default: 'Notification', exclamation: 'Exclamation', navigation: 'Click', logon: 'Windows Logon', ringin: 'Ring', none: '(None)' }, play: 'Play', ok: 'OK', cancel: 'Cancel',
     searchChat: 'Search in chat', searchNone: 'Nothing found', searchOf: '{n} of {total}', favoriteAdd: 'Add to favourites', favoriteRemove: 'Remove from favourites',
     quickSwitch: 'Go to chat', quickHint: 'Chat or person name…', read: 'Read', sent: 'Sent', messageActions: 'Actions',
@@ -335,7 +337,7 @@
     const item = event.target.closest('.chat-item[data-kind]'); if (!item) return; event.preventDefault(); closeMenu();
     const key = chatKey(item.dataset.kind, item.dataset.id);
     const menu = document.createElement('div'); menu.id = 'message-menu'; menu.className = 'message-menu'; menu.setAttribute('role', 'menu');
-    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button><button type="button" data-action="sound">${ICONS.bell}${esc(t('chatSound'))}</button><button type="button" data-action="archive">${ICONS.archive}${esc(t(isArchived(key) ? 'unarchive' : 'archive'))}</button>`;
+    menu.innerHTML = `<button type="button" data-action="open">${ICONS.open}${esc(t('openChat'))}</button><button type="button" data-action="favorite">${isFavorite(key) ? ICONS.starOff : ICONS.star}${esc(t(isFavorite(key) ? 'favoriteRemove' : 'favoriteAdd'))}</button><button type="button" data-action="mute">${isMuted(key) ? ICONS.bell : ICONS.bellOff}${esc(t(isMuted(key) ? 'unmuteChat' : 'muteChat'))}</button><button type="button" data-action="sound">${ICONS.bell}${esc(t('chatSound'))}</button>${desktopControls?.openGame ? `<button type="button" data-action="game"><img class="menu-picture" src="assets/games/minesweeper/icon.png" alt="">${esc(t('challengeMine'))}</button>` : ''}<button type="button" data-action="archive">${ICONS.archive}${esc(t(isArchived(key) ? 'unarchive' : 'archive'))}</button>`;
     document.body.append(menu);
     const box = menu.getBoundingClientRect(); menu.style.left = `${Math.min(event.clientX, innerWidth - box.width - 4)}px`; menu.style.top = `${Math.min(event.clientY, innerHeight - box.height - 4)}px`;
     menu.onclick = click => {
@@ -345,8 +347,23 @@
       if (action === 'mute') toggleMuted(key);
       if (action === 'archive') toggleArchived(key);
       if (action === 'sound') openChatSound(key, item.querySelector('.chat-name b')?.textContent?.trim() || '');
+      if (action === 'game') openChallenge(key);
     };
   });
+  // Minesweeper challenge: the level, then a message with the field's seed ([minesweeper:…]).
+  function openChallenge(key) {
+    let dialog = $('#challenge-dialog');
+    if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'challenge-dialog'; dialog.className = 'xp-dialog chat-sound-dialog'; document.body.append(dialog); }
+    const levels = (translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru).levels;
+    dialog.innerHTML = `<div class="dialog-title">${esc(t('challengeTitle'))}</div><div class="chat-sound-body"><p>${esc(t('challengeText'))}</p>${Object.entries(levels).map(([value, label], index) => `<label class="challenge-level"><input type="radio" name="challenge-level" value="${value}"${index ? '' : ' checked'}> ${esc(label)}</label>`).join('')}<div class="chat-sound-actions"><button type="button" class="xp-button" id="challenge-send">${esc(t('challengeSend'))}</button><button type="button" class="xp-button" id="challenge-cancel">${esc(t('cancel'))}</button></div></div>`;
+    dialog.querySelector('#challenge-cancel').onclick = () => dialog.close();
+    dialog.querySelector('#challenge-send').onclick = () => {
+      const level = dialog.querySelector('[name="challenge-level"]:checked').value; const seed = Math.floor(Math.random() * 2 ** 31);
+      sendToChat(key, `${t('gameChallenge', { name: displayName(me), level: levels[level] })} [minesweeper:${level}:${seed}]`);
+      dialog.close(); desktopControls?.openGame?.({ game: 'minesweeper', level, seed, chat: key });
+    };
+    dialog.showModal();
+  }
   // Notification sound of one chat: a small XP dialog with the sound, Play and the volume.
   function openChatSound(key, name) {
     let dialog = $('#chat-sound-dialog');

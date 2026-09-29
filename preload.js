@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('windowControls', {
   openThemeSettings: tab => ipcRenderer.send('theme:open-settings', typeof tab === 'string' ? tab : undefined),
   openControlPanel: () => ipcRenderer.send('control-panel:open'),
   openHelp: topic => ipcRenderer.send('help:open', typeof topic === 'string' ? topic : undefined),
+  openGame: options => ipcRenderer.send('game:open', { level: String(options?.level || ''), seed: String(options?.seed || ''), chat: String(options?.chat || '') }),
   openApplet: (applet, tab) => ipcRenderer.send('applet:open', String(applet || ''), typeof tab === 'string' ? tab : undefined),
   openThemeBrowser: () => ipcRenderer.send('theme:open-browser'),
   openThemeEditor: () => ipcRenderer.send('theme:open-editor'),
