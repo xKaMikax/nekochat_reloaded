@@ -14,3 +14,11 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .mine-grid { display: grid; box-shadow: inset 3px 3px #808080, inset -3px -3px #fff; padding: 3px; }
 .mine-cell { display: block; width: 16px; height: 16px; background: url('../games/minesweeper/cells.png') no-repeat; cursor: default; }
 .mine-challenge { margin: 0 8px 8px; max-width: 480px; color: #000; }
+/* Minimize and a greyed-out Maximize, like XP's Minesweeper. */
+.mine-window .xp-window-controls { width: var(--xp-controls-width, 73px); }
+.mine-window #minimize, .mine-window #maximize { background-image: var(--xp-caption-normal); }
+.mine-window #minimize::after, .mine-window #maximize::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.mine-window #minimize::after { background-image: var(--xp-minimize-glyph); }
+.mine-window #maximize::after { background-image: var(--xp-maximize-glyph); }
+.mine-window #maximize:disabled { opacity: .55; filter: grayscale(1); }
+.mine-app { overflow: hidden; }
