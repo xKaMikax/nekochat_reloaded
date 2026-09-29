@@ -129,6 +129,16 @@
     controlPanelWindow = createWindow({ url: '/assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
     controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
   }
+  // Games (Minesweeper): a challenge from a chat passes the level, seed and chat.
+  let gameWindow;
+  function openGame(owner, options = {}) {
+    const level = ['beginner', 'intermediate', 'expert'].includes(options.level) ? options.level : '';
+    const query = new URLSearchParams({ ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) }).toString();
+    if (!isDestroyed(gameWindow)) close(gameWindow);
+    const [width, height] = { intermediate: [300, 390], expert: [530, 390] }[level] || [230, 320];
+    gameWindow = createWindow({ url: `/assets/html/minesweeper.html${query ? `?${query}` : ''}`, width, height, minWidth: 200, minHeight: 260, parent: owner });
+    gameWindow.onClosed = () => { gameWindow = null; };
+  }
   // Help and Support Center.
   let helpWindow;
   function openHelp(owner, topic) {
@@ -258,6 +268,7 @@
       openControlPanel: () => openControlPanel(win),
       openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
       openHelp: topic => openHelp(windowOwner(win), topic),
+      openGame: options => openGame(windowOwner(win), clone(options) || {}),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),
