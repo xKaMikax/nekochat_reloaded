@@ -817,6 +817,13 @@ async function fetchCatalogThemeDetails(id) {
   } catch {}
   return { ...item, description };
 }
+async function fetchCatalogPackDetails(id) {
+  const item = (await fetchCatalogPacks()).find(pack => pack.id === id);
+  if (!item) throw new Error('Pack no longer exists in the catalog.');
+  let description = '';
+  try { const response = await fetch(item.descriptionUrl); if (response.ok) description = await response.text(); } catch {}
+  return { ...item, description };
+}
 async function findThemeSource(root) {
   const entries = await fs.readdir(root, { withFileTypes: true });
   for (const entry of entries) {
@@ -1150,6 +1157,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('theme:browser-details', (_, id) => fetchCatalogThemeDetails(String(id || '')));
   ipcMain.handle('theme:browser-install', (_, id) => installCatalogTheme(String(id || '')));
   ipcMain.handle('pack:catalog', () => fetchCatalogPacks());
+  ipcMain.handle('pack:details', (_, id) => fetchCatalogPackDetails(String(id || '')));
   ipcMain.handle('pack:install', (_, id) => installCatalogPack(String(id || '')));
   ipcMain.handle('pack:list', () => listPacks());
   ipcMain.handle('pack:remove', (_, id) => removePack(String(id || '')));

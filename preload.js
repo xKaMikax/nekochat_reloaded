@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('windowControls', {
   getCatalogThemeDetails: id => ipcRenderer.invoke('theme:browser-details', id),
   installCatalogTheme: id => ipcRenderer.invoke('theme:browser-install', id),
   listCatalogPacks: () => ipcRenderer.invoke('pack:catalog'),
+  getCatalogPackDetails: id => ipcRenderer.invoke('pack:details', String(id || '')),
   installCatalogPack: id => ipcRenderer.invoke('pack:install', id),
   listPacks: () => ipcRenderer.invoke('pack:list'),
   removePack: id => ipcRenderer.invoke('pack:remove', id),
