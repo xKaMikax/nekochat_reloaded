@@ -5,6 +5,8 @@ const words = {
   ru: { title:'Каталог Nekochat Reloaded', installed:'Установленные', discovery:'Каталог', installedIntro:'Темы, установленные на этом компьютере. Luna и Classic встроены в клиент.', discoveryIntro:'Темы, курсоры, звуки, иконки, обои для чата, помощники и дополнения (игры, Редактор тем) из каталога Nekochat Reloaded Themes. Их можно скачать и установить.', loadingInstalled:'Загрузка установленных тем…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных тем.', found:'Найдено: ', apply:'Применить', using:'Используется', applying:'Применение…', download:'Установить', downloading:'Установка…', installedDone:'Установлено', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', defaultScheme:'Стандартная', installedType:'Установлена', back:'← Назад', close:'Закрыть', sort:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', author:'Автор:', allAuthors:'Все', byAuthor:'Автор: ', schemes:'Схемы: ', type:'Тип:', types:{ '':'Все', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Иконки', wallpapers:'Обои для чата', assistants:'Помощники', addons:'Дополнения', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'иконки', wallpapers:'обои', assistant:'помощник', assistants:'помощник', addon:'дополнение', addons:'дополнение' }, contains:'Внутри: ', noPacks:'Здесь пока пусто.', help:'Справка', helpTopics:'Вызов справки', about:'О программе «Каталог»', open:'Открыть' },
   en: { title:'Nekochat Reloaded Catalog', installed:'Installed', discovery:'Discovery', installedIntro:'Themes installed on this computer. Luna and Classic are built into the client.', discoveryIntro:'Themes, cursors, sounds, icons, chat wallpapers, assistants and add-ons (games, the Theme Editor) from the Nekochat Reloaded Themes catalog. Download and install them here.', loadingInstalled:'Loading installed themes…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There are no available themes in the catalog yet.', found:'Found: ', apply:'Apply', using:'In use', applying:'Applying…', download:'Install', downloading:'Installing…', installedDone:'Installed', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', defaultScheme:'Default', installedType:'Installed', back:'← Back', close:'Close', sort:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', author:'Author:', allAuthors:'All', byAuthor:'By ', schemes:'Schemes: ', type:'Type:', types:{ '':'All', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', assistants:'Assistants', addons:'Add-ons', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers', assistant:'assistant', assistants:'assistant', addon:'add-on', addons:'add-on' }, contains:'Contains: ', noPacks:'Nothing here yet.', help:'Help', helpTopics:'Help Topics', about:'About Catalog', open:'Open' }
 };
+Object.assign(words.ru, { dlTitle: 'Установка обновления', dlHeading: 'Обновления загружаются и устанавливаются', dlStatus: 'Состояние установки:', dlDownloading: 'Загрузка:', dlInstalling: 'Установка:', dlCancel: 'Отмена', dlDownload: 'Загрузка: {name} (обновление {index} из {count})...', dlInit: 'Подготовка установки...', dlInstall: 'Установка: {name} (обновление {index} из {count})...', dlDone: 'выполнено!', dlCancelled: 'Отменено.', dlFailed: 'Ошибка: {error}', dlClose: 'Закрыть', dlMb: '{a} МБ из {b} МБ' });
+Object.assign(words.en, { dlTitle: 'Installing Update', dlHeading: 'The updates are being downloaded and installed', dlStatus: 'Installation status:', dlDownloading: 'Downloading:', dlInstalling: 'Installing:', dlCancel: 'Cancel', dlDownload: 'Downloading {name} (update {index} of {count})...', dlInit: 'Initializing installation...', dlInstall: 'Installing {name} (update {index} of {count})...', dlDone: 'done!', dlCancelled: 'Cancelled.', dlFailed: 'Error: {error}', dlClose: 'Close', dlMb: '{a} MB of {b} MB' });
 let language = 'ru'; let activeTheme;
 let selectedCatalogTheme;
 const authorsByCatalog = new Map();
@@ -20,6 +22,39 @@ async function showDiscovery() { const status = $('#discovery-status'), list = $
 $('#installed-tab').onclick = () => switchTab('installed'); $('#discovery-tab').onclick = () => { switchTab('discovery'); showDiscovery(); }; $('#close').onclick = () => controls.close(); controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); showInstalled(); }); controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); showInstalled(); if (!$('#discovery-panel').hidden) showDiscovery(); }); Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); return showInstalled(); });
 
 function plainDescription(value) { return String(value || '').replace(/^#+\s*/gm, '').replace(/[*`_]/g, '').trim(); }
+
+// Installing a pack shows XP's "Installing Update" window: status log, MB counter, green bar, Cancel.
+const fill = (text, values = {}) => String(text).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
+function installPackDialog(id, name) {
+  return new Promise((resolve, reject) => {
+    const veil = document.createElement('div'); veil.className = 'dl-veil';
+    veil.innerHTML = `<div class="xp-window dl-dialog" role="dialog"><header class="xp-titlebar"><span class="xp-app-icon has-icon dl-titleicon" style="background-image:url('assets/images/windows-update-16.png')"></span><span class="xp-title">${esc(t('dlTitle'))}</span></header><div class="xp-body-frame"><i class="xp-side xp-side-left"></i><div class="dl-inner"><div class="dl-panel"><div class="dl-head"><img src="assets/images/WindowsLogo-small.png" alt=""><span>${esc(t('dlHeading'))}</span></div><div class="dl-label">${esc(t('dlStatus'))}</div><div class="dl-log"></div><div class="dl-row"><span class="dl-label dl-phase">${esc(t('dlDownloading'))}</span><span class="dl-size"></span></div><div class="dl-bar"><i></i></div><div class="dl-buttons"><button type="button" class="dl-cancel">${esc(t('dlCancel'))}</button></div></div></div><i class="xp-side xp-side-right"></i></div><i class="xp-bottom"></i></div>`;
+    document.body.append(veil);
+    const log = veil.querySelector('.dl-log'), bar = veil.querySelector('.dl-bar i'), size = veil.querySelector('.dl-size'), phase = veil.querySelector('.dl-phase'), cancel = veil.querySelector('.dl-cancel');
+    veil.querySelector('.dl-dialog').classList.toggle('classic', getComputedStyle(document.documentElement).getPropertyValue('--classic-raised').trim() !== '');
+    const line = text => { const row = document.createElement('div'); row.textContent = text; log.append(row); log.scrollTop = log.scrollHeight; return row; };
+    const mb = bytes => (bytes / 1048576).toFixed(2);
+    let last = null, finished = false;
+    // Whole blocks only, like XP's progress bar.
+    const setBar = fraction => { const room = bar.parentElement.clientWidth - 6; bar.style.width = `${Math.max(0, Math.floor(Math.min(1, fraction) * room / 10) * 10)}px`; };
+    let index = 0, count = 1, phaseStep = 'download';
+    if (!controls.onPackProgress) veil.querySelector('.dl-bar').classList.add('busy');
+    const stop = controls.onPackProgress?.(data => {
+      if (data.id !== id) return;
+      if (data.step === 'plan') count = data.count;
+      if (data.step === 'start') { index += 1; phaseStep = 'download'; phase.textContent = t('dlDownloading'); last = line(fill(t('dlDownload'), { name: data.name || name, index, count })); }
+      if (data.step === 'bytes') { const total = data.total || 0; setBar(total ? data.received / total : .3); size.textContent = total ? fill(t('dlMb'), { a: mb(data.received), b: mb(total) }) : `${mb(data.received)} MB`; }
+      if (data.step === 'installing') { if (last) last.textContent += ` ${t('dlDone')}`; line(`${t('dlInit')} ${t('dlDone')}`); setBar(1); phase.textContent = t('dlInstalling'); size.textContent = ''; bar.parentElement.classList.add('busy'); last = line(fill(t('dlInstall'), { name: data.name || name, index, count })); }
+    });
+    const close = () => { finished = true; stop?.(); veil.remove(); };
+    cancel.onclick = () => { if (finished) return; cancel.disabled = true; controls.cancelPackInstall?.(id); };
+    controls.installCatalogPack(id).then(result => { if (last) last.textContent += ` ${t('dlDone')}`; setTimeout(() => { close(); resolve(result); }, 350); }, error => {
+      const cancelled = /Cancelled/i.test(String(error?.message));
+      line(cancelled ? t('dlCancelled') : fill(t('dlFailed'), { error: String(error?.message || error).replace(/^Error invoking remote method '[^']*': (Error: )?/, '') }));
+      bar.parentElement.classList.remove('busy'); cancel.disabled = false; cancel.textContent = t('dlClose'); cancel.onclick = () => { close(); reject(error); };
+    });
+  });
+}
 function fillDetails(details) {
   selectedCatalogTheme = details;
   $('#detail-name').textContent = details.displayName || details.id;
@@ -55,7 +90,7 @@ $('#detail-install').onclick = async () => {
   if (!selectedCatalogTheme) return;
   const button = $('#detail-install'); button.disabled = true; button.textContent = t('downloading');
   const pack = selectedCatalogTheme.kind === 'pack';
-  try { if (selectedCatalogTheme.installedId) { if (pack) await controls.removePack(selectedCatalogTheme.installedId); else await controls.removeTheme(selectedCatalogTheme.installedId); button.textContent = t('removed'); } else { if (pack) await controls.installCatalogPack(selectedCatalogTheme.id); else await controls.installCatalogTheme(selectedCatalogTheme.id); button.textContent = t('installedDone'); } if (pack) packsChanged(); await showInstalled(); await showDiscovery(); }
+  try { if (selectedCatalogTheme.installedId) { if (pack) await controls.removePack(selectedCatalogTheme.installedId); else await controls.removeTheme(selectedCatalogTheme.installedId); button.textContent = t('removed'); } else { if (pack) await installPackDialog(selectedCatalogTheme.id, selectedCatalogTheme.displayName || selectedCatalogTheme.id); else await controls.installCatalogTheme(selectedCatalogTheme.id); button.textContent = t('installedDone'); } if (pack) packsChanged(); await showInstalled(); await showDiscovery(); }
   catch (error) { button.disabled = false; button.textContent = error.message; }
 };
 
@@ -119,7 +154,7 @@ async function showDiscovery() {
       const existing = pack ? packsByCatalog.get(button.dataset.theme) : installedByCatalog.get(button.dataset.theme);
       if (existing) return pack ? removeInstalledPack(existing.id, button) : removeInstalledTheme(existing.id, button);
       button.disabled = true; button.textContent = t('downloading');
-      try { if (pack) { await controls.installCatalogPack(button.dataset.theme); packsChanged(); } else await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); await showDiscovery(); }
+      try { if (pack) { await installPackDialog(button.dataset.theme, catalogIndex.get(button.dataset.theme)?.displayName || button.dataset.theme); packsChanged(); } else await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); await showDiscovery(); }
       catch (error) { button.disabled = false; button.textContent = error.message; }
     });
   } catch (error) { status.textContent = error.message; status.classList.add('error'); }

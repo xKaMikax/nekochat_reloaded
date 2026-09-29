@@ -9,3 +9,26 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .cp-menu-popup button { height: 20px; padding: 0 20px; border: 0; background: none; color: #000; font: 11px Tahoma, sans-serif; text-align: left; }
 .cp-menu-popup button:hover { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
 .cp-menu-popup hr { margin: 3px 1px; border: 0; border-top: 1px solid #aca899; }
+
+/* "Installing Update" window (XP's), shown while a pack downloads. */
+.dl-veil { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; background: rgba(0, 0, 0, .12); }
+.dl-dialog { width: min(480px, calc(100vw - 16px)); height: auto; min-width: 0; min-height: 0; box-shadow: 2px 3px 8px rgba(0, 0, 0, .45); color: var(--xp-theme-windowtext, #000); font: 11px Tahoma, Arial, sans-serif; }
+.dl-dialog .xp-body-frame { flex: 0 1 auto; }
+.dl-titleicon { flex: none; }
+.dl-inner { flex: 1 1 auto; min-width: 0; padding: 9px; background: var(--xp-theme-window, #ece9d8); }
+.dl-panel { padding: 14px 14px 10px; border: 1px solid rgba(0, 0, 0, .18); border-radius: 4px; }
+.dl-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; font-size: 15px; }
+.dl-head img { width: 32px; height: 32px; flex: none; }
+.dl-label { margin: 4px 0; }
+.dl-log { height: 92px; margin-bottom: 14px; padding: 4px 6px; overflow-y: auto; border: 1px solid #7f9db9; background: #fff; color: #000; user-select: text; }
+.dl-row { display: flex; justify-content: space-between; align-items: baseline; }
+.dl-bar { height: 19px; box-sizing: border-box; overflow: hidden; border: 3px solid transparent; border-image: var(--xp-progress-track, linear-gradient(#fff, #fff)) 3 fill; }
+.dl-bar i { display: block; width: 0; height: 12px; background: var(--xp-progress-chunk, repeating-linear-gradient(90deg, #3ec23e 0 8px, transparent 8px 10px)) repeat-x; background-size: 10px 12px; }
+.dl-dialog.classic .dl-bar { border: 2px solid; border-color: #808080 #fff #fff #808080; border-image: none; background: #fff; height: 21px; }
+.dl-dialog.classic .dl-bar i { height: 15px; background: repeating-linear-gradient(90deg, var(--xp-theme-highlight, #000080) 0 8px, transparent 8px 10px); }
+.dl-bar.busy i { width: 100% !important; opacity: .55; animation: dl-busy 1.1s linear infinite; }
+@keyframes dl-busy { 50% { opacity: 1; } }
+.dl-buttons { display: flex; justify-content: flex-end; margin-top: 14px; }
+.dl-cancel { min-width: 75px; height: 23px; padding: 0 10px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: var(--xp-theme-windowtext, #000); font: 11px Tahoma, Arial, sans-serif; }
+.dl-cancel:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
+.dl-cancel:disabled { color: #808080; }

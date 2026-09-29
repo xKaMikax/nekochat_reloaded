@@ -333,6 +333,14 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
     # These are also native Luna pieces used by group boxes and text fields.
     save(find(images, '_GROUPBOX_BMP', prefix), output, 'groupbox.png')
     save(find(images, '_FIELDOUTLINEBLUE_BMP', prefix), output, 'field-outline.png')
+    # Progress bar: the track (a nine-slice frame) and the chunk (drawn as repeating blocks). Optional.
+    progress = False
+    try:
+        save(find(images, '_PROGRESSTRACK_BMP', prefix), output, 'progress-track.png')
+        save(find(images, '_PROGRESSCHUNK_BMP', prefix), output, 'progress-chunk.png')
+        progress = True
+    except KeyError:
+        pass
     # Native XP scrollbar pieces.  The arrow strip has the sixteen standard
     # states in this order: up, down, left and right; each has normal/hot/
     # pressed/disabled rows.  Chromium can render these through its WebKit
@@ -386,6 +394,8 @@ def write_scheme(output: Path, images: dict[str, Image.Image], prefix: str, colo
     with (output / 'theme.css').open('a', encoding='utf-8') as css:
         if startpanel:
             css.write(':root { --xp-logoff-icon: url("%s/logoff-normal.png"); --xp-logoff-icon-hover: url("%s/logoff-hover.png"); --xp-turnoff-icon: url("%s/turnoff-normal.png"); --xp-turnoff-icon-hover: url("%s/turnoff-hover.png"); }\n' % ((asset,) * 4))
+        if progress:
+            css.write(':root { --xp-progress-track: url("%s/progress-track.png"); --xp-progress-chunk: url("%s/progress-chunk.png"); }\n' % (asset, asset))
         if slider:
             css.write(':root { --xp-slider-thumb: url("%s/slider-thumb-normal.png"); --xp-slider-thumb-hover: url("%s/slider-thumb-hover.png"); --xp-slider-thumb-pressed: url("%s/slider-thumb-pressed.png"); --xp-slider-track: url("%s/slider-track.png"); }\n' % ((asset,) * 4))
         if msstyles:

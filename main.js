@@ -731,11 +731,22 @@ async function listPacks() {
   }
   return packs;
 }
-async function installCatalogPack(id) {
+// Downloads report progress ({step: start | file | bytes | installing | done}) to the Catalog window and can be cancelled.
+const packInstalls = new Map();
+async function remoteSize(url, signal) { try { const response = await fetch(url, { method: 'HEAD', signal }); return response.ok ? Number(response.headers.get('content-length')) || 0 : 0; } catch (error) { if (error?.name === 'AbortError') throw error; return 0; } }
+async function downloadBytes(url, name, report, signal, offset, total) {
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error(`Unable to download ${name} (${response.status}).`);
+  const chunks = []; let got = 0; const reader = response.body?.getReader();
+  if (!reader) { const buffer = Buffer.from(await response.arrayBuffer()); report({ step: 'bytes', received: offset + buffer.length, total: total || offset + buffer.length }); return buffer; }
+  for (;;) { const { done, value } = await reader.read(); if (done) break; if (process.env.NEKOCHAT_SLOW_DOWNLOAD) await new Promise(resolve => setTimeout(resolve, Number(process.env.NEKOCHAT_SLOW_DOWNLOAD) || 0)); chunks.push(value); got += value.length; report({ step: 'bytes', received: offset + got, total: Math.max(total, offset + got) }); }
+  return Buffer.concat(chunks);
+}
+async function installCatalogPack(id, report = () => {}, signal, nested = false) {
   const catalog = await fetchCatalogPacks();
   const item = catalog.find(pack => pack.id === id);
   if (!item) throw new Error('The pack no longer exists in the catalog.');
-  if (item.includes) return installCombo(item, catalog);
+  if (item.includes) return installCombo(item, catalog, report, signal);
   const temporary = await fs.mkdtemp(path.join(app.getPath('temp'), 'nekochat-pack-'));
   const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
   const destination = packFolder(safeId);
@@ -744,16 +755,23 @@ async function installCatalogPack(id) {
       // No Pack.ZIP: download the listed files into the folder of the pack's type.
       const folder = packTypeFolder(item.type);
       await fs.mkdir(path.join(temporary, folder), { recursive: true });
-      for (const name of item.files) {
-        const response = await fetch(`${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`);
-        if (!response.ok) throw new Error(`Unable to download ${name} (${response.status}).`);
-        await fs.writeFile(path.join(temporary, folder, name), Buffer.from(await response.arrayBuffer()));
+      const urls = item.files.map(name => `${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`);
+      const total = (await Promise.all(urls.map(url => remoteSize(url, signal)))).reduce((sum, size) => sum + size, 0);
+      report({ step: 'start', name: item.displayName, count: item.files.length, total });
+      let offset = 0;
+      for (const [index, name] of item.files.entries()) {
+        report({ step: 'file', name, index: index + 1, count: item.files.length });
+        const bytes = await downloadBytes(urls[index], name, report, signal, offset, total);
+        offset += bytes.length;
+        await fs.writeFile(path.join(temporary, folder, name), bytes);
       }
     } else {
-      const response = await fetch(item.zipUrl);
-      if (!response.ok) throw new Error(`Unable to download Pack.ZIP (${response.status}).`);
-      await extractZip(Buffer.from(await response.arrayBuffer()), temporary);
+      report({ step: 'start', name: item.displayName, count: 1, total: await remoteSize(item.zipUrl, signal) });
+      report({ step: 'file', name: 'Pack.ZIP', index: 1, count: 1 });
+      const bytes = await downloadBytes(item.zipUrl, 'Pack.ZIP', report, signal, 0, 0);
+      await extractZip(bytes, temporary);
     }
+    report({ step: 'installing', name: item.displayName });
     let info = {}; try { info = JSON.parse(await fs.readFile(path.join(temporary, 'pack.json'), 'utf8')); } catch {}
     const contains = [];
     for (const part of ['sounds', 'cursors', 'icons', 'wallpapers', 'assistant', 'addon', 'theme']) { try { await fs.access(path.join(temporary, part)); contains.push(part); } catch {} }
@@ -775,12 +793,14 @@ async function installCatalogPack(id) {
     await fs.mkdir(destination, { recursive: true });
     for (const part of contains.filter(part => part !== 'theme')) await copyDirectory(path.join(temporary, part), path.join(destination, part));
     await fs.writeFile(path.join(destination, 'pack.json'), JSON.stringify({ catalogId: item.id, type: item.type, name: info.name || item.displayName, author: info.author || item.author, contains, theme: themeId }, null, 1));
+    if (!nested) report({ step: 'done' });
     return { id: safeId, packs: await listPacks(), themes: await listThemes() };
   } finally { await fs.rm(temporary, { recursive: true, force: true }).catch(() => {}); }
 }
 // Installs every item a combo lists (skipping what is already installed) and remembers them.
-async function installCombo(item, catalog) {
+async function installCombo(item, catalog, report = () => {}, signal) {
   const installed = { theme: null, packs: [] };
+  report({ step: 'plan', count: ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants'].filter(part => item.includes[part]).length || 1 });
   if (item.includes.theme) {
     const existing = (await listThemes()).find(theme => theme.catalogId === item.includes.theme);
     installed.theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id;
@@ -790,7 +810,7 @@ async function installCombo(item, catalog) {
     const ref = item.includes[part]; if (!ref) continue;
     if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new Error(`The combo lists a missing ${part} pack: ${ref}`);
     const existing = packs.find(pack => pack.catalogId === ref);
-    installed.packs.push(existing ? existing.id : (await installCatalogPack(ref)).id);
+    installed.packs.push(existing ? existing.id : (await installCatalogPack(ref, report, signal, true)).id);
   }
   const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
   const destination = packFolder(safeId);
@@ -1158,7 +1178,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('theme:browser-install', (_, id) => installCatalogTheme(String(id || '')));
   ipcMain.handle('pack:catalog', () => fetchCatalogPacks());
   ipcMain.handle('pack:details', (_, id) => fetchCatalogPackDetails(String(id || '')));
-  ipcMain.handle('pack:install', (_, id) => installCatalogPack(String(id || '')));
+  ipcMain.handle('pack:install', (event, id) => {
+    const key = String(id || ''); const controller = new AbortController(); packInstalls.set(key, controller);
+    const report = data => { try { event.sender.send('pack:progress', { id: key, ...data }); } catch {} };
+    return installCatalogPack(key, report, controller.signal).catch(error => { throw error?.name === 'AbortError' ? new Error('Cancelled') : error; }).finally(() => packInstalls.delete(key));
+  });
+  ipcMain.handle('pack:cancel', (_, id) => { packInstalls.get(String(id || ''))?.abort(); return true; });
   ipcMain.handle('pack:list', () => listPacks());
   ipcMain.handle('pack:remove', (_, id) => removePack(String(id || '')));
   ipcMain.handle('theme:remove', (_, id) => removeTheme(String(id || '')));
