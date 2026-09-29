@@ -5,8 +5,8 @@ const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { dlTitle:'Установка обновления', dlTitleMany:'Установка обновлений: {n}', dlHeading:'Обновления загружаются и устанавливаются', dlStatus:'Состояние установки:', dlDownloading:'Загрузка:', dlInstalling:'Установка:', dlCancel:'Отмена', dlDownload:'Загрузка: {name} (обновление {index} из {count})...', dlInit:'Подготовка установки...', dlInstall:'Установка: {name} (обновление {index} из {count})...', dlDone:'выполнено!', dlCancelled:'Отменено.', dlFailed:'Ошибка: {error}', dlClose:'Закрыть', dlMb:'{a} МБ из {b} МБ', dlComplete:'Установка завершена', dlConfigure:'История установки', dlRestartText:'Чтобы обновление вступило в силу, нужно перезапустить Nekochat Reloaded.', dlRestart:'Перезапустить сейчас', dlOpened:'Загрузка открыта в браузере.' },
-  en: { dlTitle:'Installing Update', dlTitleMany:'Installing {n} Updates', dlHeading:'The updates are being downloaded and installed', dlStatus:'Installation status:', dlDownloading:'Downloading:', dlInstalling:'Installing:', dlCancel:'Cancel', dlDownload:'Downloading {name} (update {index} of {count})...', dlInit:'Initializing installation...', dlInstall:'Installing {name} (update {index} of {count})...', dlDone:'done!', dlCancelled:'Cancelled.', dlFailed:'Error: {error}', dlClose:'Close', dlMb:'{a} MB of {b} MB', dlComplete:'Installation complete', dlConfigure:'Update history', dlRestartText:'You must restart Nekochat Reloaded for the update to take effect.', dlRestart:'Restart Now', dlOpened:'The download was opened in your browser.' },
+  ru: { dlTitle:'Установка обновления', dlTitleMany:'Установка обновлений: {n}', dlHeading:'Обновления загружаются и устанавливаются', dlStatus:'Состояние установки:', dlDownloading:'Загрузка:', dlInstalling:'Установка:', dlCancel:'Отмена', dlDownload:'Загрузка: {name} (обновление {index} из {count})...', dlInit:'Подготовка установки...', dlInstall:'Установка: {name} (обновление {index} из {count})...', dlDone:'выполнено!', dlCancelled:'Отменено.', dlFailed:'Ошибка: {error}', dlClose:'Закрыть', dlMb:'{a} МБ из {b} МБ', dlComplete:'Установка завершена', dlConfigure:'История установки', dlRestartText:'Чтобы обновление вступило в силу, нужно перезапустить Nekochat Reloaded.', dlRestart:'Перезапустить сейчас', dlOpened:'Загрузка открыта в браузере.', dlSome:'Некоторые обновления не установлены', dlNotInstalled:'Не установлены следующие обновления:' },
+  en: { dlTitle:'Installing Update', dlTitleMany:'Installing {n} Updates', dlHeading:'The updates are being downloaded and installed', dlStatus:'Installation status:', dlDownloading:'Downloading:', dlInstalling:'Installing:', dlCancel:'Cancel', dlDownload:'Downloading {name} (update {index} of {count})...', dlInit:'Initializing installation...', dlInstall:'Installing {name} (update {index} of {count})...', dlDone:'done!', dlCancelled:'Cancelled.', dlFailed:'Error: {error}', dlClose:'Close', dlMb:'{a} MB of {b} MB', dlComplete:'Installation complete', dlConfigure:'Update history', dlRestartText:'You must restart Nekochat Reloaded for the update to take effect.', dlRestart:'Restart Now', dlOpened:'The download was opened in your browser.', dlSome:'Some updates were not installed', dlNotInstalled:'The following updates were not installed:' },
 };
 let language = 'ru';
 const t = key => words[language][key];
@@ -63,7 +63,7 @@ async function run(items) {
       if (last) last.textContent += ` ${t('dlDone')}`; busy(false);
       summary.ok.push(item);
     } catch (error) {
-      const stopped = /Cancelled/i.test(String(error?.message)); busy(false);
+      const stopped = cancelled || /Cancelled/i.test(String(error?.message)); busy(false);
       const message = String(error?.message || error).replace(/^Error invoking remote method '[^']*': (Error: )?/, '');
       line(stopped ? t('dlCancelled') : fill(t('dlFailed'), { error: message }));
       if (!stopped) summary.failed.push({ item, error: message });
@@ -71,7 +71,17 @@ async function run(items) {
     clientWait = null;
   }
   // XP ends with "Installation complete", a link to what was done and Close (Restart Now after a client update).
-  done = true;
+  done = true; summary.restart = restart;
+  // Whatever was cancelled or failed is listed as not installed.
+  const missed = items.filter(item => !summary.ok.some(ok => ok.id === item.id));
+  for (const item of missed) if (!summary.failed.some(entry => entry.item.id === item.id)) summary.failed.push({ item, error: t('dlCancelled') });
+  if (missed.length) {
+    $('#dl-panel').innerHTML = `<div class="dl-head done"><img src="assets/images/windows-update-48.png" alt=""><div><b>${esc(t('dlSome'))}</b>${restart ? `<p>${esc(t('dlRestartText'))}</p>` : ''}</div></div><div class="dl-label dl-missed-title"><b>${esc(t('dlNotInstalled'))}</b></div><div class="dl-missed">${missed.map(item => `<div>${esc(item.name)}</div>`).join('')}</div><div class="dl-buttons end"><a href="#" class="dl-link">${esc(t('dlConfigure'))}</a><span class="dl-buttons two">${restart ? `<button type="button" class="dl-cancel" data-do="restart">${esc(t('dlRestart'))}</button>` : ''}<button type="button" class="dl-cancel" data-do="close">${esc(t('dlClose'))}</button></span></div>`;
+    $('[data-do="close"]').onclick = finish; $('[data-do="close"]').focus();
+    $('[data-do="restart"]')?.addEventListener('click', () => controls.restartToUpdate?.());
+    $('.dl-link').onclick = event => { event.preventDefault(); summary.go = 'history'; finish(); };
+    return;
+  }
   $('#dl-panel').innerHTML = `<div class="dl-head done"><img src="assets/images/windows-update-48.png" alt=""><div><b>${esc(t('dlComplete'))}</b>${restart ? `<p>${esc(t('dlRestartText'))}</p>` : ''}</div></div><div class="dl-buttons end"><a href="#" class="dl-link">${esc(t('dlConfigure'))}</a><span class="dl-buttons two">${restart ? `<button type="button" class="dl-cancel" data-do="restart">${esc(t('dlRestart'))}</button>` : ''}<button type="button" class="dl-cancel" data-do="close">${esc(t('dlClose'))}</button></span></div>`;
   $('[data-do="close"]').onclick = finish; $('[data-do="close"]').focus();
   $('[data-do="restart"]')?.addEventListener('click', () => controls.restartToUpdate?.());
