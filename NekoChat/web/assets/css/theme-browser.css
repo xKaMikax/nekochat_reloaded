@@ -84,11 +84,29 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .wu-content { min-width: 0; }
 @media (max-width: 620px) {
   .wu-body { flex-direction: column; }
-  .wu-side { width: auto; max-height: 140px; border-right: 0; border-bottom: 1px solid #a9b3cf; }
-  .wu-two { grid-template-columns: 1fr; }
+  /* The sidebar becomes one scrolling row of links above the page. */
+  .wu-side { display: flex; flex: none; align-items: center; gap: 4px 10px; width: auto; max-height: none; padding: 6px 10px; overflow: auto hidden; border-right: 0; border-bottom: 1px solid #a9b3cf; white-space: nowrap; }
+  .wu-side h4 { display: none; }
+  .wu-link, .wu-side a, .wu-install { flex: none; margin: 0 !important; padding: 5px 8px; }
+  .wu-link.on { padding: 4px 7px; }
+  .wu-sort { display: flex; flex: none; align-items: center; gap: 6px; margin: 0; }
+  .wu-sort select { width: auto; margin: 0; height: 26px; }
+  .wu-two { grid-template-columns: 1fr; gap: 0; padding: 0 12px; }
+  .wu-content, .wu-content.full { padding: 0 12px; }
   .wu-brand { font-size: 20px; }
+  .wu-banner { padding: 0 12px; }
   .wu-tag { display: none; }
-  .wu-strip-text b { font-size: 26px; }
+  .wu-strip { height: 56px; background-size: auto 56px; }
+  .wu-strip::after { left: 120px; top: 34px; height: 22px; }
+  .wu-strip-text { left: 118px; }
+  .wu-strip-text b { overflow: hidden; margin-top: 2px; font-size: 20px; line-height: 28px; text-overflow: ellipsis; }
+  .wu-strip-text span { left: 2px; top: 32px; overflow: hidden; max-width: calc(100vw - 130px); font-size: 13px; line-height: 20px; text-overflow: ellipsis; }
+  .wu-h { font-size: 18px; }
+  .wu-choice { gap: 10px; }
+  .wu-choice span { max-width: none; }
+  .wu-btn { min-height: 32px; }
+  .wu-detail { margin-left: 0; flex-wrap: wrap; }
+  .wu-history { display: block; overflow-x: auto; }
 }
 .wu-history { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 11px; }
 .wu-history th { padding: 3px 8px; background: #c6c6c6; text-align: left; font-weight: 700; }
