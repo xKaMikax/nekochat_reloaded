@@ -139,7 +139,7 @@ document.addEventListener('click', event => {
   if (command === 'sound') { soundOn = !soundOn; try { localStorage.setItem('nk_mine_sound', soundOn ? '1' : '0'); } catch {} }
   if (command === 'best') { const best = (() => { try { return JSON.parse(localStorage.getItem('nk_mine_best') || '{}'); } catch { return {}; } })(); alert(`${t('bestTitle')}\n\n${['beginner', 'intermediate', 'expert'].map(name => `${t(name)}: ${best[name] ? t('seconds', { time: best[name] }) : t('none')}`).join('\n')}`); }
   if (command === 'rules') alert(t('rulesText'));
-  if (command === 'about') alert('Minesweeper — Windows XP. Nekochat Reloaded.');
+  if (command === 'about') { if (controls.openAbout) controls.openAbout('minesweeper'); else alert('Minesweeper — Windows XP. Nekochat Reloaded.'); }
   if (command === 'exit') controls.close();
 });
 document.addEventListener('keydown', event => { if (event.key === 'F2') newGame(); if (event.key === 'Escape') closeMenu(); });

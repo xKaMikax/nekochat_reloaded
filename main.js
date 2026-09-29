@@ -126,6 +126,7 @@ async function saveDisplaySettings(changes) {
   await fs.mkdir(path.dirname(displayStatePath), { recursive: true });
   await fs.writeFile(displayStatePath, JSON.stringify(activeDisplay));
   notifyDisplayChanged(activeDisplay);
+  buildTrayMenu();
   return activeDisplay;
 }
 
@@ -183,6 +184,15 @@ function openGame(owner, options = {}) {
   gameWindow = new BrowserWindow({ title: 'Minesweeper', width, height, minWidth: 200, minHeight: 260, resizable: true, parent: owner, frame: false, transparent: false, backgroundColor: '#c0c0c0', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
   gameWindow.on('closed', () => { gameWindow = null; });
   gameWindow.loadFile(path.join(__dirname, 'assets', 'html', 'minesweeper.html'), { query });
+}
+// About box (XP's ShellAbout look): 'nekochat' or 'minesweeper'.
+let aboutWindow;
+function openAbout(owner, appName) {
+  const name = appName === 'minesweeper' ? 'minesweeper' : 'nekochat';
+  if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
+  aboutWindow = new BrowserWindow({ title: 'About', width: 420, height: 380, minWidth: 380, minHeight: 340, resizable: false, parent: owner || undefined, frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  aboutWindow.on('closed', () => { aboutWindow = null; });
+  aboutWindow.loadFile(path.join(__dirname, 'assets', 'html', 'about.html'), { query: { app: name } });
 }
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
@@ -1002,11 +1012,17 @@ function setUnreadCount(count) {
   try { app.setBadgeCount(unreadCount); } catch {}
   if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) mainWindow.setOverlayIcon(unreadCount ? nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', 'unread-overlay.png')) : null, unreadCount ? String(unreadCount) : '');
 }
+// The tray menu, in the app's language: open, About (XP's About box) and quit.
+function buildTrayMenu() {
+  if (!tray) return;
+  const ru = activeDisplay?.language !== 'en';
+  tray.setContextMenu(Menu.buildFromTemplate([{ label: ru ? 'Открыть Nekochat Reloaded' : 'Open Nekochat Reloaded', click: showMainWindow }, { label: ru ? 'О программе Nekochat Reloaded' : 'About Nekochat Reloaded', click: () => openAbout(null, 'nekochat') }, { type: 'separator' }, { label: ru ? 'Выход' : 'Quit', click: () => app.quit() }]));
+}
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'images', 'nekochat_icon.png')).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip('Nekochat Reloaded');
-  tray.setContextMenu(Menu.buildFromTemplate([{ label: 'Open Nekochat Reloaded', click: showMainWindow }, { type: 'separator' }, { label: 'Quit', click: () => app.quit() }]));
+  buildTrayMenu();
   tray.on('click', showMainWindow);
 }
 async function notificationIcon(avatarUrl) {
@@ -1072,6 +1088,7 @@ app.whenReady().then(async () => {
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
   ipcMain.on('help:open', (e, topic) => openHelp(windowOwner(e), topic));
+  ipcMain.on('about:open', (e, appName) => openAbout(windowOwner(e), appName));
   ipcMain.on('game:open', (e, options) => openGame(windowOwner(e), options && typeof options === 'object' ? options : {}));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
   ipcMain.on('theme:open-editor', e => openThemeEditor(windowOwner(e)));

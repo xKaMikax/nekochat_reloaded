@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('windowControls', {
   setWindowMeta: (title, icon) => ipcRenderer.send('window:set-meta', { title, icon }),
   openThemeSettings: tab => ipcRenderer.send('theme:open-settings', typeof tab === 'string' ? tab : undefined),
   openControlPanel: () => ipcRenderer.send('control-panel:open'),
+  openAbout: appName => ipcRenderer.send('about:open', appName === 'minesweeper' ? 'minesweeper' : 'nekochat'),
   openHelp: topic => ipcRenderer.send('help:open', typeof topic === 'string' ? topic : undefined),
   openGame: options => ipcRenderer.send('game:open', { level: String(options?.level || ''), seed: String(options?.seed || ''), chat: String(options?.chat || '') }),
   openApplet: (applet, tab) => ipcRenderer.send('applet:open', String(applet || ''), typeof tab === 'string' ? tab : undefined),

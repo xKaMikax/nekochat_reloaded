@@ -61,6 +61,7 @@ const ACTIONS = {
   update: () => { try { localStorage.setItem('nk_update_check', String(Date.now())); } catch {} applet('updates'); },
   help: () => (controls.openHelp ? controls.openHelp('control') : window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener')),
   close: () => controls.close(),
+  about: () => (controls.openAbout ? controls.openAbout('nekochat') : ACTIONS.help()),
 };
 // Icons missing on this platform (the theme editor needs the desktop app; the admin panel is off
 // unless turned on in Display Properties) are left out.
@@ -164,7 +165,7 @@ const MENUS = {
   file: [['close', 'close']],
   view: [['category', 'view-category'], ['classic', 'view-classic'], null, ['refresh', 'refresh']],
   tools: [['catalog', 'catalog']],
-  help: [['helpTopics', 'help'], null, ['about', 'help']],
+  help: [['helpTopics', 'help'], null, ['about', 'about']],
 };
 function closeMenu() { document.querySelector('.cp-menu-popup')?.remove(); document.querySelectorAll('[data-menu].open').forEach(button => button.classList.remove('open')); }
 $('#cp-menu').addEventListener('click', event => {
