@@ -370,3 +370,5 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .challenge-level { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; margin: 4px 0 !important; }
 .icon-games { background: url('../games/minesweeper/icon.png') center / 16px 16px no-repeat; }
 .profile-actions #games-profile { grid-column: 1 / -1; order: 5; }
+
+.game-invite-dialog { position: fixed; inset: auto 16px 60px auto; margin: 0; z-index: 9000; }
