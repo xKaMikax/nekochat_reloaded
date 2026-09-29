@@ -164,7 +164,7 @@
   }
   function openThemeBrowser(owner) {
     if (!isDestroyed(themeBrowserWindow)) { focus(themeBrowserWindow); return; }
-    themeBrowserWindow = createWindow({ url: '/assets/html/theme_browser.html', width: 720, height: 540, minWidth: 520, minHeight: 360, parent: owner });
+    themeBrowserWindow = createWindow({ url: '/assets/html/theme_browser.html', width: 940, height: 660, minWidth: 640, minHeight: 420, parent: owner });
     themeBrowserWindow.onClosed = () => { themeBrowserWindow = null; };
   }
   function openControlPanel(owner) {
