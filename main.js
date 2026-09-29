@@ -760,6 +760,18 @@ async function downloadBytes(url, name, report, signal, offset, total) {
   for (;;) { const { done, value } = await reader.read(); if (done) break; if (process.env.NEKOCHAT_SLOW_DOWNLOAD) await new Promise(resolve => setTimeout(resolve, Number(process.env.NEKOCHAT_SLOW_DOWNLOAD) || 0)); chunks.push(value); got += value.length; report({ step: 'bytes', received: offset + got, total: Math.max(total, offset + got) }); }
   return Buffer.concat(chunks);
 }
+// Download size of a catalog pack (HEAD requests, remembered): shown in the Update window's lists.
+const packSizes = new Map();
+async function catalogPackSize(id, catalog) {
+  if (packSizes.has(id)) return packSizes.get(id);
+  catalog ||= await fetchCatalogPacks();
+  const item = catalog.find(pack => pack.id === id); if (!item) return 0;
+  let total = 0;
+  if (item.includes) { for (const ref of Object.values(item.includes)) if (ref !== id && catalog.some(pack => pack.id === ref && !pack.includes)) total += await catalogPackSize(ref, catalog); }
+  else if (item.files.length) total = (await Promise.all(item.files.map(name => remoteSize(`${themeCatalogRoot}/${item.directory}/${encodeURIComponent(name)}`)))).reduce((sum, size) => sum + size, 0);
+  else total = await remoteSize(item.zipUrl);
+  packSizes.set(id, total); return total;
+}
 async function installCatalogPack(id, report = () => {}, signal, nested = false) {
   const catalog = await fetchCatalogPacks();
   const item = catalog.find(pack => pack.id === id);
@@ -1204,6 +1216,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('install:open', (event, items) => openInstallWindow(BrowserWindow.fromWebContents(event.sender), items));
   ipcMain.handle('install:job', event => installJobs.get(event.sender.id)?.items || []);
   ipcMain.on('install:finish', (event, summary) => { const job = installJobs.get(event.sender.id); if (!job) return; job.done = true; job.resolve(summary && typeof summary === 'object' ? summary : { ok: [], failed: [] }); BrowserWindow.fromWebContents(event.sender)?.close(); });
+  ipcMain.handle('pack:size', (_, id) => catalogPackSize(String(id || '')).catch(() => 0));
   ipcMain.handle('pack:cancel', (_, id) => { packInstalls.get(String(id || ''))?.abort(); return true; });
   ipcMain.handle('pack:list', () => listPacks());
   ipcMain.handle('pack:remove', (_, id) => removePack(String(id || '')));

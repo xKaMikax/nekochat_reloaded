@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('windowControls', {
   openInstallWindow: items => ipcRenderer.invoke('install:open', items),
   getInstallJob: () => ipcRenderer.invoke('install:job'),
   finishInstall: summary => ipcRenderer.send('install:finish', summary),
+  getCatalogPackSize: id => ipcRenderer.invoke('pack:size', String(id || '')),
   cancelPackInstall: id => ipcRenderer.invoke('pack:cancel', String(id || '')),
   onPackProgress: callback => { const listener = (_, data) => callback(data); ipcRenderer.on('pack:progress', listener); return () => ipcRenderer.removeListener('pack:progress', listener); },
   listPacks: () => ipcRenderer.invoke('pack:list'),
