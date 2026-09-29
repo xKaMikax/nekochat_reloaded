@@ -139,6 +139,13 @@
     gameWindow = createWindow({ url: `/assets/html/minesweeper.html${query ? `?${query}` : ''}`, width, height, minWidth: 200, minHeight: 260, parent: owner });
     gameWindow.onClosed = () => { gameWindow = null; };
   }
+  // About box (XP's ShellAbout look).
+  let aboutWindow;
+  function openAbout(owner, appName) {
+    if (!isDestroyed(aboutWindow)) close(aboutWindow);
+    aboutWindow = createWindow({ url: `/assets/html/about.html?app=${appName === 'minesweeper' ? 'minesweeper' : 'nekochat'}`, width: 420, height: 380, minWidth: 380, minHeight: 340, parent: owner });
+    aboutWindow.onClosed = () => { aboutWindow = null; };
+  }
   // Help and Support Center.
   let helpWindow;
   function openHelp(owner, topic) {
@@ -268,6 +275,7 @@
       openControlPanel: () => openControlPanel(win),
       openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
       openHelp: topic => openHelp(windowOwner(win), topic),
+      openAbout: appName => openAbout(windowOwner(win), appName),
       openGame: options => openGame(windowOwner(win), clone(options) || {}),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),
