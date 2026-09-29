@@ -282,7 +282,7 @@ function openInstallWindow(owner, items) {
   return new Promise(resolve => {
     if (installWindow && !installWindow.isDestroyed()) { installWindow.focus(); resolve({ ok: [], failed: [], busy: true }); return; }
     const job = { items: cleanInstallItems(items), resolve, done: false };
-    installWindow = new BrowserWindow({ title: 'Installing Update', width: 520, height: 420, resizable: false, minimizable: false, maximizable: false, parent: owner || undefined, modal: Boolean(owner), frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+    installWindow = new BrowserWindow({ title: 'Installing Update', icon: path.join(__dirname, 'assets', 'images', 'windows-update-48.png'), width: 520, height: 420, resizable: false, minimizable: false, maximizable: false, parent: owner || undefined, modal: Boolean(owner), frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
     const id = installWindow.webContents.id; installJobs.set(id, job);
     installWindow.on('closed', () => { if (!job.done) resolve({ ok: [], failed: [], closed: true }); installJobs.delete(id); installWindow = null; });
     installWindow.loadFile(path.join(__dirname, 'assets', 'html', 'install_update.html'));
@@ -291,7 +291,7 @@ function openInstallWindow(owner, items) {
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
-    title: 'Nekochat Reloaded Update', width: 940, height: 660, minWidth: 640, minHeight: 420,
+    title: 'Nekochat Reloaded Update', icon: path.join(__dirname, 'assets', 'images', 'windows-update-48.png'), width: 940, height: 660, minWidth: 640, minHeight: 420,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
