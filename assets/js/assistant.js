@@ -14,12 +14,12 @@
   let files = source();
   const words = {
     ru: { hello: 'Что вы хотите сделать?', searchAll: 'Найти сообщения во всех чатах', search: 'Найти в этом чате', go: 'Перейти к другому чату', unread: 'Непрочитанные ({count})', noUnread: 'Непрочитанных сообщений нет.', status: 'Сменить статус', tip: 'Дайте совет', hide: 'Скрыть {name}', back: 'Назад',
-      searchPrompt: 'Что вы хотите найти? Я поищу во всех ваших чатах.', find: 'Найти', searching: 'Ищу во всех чатах…', found: 'Нашёл: {count}. Щёлкните, чтобы открыть.', notFound: 'Ничего не нашёл. Попробуйте другое слово.', searchAgain: 'Искать ещё',
+      searchPrompt: 'Что вы хотите найти? Я поищу во всех ваших чатах.', paneTitle: 'Помощник по поиску', whatFind: 'Что вы хотите найти?', words: 'Всё слово или часть слова:', where: 'Где искать:', whereAll: 'Во всех чатах', whereRooms: 'Только в комнатах', whereDms: 'Только в личных', whereHere: 'В открытом чате', from: 'От кого:', anyone: 'От кого угодно', close: 'Закрыть', resultsCount: 'Результатов: {count}', find: 'Найти', searching: 'Ищу во всех чатах…', found: 'Нашёл: {count}. Щёлкните, чтобы открыть.', notFound: 'Ничего не нашёл. Попробуйте другое слово.', searchAgain: 'Искать ещё',
       mention: '{name} упомянул(а) вас в {chat}', open: 'Открыть', unreadIn: 'Непрочитанные чаты:',
       statuses: { online: 'В сети', away: 'Отошёл', dnd: 'Не беспокоить', invisible: 'Невидимка' },
       tips: ['Ctrl+K — быстрый переход к любому чату.', 'Ctrl+F ищет в открытом чате, а я — во всех сразу.', 'Alt+↑ и Alt+↓ листают список чатов.', 'Ответить на сообщение можно из меню ⋯ рядом со временем.', '**жирный**, *курсив*, ~~зачёркнутый~~ и `код` работают в сообщениях.', 'Щёлкните по чату правой кнопкой: избранное, звук, архив.', 'Шапку чата можно вытащить мышью — чат откроется в своём окне.', 'Темы, курсоры, звуки, обои и помощники — в Каталоге.', 'В Панели управления → Мышь можно выбрать другие указатели.', 'Черновики сохраняются и переходят на другие устройства.'] },
     en: { hello: 'What would you like to do?', searchAll: 'Search messages in all chats', search: 'Search this chat', go: 'Go to another chat', unread: 'Unread ({count})', noUnread: 'There are no unread messages.', status: 'Change my status', tip: 'Give me a tip', hide: 'Hide {name}', back: 'Back',
-      searchPrompt: 'What do you want to find? I will look in all your chats.', find: 'Search', searching: 'Searching all chats…', found: 'Found {count}. Click one to open it.', notFound: 'I could not find anything. Try another word.', searchAgain: 'Search again',
+      searchPrompt: 'What do you want to find? I will look in all your chats.', paneTitle: 'Search Companion', whatFind: 'What do you want to search for?', words: 'All or part of a word:', where: 'Look in:', whereAll: 'All chats', whereRooms: 'Rooms only', whereDms: 'Direct messages only', whereHere: 'The open chat', from: 'From:', anyone: 'Anyone', close: 'Close', resultsCount: 'Results: {count}', find: 'Search', searching: 'Searching all chats…', found: 'Found {count}. Click one to open it.', notFound: 'I could not find anything. Try another word.', searchAgain: 'Search again',
       mention: '{name} mentioned you in {chat}', open: 'Open', unreadIn: 'Chats with unread messages:',
       statuses: { online: 'Online', away: 'Away', dnd: 'Do not disturb', invisible: 'Invisible' },
       tips: ['Ctrl+K goes to any chat.', 'Ctrl+F searches the open chat; I search all of them.', 'Alt+↑ and Alt+↓ move through the chat list.', 'Reply to a message from the ⋯ menu next to its time.', '**bold**, *italic*, ~~strikethrough~~ and `code` work in messages.', 'Right-click a chat: favourite, mute, archive.', 'Drag the chat header out to open the chat in its own window.', 'Themes, cursors, sounds, wallpapers and assistants are in the Catalog.', 'Control Panel → Mouse changes the pointers.', 'Drafts are saved and follow you to your other devices.'] },
@@ -123,39 +123,71 @@
     let count = 0; try { count = unread.size; } catch {}
     say(t('hello'), [[t('searchAll'), 'search-all'], [fill(t('unread'), { count }), 'unread'], [t('go'), 'go'], [t('search'), 'search'], [t('status'), 'status'], [t('tip'), 'tip'], [fill(t('hide'), { name: data.name || 'Rover' }), 'hide']]);
   }
-  function askSearch() {
-    say(t('searchPrompt'), [[t('back'), 'menu']], `<form class="assistant-search"><input type="search" maxlength="80" autocomplete="off"><button type="submit">${esc(t('find'))}</button></form>`);
-    setTimeout(() => balloon?.querySelector('input')?.focus(), 30);
-  }
-  // Every room and every person you talk to, a few at a time; the newest matches first.
+  // Search Companion, like Windows XP's: a pane in place of the chat list with the question, the
+  // words, where to look and from whom, and the results under it. Rover sits at its bottom.
+  let pane = null, lastHits = [], lastQuery = '';
   const histories = new Map();
-  async function searchAll(query) {
-    const needle = query.toLowerCase(); play('Searching'); say(t('searching'));
-    let chats = []; try { chats = [...rooms.map(room => ({ kind: 'room', data: room })), ...users.filter(user => conversationOrder.has(Number(user.id))).map(user => ({ kind: 'dm', data: user }))]; } catch {}
+  function askSearch() {
+    closeBalloon();
+    if (pane) { pane.querySelector('input')?.focus(); return; }
+    const sidebar = document.querySelector('.sidebar'); if (!sidebar) return;
+    let people = []; try { people = users.filter(user => conversationOrder.has(Number(user.id))); } catch {}
+    pane = document.createElement('aside'); pane.className = 'search-companion';
+    pane.innerHTML = `<header><span>${esc(t('paneTitle'))}</span><button type="button" data-assistant="close-pane" title="${esc(t('close'))}">×</button></header><div class="search-companion-body"><form class="search-companion-form"><b>${esc(t('whatFind'))}</b>`
+      + `<label>${esc(t('words'))}<input type="search" maxlength="80" autocomplete="off"></label>`
+      + `<label>${esc(t('where'))}<select name="where"><option value="all">${esc(t('whereAll'))}</option><option value="room">${esc(t('whereRooms'))}</option><option value="dm">${esc(t('whereDms'))}</option><option value="here">${esc(t('whereHere'))}</option></select></label>`
+      + `<label>${esc(t('from'))}<select name="from"><option value="">${esc(t('anyone'))}</option>${people.map(user => `<option value="${user.id}">${esc(displayName(user))}</option>`).join('')}</select></label>`
+      + `<div class="search-companion-buttons"><button type="submit">${esc(t('find'))}</button><button type="button" data-assistant="close-pane">${esc(t('back'))}</button></div></form><div class="search-companion-status"></div><div class="search-companion-results"></div></div><div class="search-companion-dog"></div>`;
+    sidebar.hidden = true; sidebar.after(pane);
+    // Rover moves into the pane, like the dog of XP's search.
+    pane.querySelector('.search-companion-dog').append(host); host.classList.add('in-pane');
+    pane.addEventListener('click', event => { const action = event.target.closest('[data-assistant]')?.dataset.assistant; if (action === 'close-pane') closePane(); if (action === 'open-hit') openHit(event.target.closest('[data-assistant]').dataset.value); });
+    pane.querySelector('form').addEventListener('submit', event => { event.preventDefault(); event.stopPropagation(); const form = event.target; const query = form.querySelector('input').value.trim(); if (query) searchAll(query, form.where.value, form.from.value); });
+    setTimeout(() => pane?.querySelector('input')?.focus(), 30);
+    play('GetAttentionMinor');
+  }
+  function closePane() {
+    if (!pane) return;
+    document.body.append(host); host.classList.remove('in-pane');
+    pane.remove(); pane = null; const sidebar = document.querySelector('.sidebar'); if (sidebar) sidebar.hidden = false;
+  }
+  // Every room and every person you talk to (or only some), a few at a time; newest first.
+  async function searchAll(query, where = 'all', from = '') {
+    const needle = query.toLowerCase(); const status = pane?.querySelector('.search-companion-status'), results = pane?.querySelector('.search-companion-results');
+    if (!pane) return;
+    play('Searching'); status.textContent = t('searching'); results.innerHTML = '';
+    let chats = []; try {
+      if (where === 'here' && current) chats = [{ kind: current.kind, data: current.data }];
+      else chats = [...(where === 'dm' ? [] : rooms.map(room => ({ kind: 'room', data: room }))), ...(where === 'room' ? [] : users.filter(user => conversationOrder.has(Number(user.id))).map(user => ({ kind: 'dm', data: user })))];
+    } catch {}
     const hits = [];
     for (let i = 0; i < chats.length; i += 4) {
       await Promise.all(chats.slice(i, i + 4).map(async chat => {
         const key = `${chat.kind}:${chat.data.id}`; let history = histories.get(key);
         if (!history || Date.now() - history.time > 60000) { try { history = { time: Date.now(), items: await fetchHistory(chat) }; histories.set(key, history); } catch { return; } }
-        for (const message of history.items) if (String(message.content || '').toLowerCase().includes(needle)) hits.push({ kind: chat.kind, id: chat.data.id, message });
+        for (const message of history.items) {
+          const author = message.user || message.sender || null; const authorId = author?.id ?? message.user_id ?? message.sender_id;
+          if (from && String(authorId) !== String(from)) continue;
+          if (String(message.content || '').toLowerCase().includes(needle)) hits.push({ kind: chat.kind, id: chat.data.id, message, author });
+        }
       }));
     }
+    if (!pane) return;
     hits.sort((a, b) => String(b.message.created_at).localeCompare(String(a.message.created_at)));
-    await play(hits.length ? 'CharacterSucceeds' : 'Embarrassed');
-    if (!hits.length) { say(t('notFound'), [[t('searchAgain'), 'search-all'], [t('back'), 'menu']]); return; }
-    const list = hits.slice(0, 30).map((hit, index) => {
-      const text = String(hit.message.content || ''); const at = text.toLowerCase().indexOf(needle); const start = Math.max(0, at - 30);
-      const snippet = (start ? '…' : '') + text.slice(start, at + needle.length + 50);
-      return `<button type="button" class="assistant-hit" data-assistant="open-hit" data-value="${index}"><b>${esc(chatName(hit.kind, hit.id))}</b><span>${esc(snippet)}</span></button>`;
-    }).join('');
+    play(hits.length ? 'CharacterSucceeds' : 'Embarrassed');
     lastHits = hits; lastQuery = query;
-    say(fill(t('found'), { count: hits.length }), [[t('searchAgain'), 'search-all'], [t('back'), 'menu']], `<div class="assistant-hits">${list}</div>`);
+    status.textContent = hits.length ? fill(t('resultsCount'), { count: hits.length }) : t('notFound');
+    const mark = text => { const at = text.toLowerCase().indexOf(needle); if (at < 0) return esc(text.slice(0, 90)); const start = Math.max(0, at - 30); return `${start ? '…' : ''}${esc(text.slice(start, at))}<mark>${esc(text.slice(at, at + needle.length))}</mark>${esc(text.slice(at + needle.length, at + needle.length + 60))}`; };
+    results.innerHTML = hits.slice(0, 100).map((hit, index) => {
+      let who = '', when = '';
+      try { who = displayName(hit.author || userFor(hit.message.user_id || hit.message.sender_id)); } catch {}
+      try { when = parseTime(hit.message.created_at).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch {}
+      return `<button type="button" class="search-companion-hit" data-assistant="open-hit" data-value="${index}"><b>${esc(chatName(hit.kind, hit.id))}</b><small>${esc(who)}${who && when ? ' · ' : ''}${esc(when)}</small><span>${mark(String(hit.message.content || ''))}</span></button>`;
+    }).join('');
   }
-  let lastHits = [], lastQuery = '';
   // Open the chat and find the words there, with the chat header's search.
   async function openHit(index) {
     const hit = lastHits[Number(index)]; if (!hit) return;
-    closeBalloon();
     try { await openChat(hit.kind, hit.id); } catch { return; }
     setTimeout(() => { const input = document.querySelector('#header-search input'); if (!input) return; input.value = lastQuery; input.dispatchEvent(new Event('input', { bubbles: true })); }, 400);
   }
@@ -189,14 +221,12 @@
       if (action === 'hide') { closeBalloon(); hide(true); return; }
       if (event.target === canvas && !moved) { if (balloon) { closeBalloon(); return; } play('ClickedOn'); menu(); }
     });
-    host.addEventListener('submit', event => {
-      event.preventDefault(); const query = event.target.querySelector('input')?.value.trim(); if (query) searchAll(query);
-    });
+
     // Drag him anywhere; the place is remembered.
     let moved = false;
     canvas.addEventListener('pointerdown', event => {
       moved = false; const startX = event.clientX, startY = event.clientY, rect = host.getBoundingClientRect(); canvas.setPointerCapture(event.pointerId);
-      canvas.onpointermove = move => { if (Math.abs(move.clientX - startX) + Math.abs(move.clientY - startY) > 4) moved = true; if (!moved) return; host.style.left = `${Math.max(0, Math.min(innerWidth - rect.width, rect.left + move.clientX - startX))}px`; host.style.top = `${Math.max(0, Math.min(innerHeight - rect.height, rect.top + move.clientY - startY))}px`; host.style.right = host.style.bottom = 'auto'; };
+      canvas.onpointermove = move => { if (host.classList.contains('in-pane')) return; if (Math.abs(move.clientX - startX) + Math.abs(move.clientY - startY) > 4) moved = true; if (!moved) return; host.style.left = `${Math.max(0, Math.min(innerWidth - rect.width, rect.left + move.clientX - startX))}px`; host.style.top = `${Math.max(0, Math.min(innerHeight - rect.height, rect.top + move.clientY - startY))}px`; host.style.right = host.style.bottom = 'auto'; };
       canvas.onpointerup = () => { canvas.onpointermove = null; if (moved) try { localStorage.setItem('nk_assistant_place', JSON.stringify([host.style.left, host.style.top])); } catch {} };
     });
     try { const [left, top] = JSON.parse(localStorage.getItem('nk_assistant_place') || 'null') || []; if (left) Object.assign(host.style, { left, top, right: 'auto', bottom: 'auto' }); } catch {}
@@ -204,6 +234,7 @@
   }
   async function hide(remember) {
     if (!host) return;
+    closePane();
     if (remember) try { localStorage.setItem('nk_assistant', 'none'); } catch {}
     closeBalloon(); await play('Hide');
     clearTimeout(timer); clearTimeout(idleTimer); host?.remove(); host = null; current = null; queue = [];
@@ -234,6 +265,7 @@
     }
   }).observe(document.body, { childList: true, subtree: true });
 
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && pane) closePane(); });
   // Turned on or off in the Control Panel (other windows write the setting).
   window.addEventListener('storage', event => { if (event.key === 'nk_assistant' || event.key === 'nk_assistant_pack') { if (enabled()) change(); else hide(false); } });
   // After sign-in the chat app appears; wait for it.
