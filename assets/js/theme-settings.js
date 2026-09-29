@@ -59,6 +59,7 @@ async function applySelection() {
   localStorage.setItem('nk_sound_scheme', $('#sound-scheme').value);
   applyPackChoices();
   localStorage.setItem('nk_sound_volume', $('#sound-volume').value);
+  localStorage.setItem('nk_font_size', $('#font-size').value); window.nkPacks?.applyLook();
   localStorage.setItem('nk_chat_wallpaper_opacity', $('#chat-wallpaper-opacity').value);
   saveWallpaper();
   localStorage.setItem('nk_active_theme', result.id);
@@ -300,9 +301,51 @@ $('#desktop-browse').onclick = () => $('#chat-wallpaper-file').click();
 ['#chat-wallpaper-position', '#chat-wallpaper-color', '#chat-wallpaper-color-off', '#chat-wallpaper-opacity'].forEach(selector => $(selector).addEventListener('input', refreshDesktopPreview));
 $('#chat-wallpaper-position').value = localStorage.getItem('nk_chat_wallpaper_position') || 'stretch';
 { const colour = localStorage.getItem('nk_chat_wallpaper_color') || ''; $('#chat-wallpaper-color-off').checked = !colour; if (colour) $('#chat-wallpaper-color').value = colour; }
-$('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
-$('#advanced').onclick = () => alert('Advanced colour editing is available when the theme provides multiple colour schemes.');
+// Effects… and Advanced…, like XP's Appearance tab. They are saved when you click OK in them.
+const readJson = key => { try { return JSON.parse(localStorage.getItem(key) || 'null') || {}; } catch { return {}; } };
+function xpDialog(id, title, body) {
+  let dialog = document.getElementById(id); if (dialog) dialog.remove();
+  dialog = document.createElement('dialog'); dialog.id = id; dialog.className = 'xp-subdialog';
+  dialog.innerHTML = `<div class="xp-subdialog-title">${esc(title)}</div><div class="xp-subdialog-body">${body}<div class="xp-subdialog-buttons"><button type="button" data-close="ok">OK</button><button type="button" data-close="cancel">Cancel</button></div></div>`;
+  document.body.append(dialog); dialog.showModal(); return dialog;
+}
+$('#effects').onclick = () => {
+  const fx = readJson('nk_effects');
+  const dialog = xpDialog('effects-dialog', 'Effects', `<label class="xp-check"><input type="checkbox" id="fx-transition-on"${fx.transition !== 'none' ? ' checked' : ''}> Use the following transition effect for menus and tooltips:</label><select id="fx-transition"><option value="fade">Fade effect</option><option value="scroll">Scroll effect</option></select>`
+    + `<label class="xp-check"><input type="checkbox" id="fx-smoothing-on"${fx.smoothing !== 'none' ? ' checked' : ''}> Use the following method to smooth edges of screen fonts:</label><select id="fx-smoothing"><option value="standard">Standard</option><option value="cleartype">ClearType</option></select>`
+    + `<label class="xp-check"><input type="checkbox" id="fx-large"${fx.largeIcons ? ' checked' : ''}> Use large icons</label><label class="xp-check"><input type="checkbox" id="fx-shadows"${fx.shadows !== false ? ' checked' : ''}> Show shadows under menus</label>`);
+  dialog.querySelector('#fx-transition').value = fx.transition === 'scroll' ? 'scroll' : 'fade';
+  dialog.querySelector('#fx-smoothing').value = fx.smoothing === 'cleartype' ? 'cleartype' : 'standard';
+  dialog.onclick = event => {
+    const action = event.target.closest('[data-close]')?.dataset.close; if (!action) return;
+    if (action === 'ok') localStorage.setItem('nk_effects', JSON.stringify({ transition: dialog.querySelector('#fx-transition-on').checked ? dialog.querySelector('#fx-transition').value : 'none', smoothing: dialog.querySelector('#fx-smoothing-on').checked ? dialog.querySelector('#fx-smoothing').value : 'none', largeIcons: dialog.querySelector('#fx-large').checked, shadows: dialog.querySelector('#fx-shadows').checked }));
+    window.nkPacks?.applyLook(); dialog.close(); dialog.remove();
+  };
+};
+const LOOK_ITEMS = [['title', 'Active Title Bar', ['color1', 'color2', 'text']], ['inactive', 'Inactive Title Bar', ['color1', 'color2']], ['window', 'Window', ['color1', 'text']], ['selected', 'Selected Items', ['color1', 'text']], ['face', '3D Objects', ['color1']], ['message', 'Message Text', ['size', 'text', 'bold', 'italic']], ['tooltip', 'ToolTip', ['color1', 'text']]];
+$('#advanced').onclick = () => {
+  const look = readJson('nk_appearance');
+  const dialog = xpDialog('advanced-dialog', 'Advanced Appearance', `<div class="preview advanced-preview"><iframe src="assets/html/theme_preview.html" title="Preview"></iframe></div><p>If you select a windows and buttons setting other than Windows Classic, it will override the following settings, except in some older programs.</p>`
+    + `<div class="advanced-grid"><label>Item:<select id="look-item">${LOOK_ITEMS.map(([id, label]) => `<option value="${id}">${label}</option>`).join('')}</select></label><label>Size:<input id="look-size" type="number" min="8" max="28"></label><label>Color 1:<input id="look-color1" type="color"></label><label>Color 2:<input id="look-color2" type="color"></label><label>Font color:<input id="look-text" type="color"></label><span class="advanced-style"><label class="xp-check"><input type="checkbox" id="look-bold"> <b>B</b></label><label class="xp-check"><input type="checkbox" id="look-italic"> <i>I</i></label></span></div><button type="button" id="look-reset">Use default</button>`);
+  const previewFrame = dialog.querySelector('.advanced-preview iframe');
+  previewFrame.addEventListener('load', () => { if (previewTheme) previewFrame.contentWindow.postMessage({ type: 'theme-preview', theme: previewTheme }, '*'); });
+  const draft = JSON.parse(JSON.stringify(look));
+  const fields = ['size', 'color1', 'color2', 'text', 'bold', 'italic'];
+  const input = name => dialog.querySelector(`#look-${name}`);
+  const show = () => {
+    const [id, , allowed] = LOOK_ITEMS.find(([item]) => item === input('item').value); const values = draft[id] || {};
+    for (const name of fields) { const node = input(name); node.disabled = !allowed.includes(name); node.closest('label').classList.toggle('disabled', node.disabled); if (node.type === 'checkbox') node.checked = Boolean(values[name]); else node.value = values[name] ?? (node.type === 'color' ? '#000000' : ''); node.dataset.touched = values[name] !== undefined ? '1' : ''; }
+  };
+  for (const name of fields) input(name).addEventListener('input', () => { const id = input('item').value; const node = input(name); draft[id] = { ...(draft[id] || {}), [name]: node.type === 'checkbox' ? node.checked : node.value }; });
+  input('item').onchange = show; show();
+  dialog.querySelector('#look-reset').onclick = () => { delete draft[input('item').value]; show(); };
+  dialog.onclick = event => {
+    const action = event.target.closest('[data-close]')?.dataset.close; if (!action) return;
+    if (action === 'ok') localStorage.setItem('nk_appearance', JSON.stringify(draft));
+    window.nkPacks?.applyLook(); dialog.close(); dialog.remove();
+  };
+};
 controls.onThemeChanged(theme => { refreshFrame(theme); refreshPreview(theme); });
-Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#show-last-seen').checked = localStorage.getItem('nk_hide_last_seen') !== '1'; $('#auto-away').value = localStorage.getItem('nk_auto_away_minutes') ?? '10'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; refreshPacks(); $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
+Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#show-last-seen').checked = localStorage.getItem('nk_hide_last_seen') !== '1'; $('#auto-away').value = localStorage.getItem('nk_auto_away_minutes') ?? '10'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; refreshPacks(); $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#font-size').value = localStorage.getItem('nk_font_size') || 'normal'; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
 // XP click sound on buttons, like in the chat window.
 document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
