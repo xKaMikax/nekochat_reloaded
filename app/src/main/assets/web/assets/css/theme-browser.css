@@ -32,3 +32,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .dl-cancel { min-width: 75px; height: 23px; padding: 0 10px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: var(--xp-theme-windowtext, #000); font: 11px Tahoma, Arial, sans-serif; }
 .dl-cancel:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
 .dl-cancel:disabled { color: #808080; }
+.dl-head.done { align-items: flex-start; margin-bottom: 0; }
+.dl-head.done b { font-size: 15px; }
+.dl-head.done p { margin: 6px 0 0; font-size: 11px; }
+.dl-buttons.end { margin-top: 150px; }
