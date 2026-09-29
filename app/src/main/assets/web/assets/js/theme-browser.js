@@ -111,7 +111,7 @@ function renderSide() {
 }
 
 // ---- pages -----------------------------------------------------------------------------------
-const strip = (title, sub = '') => `<div class="wu-strip"><img src="assets/images/wu/tablet.png" alt=""><div class="wu-strip-text"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div></div>`;
+const strip = (title, sub = '') => `<div class="wu-strip"><div class="wu-strip-text"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div></div>`;
 const rowHTML = (item, open = false) => {
   const checked = state.selected.has(item.id), expanded = open || state.expanded.has(item.id);
   const preview = item.previewUrl ? `<img class="wu-thumb" src="${esc(item.previewUrl)}" alt="" onerror="this.remove()">` : '';
