@@ -127,7 +127,7 @@
       const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
       try {
         const info = await (await fetch(manifest)).json();
-        list.push({ packId: pack.id, id: String(info.id || pack.id), name: info.name || { en: pack.name }, version: info.version || '', author: pack.author || info.author || '', icon: pack.files[`addon/${info.icon || 'icon.png'}`] || '', icon32: pack.files[`addon/${info.icon32 || info.icon || 'icon.png'}`] || '', help: pack.files['addon/help.json'] || '', about: info.about || null, multiplayer: info.multiplayer || null });
+        list.push({ packId: pack.id, id: String(info.id || pack.id), name: info.name || { en: pack.name }, version: info.version || '', author: pack.author || info.author || '', icon: pack.files[`addon/${info.icon || 'icon.png'}`] || '', icon32: pack.files[`addon/${info.icon32 || info.icon || 'icon.png'}`] || '', help: pack.files['addon/help.json'] || '', about: info.about || null, multiplayer: info.multiplayer || null, challenge: info.challenge || null });
       } catch {}
     }
     addonCache = list; window.dispatchEvent(new Event('nk-addons-ready'));
