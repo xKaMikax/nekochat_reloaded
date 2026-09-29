@@ -36,3 +36,87 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial
 .dl-head.done b { font-size: 15px; }
 .dl-head.done p { margin: 6px 0 0; font-size: 11px; }
 .dl-buttons.end { margin-top: 150px; }
+
+/* The Catalog as Windows Update / Microsoft Update. */
+.wu .cp-menu { margin: 0; flex: none; }
+.wu-banner { position: relative; flex: none; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 18px; background: linear-gradient(90deg, #fff 0%, #fff 42%, #c9d3ee 100%); border-bottom: 1px solid #b9c3de; overflow: hidden; }
+.wu-globe { width: 48px; height: 48px; flex: none; }
+.wu-brand { font: 400 30px 'Trebuchet MS', Tahoma, sans-serif; color: #222; white-space: nowrap; }
+.wu-tag { flex: 1; max-width: 300px; margin-left: 18px; color: #4a5a86; font: 14px 'Trebuchet MS', Tahoma, sans-serif; line-height: 1.15; }
+.wu-body { display: flex; flex: 1 1 auto; min-height: 0; background: #fff; }
+.wu-side { flex: none; width: 196px; padding: 12px 12px 16px; overflow-y: auto; background: #fff; border-right: 1px solid #a9b3cf; font: 11px Tahoma, Arial, sans-serif; }
+.wu-side h4 { margin: 16px 0 6px; font: 700 11px Tahoma, Arial, sans-serif; color: #000; }
+.wu-link, .wu-side a { display: block; margin: 0 0 5px; padding: 2px 4px; color: #0a2fa8; text-decoration: none; }
+.wu-link:hover, .wu-side a:hover, .wu-content a:hover { text-decoration: underline; }
+.wu-link.on { border: 1px solid #222; padding: 3px 3px; color: #000; }
+.wu-install { display: flex !important; align-items: center; gap: 7px; margin: 12px 0 4px !important; font-weight: 700; color: #0a2fa8 !important; }
+.wu-install img, .wu-go img { width: 18px; height: 18px; flex: none; }
+.wu-sort { display: block; margin: 8px 4px 0; color: #000; }
+.wu-sort select { display: block; width: 100%; margin-top: 3px; height: 21px; border: 1px solid #7f9db9; background: #fff; font: 11px Tahoma, Arial, sans-serif; }
+.wu-main { flex: 1; min-width: 0; overflow-x: hidden; overflow-y: auto; background: #fff; padding-bottom: 22px; font: 12px Tahoma, Arial, sans-serif; color: #000; }
+.wu-strip { position: relative; display: flex; align-items: flex-end; min-height: 76px; padding-left: 0; overflow: hidden; }
+.wu-strip img { position: relative; z-index: 1; height: 76px; width: auto; flex: none; }
+.wu-strip::after { content: ''; position: absolute; left: 70px; right: 0; bottom: 0; height: 28px; background: linear-gradient(90deg, #b9b9b9 0%, #dedede 55%, #fff 100%); }
+.wu-strip-text { position: relative; z-index: 1; margin: 0 0 0 40px; padding-bottom: 6px; color: #6a6a6a; font-family: 'Trebuchet MS', Tahoma, sans-serif; line-height: 1; }
+.wu-strip-text b { display: block; font-size: 34px; font-weight: 400; letter-spacing: -.5px; }
+.wu-strip-text span { display: block; margin: 0 0 0 4px; font-size: 17px; }
+.wu-two { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 22px; padding: 0 18px 0 16px; }
+.wu-content { padding: 0 18px 0 16px; }
+.wu-content.full { padding-right: 20px; }
+.wu-h { margin: 22px 0 8px; font: 400 21px 'Trebuchet MS', Tahoma, sans-serif; color: #666; }
+.wu-content.full .wu-h { font-size: 17px; margin-top: 20px; }
+.wu-h3 { display: flex; align-items: center; gap: 10px; margin: 22px 0 6px; padding-top: 16px; border-top: 1px solid #ccc; font: 700 14px Tahoma, Arial, sans-serif; }
+.wu-h3 img { width: 28px; height: 28px; }
+.wu-content p { margin: 6px 0; line-height: 1.35; }
+.wu-choice { display: flex; align-items: center; gap: 14px; margin: 26px 0; }
+.wu-choice span { max-width: 340px; }
+.wu-btn { min-width: 76px; height: 24px; padding: 0 12px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: 11px Tahoma, Arial, sans-serif; cursor: default; }
+.wu-btn:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal, linear-gradient(#fff, #d4d0c8))); }
+.wu-btn:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal, linear-gradient(#fff, #d4d0c8))); }
+.wu-btn.small { min-width: 62px; height: 22px; }
+.wu-boxes { padding-top: 20px; }
+.wu-box { margin-bottom: 14px; border: 1px solid #5a83d4; border-radius: 5px; background: #fff; overflow: hidden; font-size: 11px; }
+.wu-box header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; color: #fff; background: linear-gradient(#2c62d0, #1b4bb8); }
+.wu-box.ok header { border-bottom: 4px solid #3f9a2c; }
+.wu-box header img { width: 22px; height: 22px; }
+.wu-box p { margin: 8px; }
+.wu-box.news { border-color: #a07f3d; }
+.wu-box.news header { color: #000; background: #fff; border-top: 5px solid #a07f3d; }
+.wu-box a, .wu-content a { color: #0a2fa8; text-decoration: none; }
+.wu-actionline { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; }
+.wu-go { display: inline-flex; align-items: center; gap: 7px; }
+.wu-group-box { padding: 6px 12px 12px; border: 1px solid #b4b4b0; background: #f4f4f2; }
+.wu-tools { margin: 8px 0 10px; }
+.wu-groupbar { margin: 8px 0 4px; padding: 3px 4px; background: #c6c6c6; font: 700 11px Tahoma, Arial, sans-serif; }
+.wu-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; }
+.wu-checkline { display: inline-flex; }
+.wu-check { appearance: none; -webkit-appearance: none; width: 13px; height: 13px; margin: 0; background: var(--xp-checkbox-unchecked, linear-gradient(#fff, #ddd)) center / 13px 13px no-repeat; }
+.wu-check:hover { background-image: var(--xp-checkbox-unchecked-hover, var(--xp-checkbox-unchecked)); }
+.wu-check:checked { background-image: var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8)); }
+.wu-check:checked:hover { background-image: var(--xp-checkbox-checked-hover, var(--xp-checkbox-checked)); }
+.wu-plus { width: 11px; height: 11px; padding: 0; border: 1px solid #7a7a7a; background: #fff; color: #000; font: 700 9px/9px Tahoma, sans-serif; text-align: center; cursor: default; }
+.wu-name { color: #0a2fa8; }
+.wu-by { color: #555; font-size: 11px; }
+.wu-detail { display: flex; flex: 1 0 100%; gap: 12px; margin: 4px 0 6px 44px; font-size: 11px; }
+.wu-detail[hidden] { display: none; }
+.wu-thumb { width: 132px; max-height: 100px; flex: none; object-fit: contain; border: 1px solid #999; background: #d4d0c8; }
+.wu-detail-text p { margin: 2px 0; }
+.wu-meta { color: #666; }
+.wu-plain { padding: 3px 4px; font-size: 11px; }
+.wu-empty { margin: 18px 0; color: #666; }
+.wu-notice { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid #e2d9a8; background: #fdf9e4; }
+.wu-summary { margin: 8px 0 14px 4px; border-collapse: collapse; }
+.wu-summary td { padding: 2px 30px 2px 0; }
+.wu-summary img { width: 16px; height: 16px; vertical-align: -3px; }
+.dl-buttons.end { justify-content: space-between; align-items: center; }
+.dl-link { color: #0a2fa8; font-size: 11px; }
+.wu-detail-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.wu-content { min-width: 0; }
+@media (max-width: 620px) {
+  .wu-body { flex-direction: column; }
+  .wu-side { width: auto; max-height: 140px; border-right: 0; border-bottom: 1px solid #a9b3cf; }
+  .wu-two { grid-template-columns: 1fr; }
+  .wu-brand { font-size: 20px; }
+  .wu-tag { display: none; }
+  .wu-strip-text b { font-size: 24px; }
+}
