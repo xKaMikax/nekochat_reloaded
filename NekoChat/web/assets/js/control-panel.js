@@ -51,7 +51,7 @@ const t = key => words[language][key];
 const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
 
 // Each applet opens in its own window with only its pages, like Windows XP's .cpl files.
-const applet = (name, tab) => (controls.openApplet ? controls.openApplet(name, tab) : controls.openThemeSettings());
+const applet = (name, tab) => (window.nkPlaySound?.('navigation'), controls.openApplet ? controls.openApplet(name, tab) : controls.openThemeSettings());
 const ACTIONS = {
   themes: () => applet('display', 'themes'), appearance: () => applet('display', 'appearance'), desktop: () => applet('display', 'desktop'),
   sounds: () => applet('sounds', 'sounds'), audio: () => applet('sounds', 'audio'), mouse: () => applet('mouse'), regional: () => applet('regional'),
@@ -97,12 +97,13 @@ let view = stored('nk_control_panel_view') === 'classic' ? 'classic' : 'category
 let page = null;
 const back = [], forward = [];
 function go(next) {
+  window.nkPlaySound?.('navigation');
   back.push({ view, page }); forward.length = 0;
   ({ view, page } = next);
   try { localStorage.setItem('nk_control_panel_view', view); } catch {}
   render();
 }
-function step(from, to) { if (!from.length) return; to.push({ view, page }); ({ view, page } = from.pop()); render(); }
+function step(from, to) { if (!from.length) return; window.nkPlaySound?.('navigation'); to.push({ view, page }); ({ view, page } = from.pop()); render(); }
 
 function iconButton(item) {
   return `<button class="cp-icon" type="button" data-action="${item.action}"><img src="${iconUrl(item.icon)}" alt=""><span>${esc(t('icons')[item.id])}</span></button>`;

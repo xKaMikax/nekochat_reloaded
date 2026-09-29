@@ -68,6 +68,24 @@
   window.addEventListener('storage', event => { if (event.key === 'nk_cursor_pack' || event.key === 'nk_cursor_scheme') applyCursors(); if (event.key === 'nk_icon_pack') applyIcons(); });
   // The file a sound plays from: the chosen sound pack, or the built-in Windows XP sounds.
   window.nkSoundUrl = (name, file) => { const pack = read('nk_sound_pack'); return pack?.[name] || `assets/sounds/${file || `${name}.wav`}`; };
+  // Plays a Windows sound of the chosen scheme at the chosen volume, in any window.
+  const FILES = { navigation: 'navigation.wav', notify: 'notify.wav', default: 'default.wav', error: 'error.wav', exclamation: 'exclamation.wav', critical: 'critical-stop.wav', minimize: 'minimize.wav' };
+  window.nkPlaySound = name => {
+    let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {}
+    if (scheme === 'none' || !(volume > 0)) return null;
+    const audio = new Audio(window.nkSoundUrl(name, FILES[name])); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); return audio;
+  };
+  // An error shown in a window (role="alert" or an .error line) sounds like a Windows XP error.
+  const errorTexts = new WeakMap();
+  const watchErrors = () => new MutationObserver(records => {
+    for (const record of records) {
+      const node = (record.target.nodeType === 1 ? record.target : record.target.parentElement)?.closest?.('[role="alert"], .error, .ua-error, .editor-status.error');
+      if (!node) continue;
+      const text = node.textContent.trim(); if (text && text !== errorTexts.get(node) && (node.getAttribute('role') === 'alert' ? /error|ошибк|failed|не удалось|unable|invalid|too large/i.test(text) : true)) window.nkPlaySound('error');
+      errorTexts.set(node, text);
+    }
+  }).observe(document.body, { childList: true, characterData: true, subtree: true });
+  if (document.body) watchErrors(); else document.addEventListener('DOMContentLoaded', watchErrors, { once: true });
   // The pointers a scheme shows (Mouse Properties → Pointers): 'xp', 'system' or a pack's cursors.
   const schemeCursors = (scheme, pack) => scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, [file, x, y]]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href, x, y }])) : scheme === 'system' ? {} : pack || {};
   window.nkPacks = { applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };

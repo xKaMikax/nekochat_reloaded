@@ -222,7 +222,8 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .extra-button svg { width: 17px; height: 17px; fill: #fff; }.extra-button.on svg { fill: #ffd84d; }
 .favorite-icon { color: #e0a800; font-size: 12px; }
 .draft-label { color: #c0392b; }
-.quick-switch { width: min(420px, calc(100% - 30px)); padding: 8px; }
+.quick-switch { width: min(420px, calc(100% - 30px)); padding: 0 0 8px; }
+.quick-switch > input, .quick-switch > .quick-list { width: calc(100% - 16px) !important; margin-left: 8px !important; margin-right: 8px !important; }
 .quick-switch input { width: 100%; height: 26px; margin: 6px 0; border: 1px solid #7f9db9; font: 13px Tahoma, sans-serif; box-sizing: border-box; }
 .quick-list { max-height: 320px; overflow-y: auto; border: 1px solid #c9d6e6; background: #fff; }
 .quick-item { display: block; width: 100%; padding: 5px 8px; border: 0; background: transparent; text-align: left; font: 13px Tahoma, sans-serif; cursor: pointer; }
@@ -318,3 +319,16 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .assistant-balloon .assistant-hit:hover { background: #fff5b8; text-decoration: none; }
 .assistant-hit b { color: #0000ee; }
 .assistant-hit span { overflow: hidden; max-width: 100%; color: #333; text-overflow: ellipsis; white-space: nowrap; }
+/* Notification sound of a chat (chat-extras.js). */
+.chat-sound-dialog { width: min(360px, calc(100% - 30px)); padding: 0; }
+.chat-sound-body { padding: 4px 14px 12px; }
+.chat-sound-dialog label { display: flex; flex-direction: column; gap: 3px; margin: 8px 0; }
+.chat-sound-row { display: flex; align-items: center; gap: 6px; }
+.chat-sound-row select { flex: 1; min-width: 0; height: 22px; border: 1px solid #7f9db9; background: #fff; font: inherit; }
+.chat-sound-row input[type="range"] { flex: 1; }
+.chat-sound-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+.chat-sound-dialog .xp-button { min-width: 75px; height: 23px; }
+.chat-sound-row select { flex: 1 1 auto !important; min-width: 140px; display: block !important; }
+.chat-sound-row .xp-button { flex: none !important; width: auto !important; padding: 0 10px; }
+.chat-sound-actions .xp-button { flex: none !important; width: auto !important; }
+.quick-switch .dialog-title, .chat-sound-dialog .dialog-title { margin: 0 0 8px; }
