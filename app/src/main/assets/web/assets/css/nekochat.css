@@ -368,3 +368,5 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .game-challenge:hover { background: linear-gradient(#fff, #f5f3e8); border-color: #e5a01a; }
 .message-menu .menu-picture { width: 16px; height: 16px; }
 .challenge-level { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; margin: 4px 0 !important; }
+.icon-games { background: url('../games/minesweeper/icon.png') center / 16px 16px no-repeat; }
+.profile-actions #games-profile { grid-column: 1 / -1; order: 5; }
