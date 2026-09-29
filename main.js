@@ -160,6 +160,19 @@ function openApplet(owner, applet, tab) {
   win.on('closed', () => { if (appletWindows.get(name) === win) appletWindows.delete(name); });
   win.loadFile(path.join(__dirname, 'assets', 'html', 'theme_settings_frame.html'), { query: page ? { applet: name, tab: page } : { applet: name } });
 }
+// Help and Support Center; topic: the page to open (help-center.js ids).
+let helpWindow;
+function openHelp(owner, topic) {
+  const page = typeof topic === 'string' && /^[a-z-]+$/.test(topic) ? topic : '';
+  if (helpWindow && !helpWindow.isDestroyed()) { helpWindow.focus(); if (page) helpWindow.webContents.send('help:topic', page); return; }
+  helpWindow = new BrowserWindow({
+    title: 'Help and Support Center', width: 820, height: 580, minWidth: 460, minHeight: 360, resizable: true,
+    parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  helpWindow.on('closed', () => { helpWindow = null; });
+  helpWindow.loadFile(path.join(__dirname, 'assets', 'html', 'help_center.html'), page ? { query: { topic: page } } : undefined);
+}
 let controlPanelWindow;
 // Windows opened from the Control Panel belong to the chat window, so they stay open when it closes.
 const windowOwner = event => { const win = BrowserWindow.fromWebContents(event.sender); return win && win === controlPanelWindow ? win.getParentWindow() || undefined : win; };
@@ -1047,6 +1060,7 @@ app.whenReady().then(async () => {
   ipcMain.on('theme:open-settings', (e, tab) => openThemeSettings(windowOwner(e), tab));
   ipcMain.on('control-panel:open', e => openControlPanel(BrowserWindow.fromWebContents(e.sender)));
   ipcMain.on('applet:open', (e, applet, tab) => openApplet(windowOwner(e), applet, tab));
+  ipcMain.on('help:open', (e, topic) => openHelp(windowOwner(e), topic));
   ipcMain.on('theme:open-browser', e => openThemeBrowser(windowOwner(e)));
   ipcMain.on('theme:open-editor', e => openThemeEditor(windowOwner(e)));
   ipcMain.handle('theme-editor:load', (_, id, scheme) => loadThemeForEditor(String(id || ''), scheme ? String(scheme) : undefined));

@@ -1,0 +1,76 @@
+/* Help and Support Center, like Windows XP's; the task pane boxes come from control-panel.css. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.help-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.help-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.help-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.help-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.help-toolbar { display: flex; align-items: center; gap: 2px; padding: 2px 4px; border-bottom: 1px solid #d6d2c2; background: var(--xp-theme-buttonface, #ece9d8); }
+.help-tool { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; min-width: 44px; padding: 2px 4px; border: 1px solid transparent; border-radius: 3px; background: none; color: #000; font: inherit; }
+.help-tool img { width: 24px; height: 24px; }
+.help-tool:not(:disabled):hover { border-color: #cecec3; background: linear-gradient(#fff, #f0efe8); }
+.help-tool:disabled { color: #aca899; }
+.help-tool:disabled img { filter: grayscale(1) opacity(.55); }
+/* The blue band with Search on the left and the Help and Support Center name on the right. */
+.help-band { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 6px 14px; background: linear-gradient(#003399, #0a3aa0); color: #fff; }
+.help-search { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 4px; }
+.help-search label { display: flex; align-items: center; gap: 8px; font: bold 16px 'Trebuchet MS', Tahoma, sans-serif; }
+.help-search input { width: 170px; height: 20px; box-sizing: border-box; padding: 1px 3px; border: 1px solid #7f9db9; font: 11px Tahoma, sans-serif; }
+.help-search button { width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+.help-search button img { width: 22px; height: 22px; }
+.help-search small { grid-column: 1; padding-left: 64px; color: #dfe8ff; }
+.help-brand { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.help-brand b { display: flex; align-items: center; gap: 6px; font: bold 18px 'Trebuchet MS', Tahoma, sans-serif; }
+.help-brand b img { width: 24px; height: 24px; }
+.help-brand small { color: #dfe8ff; }
+.help-body { flex: 1; min-height: 0; }
+.help-pane { flex: none; width: 250px; box-sizing: border-box; padding: 10px; overflow-y: auto; background: var(--xp-taskpane-background, var(--classic-face, linear-gradient(#7ba2e7, #6375d6))); }
+.help-pane-hidden .help-pane { display: none; }
+.help-box .cp-box-body { background: #fff; }
+.help-tree { gap: 2px !important; }
+.help-node { display: flex; align-items: flex-start; gap: 4px; width: 100%; padding: 1px 2px; border: 0; background: none; color: #215dc6; font: inherit; text-align: left; cursor: pointer; }
+.help-node:hover span { color: #428eff; text-decoration: underline; }
+.help-node.selected span { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.help-toggle { flex: none; width: 11px; height: 11px; margin-top: 1px; }
+.help-children { padding-left: 14px; }
+.help-main { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.help-actions { display: flex; gap: 4px; padding: 3px 8px; border-bottom: 1px solid #d6d2c2; background: #fcfcf8; }
+.help-actions button { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px 6px; border: 1px solid transparent; border-radius: 3px; background: none; color: #000; font: inherit; }
+.help-actions button img { width: 24px; height: 24px; }
+.help-actions button:not(:disabled):hover { border-color: #cecec3; background: linear-gradient(#fff, #f0efe8); }
+.help-actions button:disabled { color: #aca899; }
+.help-actions button:disabled img { filter: grayscale(1) opacity(.55); }
+/* The topic page: white text on blue with the big question mark, like XP's. */
+.help-page { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 30px; background: url('../images/help/watermark.png') right 20px bottom 20px / 260px no-repeat, var(--xp-cp-background, #6f86d6); color: #fff; font-size: 12px; line-height: 1.45; }
+.help-page h1 { margin: 6px 0 16px; font: bold 22px 'Trebuchet MS', Tahoma, sans-serif; }
+.help-page h2 { margin: 0 0 8px; font: bold 14px 'Trebuchet MS', Tahoma, sans-serif; }
+.help-page h3 { margin: 14px 0 4px; font-size: 13px; }
+.help-page a { color: #fff; text-decoration: underline; }
+.help-page code { padding: 0 3px; border-radius: 2px; background: rgba(255, 255, 255, .2); font-family: 'Lucida Console', monospace; }
+.help-page ul { padding-left: 20px; }
+.help-links li { margin: 4px 0; }
+.help-table { border-collapse: collapse; }
+.help-table td { padding: 4px 16px 4px 0; border-bottom: 1px solid rgba(255, 255, 255, .25); }
+.help-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.help-home ul { list-style: none; padding: 0; margin: 0; }
+.help-home-topics li, .help-home-tasks li { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.help-home-topics img { width: 32px; height: 32px; }
+.help-home-tasks img { width: 20px; height: 20px; }
+.help-index-filter { width: 220px; height: 20px; margin-bottom: 8px; border: 1px solid #7f9db9; }
+.help-index { columns: 2; }
+.help-index small { color: #dfe8ff; }
+.help-remove { margin-left: 6px; padding: 0 6px; border: 1px solid #fff; border-radius: 2px; background: none; color: #fff; font: 10px Tahoma, sans-serif; cursor: pointer; }
+/* Classic theme: grey and black, no Luna blue. */
+.cp-classic-look .help-band { background: var(--xp-theme-highlight, #000080); }
+.cp-classic-look .help-page { background: var(--xp-theme-window, #fff); color: var(--xp-theme-windowtext, #000); }
+.cp-classic-look .help-page a { color: #000080; }
+.cp-classic-look .help-page code { background: #e0e0e0; }
+.cp-classic-look .help-box .cp-box-body { border: 1px solid #808080; }
+.cp-classic-look .help-node { color: #000080; }
+@media (max-width: 620px) {
+  .help-body { flex-direction: column; }
+  .help-pane { width: auto; max-height: 36%; }
+  .help-brand, .help-search small, .help-tool span, .help-actions button span { display: none; }
+  .help-home { grid-template-columns: 1fr; }
+  .help-page { padding: 12px 14px; }
+}
+@media print { .help-toolbar, .help-band, .help-pane, .help-actions, .xp-titlebar { display: none !important; } .help-page { background: #fff; color: #000; } }
