@@ -129,28 +129,55 @@
     controlPanelWindow = createWindow({ url: '/assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
     controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
   }
-  // Games (Minesweeper): a challenge from a chat passes the level, seed and chat.
-  let gameWindow;
+  // Add-ons from the Catalog (games, the Theme Editor…): a pack with addon/addon.json and its files.
+  // Its pages say {{APP}} for the app, {{ADDON}}file for their own files and {{BRIDGE}} for this
+  // platform's bridge; they are filled in and opened from blob: URLs, like main.js does on the PC.
+  const APP_ROOT = new URL('/', location.href).href;
+  const BRIDGE = '<script src="assets/js/ios-bridge.js"></script><link rel="stylesheet" href="assets/css/ios.css">';
+  const addonWindows = new Map();
+  async function openAddon(owner, id, query = {}) {
+    let found = null;
+    for (const pack of await invoke('pack:list').catch(() => [])) {
+      const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
+      try { const info = await (await fetch(manifest)).json(); if (String(info.id || pack.id) === id || pack.id === id) { found = { info, files: pack.files }; break; } } catch {}
+    }
+    if (!found) return false;
+    const { info, files } = found; const key = String(info.id || id);
+    const existing = addonWindows.get(key);
+    if (!isDestroyed(existing)) { if (!Object.keys(query).length) { focus(existing); return true; } close(existing); }
+    const own = Object.fromEntries(Object.entries(files).filter(([name]) => name.startsWith('addon/')).map(([name, url]) => [name.slice(6), url]));
+    const processed = {};
+    const fill = text => text.replace(/\{\{APP\}\}/g, APP_ROOT).replace(/\{\{BRIDGE\}\}/g, BRIDGE).replace(/\{\{ADDON\}\}([\w.-]+)/g, (_, name) => processed[name] || own[name] || '');
+    for (const name of Object.keys(own).filter(item => /\.css$/i.test(item))) processed[name] = URL.createObjectURL(new Blob([fill(await (await fetch(own[name])).text())], { type: 'text/css' }));
+    const urls = { ...own, ...processed };
+    const entryName = String(info.entry || 'index.html');
+    const html = fill(await (await fetch(own[entryName])).text()).replace(/<head>/i, `<head><script>window.NK_ADDON = ${JSON.stringify({ id: key, files: urls }).replace(/</g, '\\u003c')};</script>`);
+    const search = new URLSearchParams(Object.entries(query || {}).filter(([name, value]) => /^\w+$/.test(name) && typeof value === 'string' && value.length < 300)).toString();
+    const size = info.window || {};
+    const win = createWindow({ url: `${URL.createObjectURL(new Blob([html], { type: 'text/html' }))}${search ? `#${search}` : ''}`, width: size.width || 640, height: size.height || 480, minWidth: size.minWidth || 200, minHeight: size.minHeight || 150, parent: owner });
+    addonWindows.set(key, win);
+    win.onClosed = () => { if (addonWindows.get(key) === win) addonWindows.delete(key); };
+    return true;
+  }
+  // Games (Minesweeper, an add-on): a challenge from a chat passes the level, seed and chat.
   function openGame(owner, options = {}) {
     const level = ['beginner', 'intermediate', 'expert'].includes(options.level) ? options.level : '';
-    const query = new URLSearchParams({ ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) }).toString();
-    if (!isDestroyed(gameWindow)) close(gameWindow);
-    const [width, height] = { intermediate: [300, 390], expert: [530, 390] }[level] || [230, 320];
-    gameWindow = createWindow({ url: `/assets/html/minesweeper.html${query ? `?${query}` : ''}`, width, height, minWidth: 120, minHeight: 150, parent: owner });
-    gameWindow.onClosed = () => { gameWindow = null; };
+    return openAddon(owner, 'minesweeper', { ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) });
   }
-  // The HTML Help viewer of XP (Minesweeper's Help).
+  // The HTML Help viewer of XP: spec is 'catalog' or 'addon:<id>' (the Help an add-on brings).
   let helpViewerWindow;
-  function openHelpViewer(owner) {
-    if (!isDestroyed(helpViewerWindow)) { focus(helpViewerWindow); return; }
-    helpViewerWindow = createWindow({ url: '/assets/html/help_viewer.html', width: 620, height: 460, minWidth: 380, minHeight: 300, parent: owner });
+  function openHelpViewer(owner, spec) {
+    const query = /^addon:[\w.-]+$/.test(spec || '') ? `?addon=${spec.slice(6)}` : /^[a-z-]+$/.test(spec || '') ? `?book=${spec}` : '';
+    if (!isDestroyed(helpViewerWindow)) close(helpViewerWindow);
+    helpViewerWindow = createWindow({ url: `/assets/html/help_viewer.html${query}`, width: 620, height: 460, minWidth: 380, minHeight: 300, parent: owner });
     helpViewerWindow.onClosed = () => { helpViewerWindow = null; };
   }
-  // About box (XP's ShellAbout look).
+  // About box (XP's ShellAbout look): 'nekochat', 'catalog' or 'addon:<id>'.
   let aboutWindow;
   function openAbout(owner, appName) {
+    const name = /^(nekochat|catalog|addon:[\w.-]+)$/.test(appName || '') ? appName : 'nekochat';
     if (!isDestroyed(aboutWindow)) close(aboutWindow);
-    aboutWindow = createWindow({ url: `/assets/html/about.html?app=${appName === 'minesweeper' ? 'minesweeper' : 'nekochat'}`, width: 420, height: 380, minWidth: 380, minHeight: 340, parent: owner });
+    aboutWindow = createWindow({ url: `/assets/html/about.html?app=${encodeURIComponent(name)}`, width: 420, height: 380, minWidth: 380, minHeight: 340, parent: owner });
     aboutWindow.onClosed = () => { aboutWindow = null; };
   }
   // Help and Support Center.
@@ -283,7 +310,8 @@
       openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
       openHelp: topic => openHelp(windowOwner(win), topic),
       openAbout: appName => openAbout(windowOwner(win), appName),
-      openHelpViewer: () => openHelpViewer(win),
+      openHelpViewer: spec => openHelpViewer(windowOwner(win), typeof spec === 'string' ? spec : ''),
+      openAddon: (id, query) => openAddon(windowOwner(win), String(id || ''), query && typeof query === 'object' ? clone(query) : {}),
       openGame: options => openGame(windowOwner(win), clone(options) || {}),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),

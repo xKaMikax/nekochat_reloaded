@@ -393,7 +393,7 @@ final class ThemeManager {
             let id = entry["pack_id"] as? String ?? entry["id"] as? String ?? "pack-\(index + 1)"
             let directory = (entry["directory"] as? String ?? id).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let rawType = (entry["type"] as? String ?? entry["Type"] as? String ?? "").lowercased()
-            let type = ["cursors", "sounds", "icons", "wallpapers", "assistants", "combo"].contains(rawType) ? rawType : "combo"
+            let type = ["cursors", "sounds", "icons", "wallpapers", "assistants", "addons", "combo"].contains(rawType) ? rawType : "combo"
             // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
             let fileList = (entry["Files"] as? [String] ?? entry["files"] as? [String] ?? []).filter { !$0.isEmpty && !$0.contains("/") && !$0.contains("\\") && $0 != "." && $0 != ".." }
             // A wallpapers pack without Preview.png shows its first picture.
@@ -405,6 +405,8 @@ final class ThemeManager {
                     "contains": includes.map { Array($0.keys) } ?? entry["Contains"] as? [String] ?? entry["contains"] as? [String] ?? [type],
                     "author": details["Author"] as? String ?? entry["Author"] as? String ?? "Unknown", "added": details["Added"] as? String ?? entry["Added"] as? String ?? "",
                     "version": details["Version"] as? String ?? "", "files": fileList,
+                    // Add-ons (like the Theme Editor) may need the desktop app: "Platforms": ["desktop"].
+                    "platforms": (entry["Platforms"] as? [String] ?? entry["platforms"] as? [String]).map { $0 as Any } ?? NSNull(),
                     "previewUrl": preview,
                     "zipUrl": entry["PackZIP"] as? String ?? "\(Self.catalogRoot)/\(directory)/Pack.ZIP"]
         }
@@ -421,7 +423,7 @@ final class ThemeManager {
         if !fileList.isEmpty {
             // No Pack.ZIP: download the listed files into the folder of the pack's type.
             let typeName = item["type"] as? String ?? "combo"
-            let folder = temporary.appendingPathComponent(typeName == "assistants" ? "assistant" : typeName, isDirectory: true)
+            let folder = temporary.appendingPathComponent(["assistants": "assistant", "addons": "addon"][typeName] ?? typeName, isDirectory: true)
             try files.createDirectory(at: folder, withIntermediateDirectories: true)
             for name in fileList {
                 let (status, data) = try Self.download("\(Self.catalogRoot)/\(item["directory"] as? String ?? id)/\(Self.encode(name))")
@@ -435,7 +437,7 @@ final class ThemeManager {
         }
         lock.lock(); defer { lock.unlock() }
         let info = readJSON(temporary.appendingPathComponent("pack.json")) as? [String: Any] ?? [:]
-        let contains = ["sounds", "cursors", "icons", "wallpapers", "assistant", "theme"].filter { var dir: ObjCBool = false; return files.fileExists(atPath: temporary.appendingPathComponent($0).path, isDirectory: &dir) && dir.boolValue }
+        let contains = ["sounds", "cursors", "icons", "wallpapers", "assistant", "addon", "theme"].filter { var dir: ObjCBool = false; return files.fileExists(atPath: temporary.appendingPathComponent($0).path, isDirectory: &dir) && dir.boolValue }
         // The theme of a combo goes to the installed themes, like a catalog theme.
         var themeId: Any = NSNull()
         if contains.contains("theme") {
