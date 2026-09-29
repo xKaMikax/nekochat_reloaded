@@ -20,28 +20,42 @@ async function showDiscovery() { const status = $('#discovery-status'), list = $
 $('#installed-tab').onclick = () => switchTab('installed'); $('#discovery-tab').onclick = () => { switchTab('discovery'); showDiscovery(); }; $('#close').onclick = () => controls.close(); controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); showInstalled(); }); controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); showInstalled(); if (!$('#discovery-panel').hidden) showDiscovery(); }); Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); return showInstalled(); });
 
 function plainDescription(value) { return String(value || '').replace(/^#+\s*/gm, '').replace(/[*`_]/g, '').trim(); }
-async function openCatalogDetails(id) {
-  const details = await controls.getCatalogThemeDetails(id);
-  const installed = await controls.listThemes();
-  details.installedId = installed.find(theme => theme.catalogId === details.id)?.id || null;
+function fillDetails(details) {
   selectedCatalogTheme = details;
   $('#detail-name').textContent = details.displayName || details.id;
   $('#detail-meta').textContent = [details.author && details.author !== 'Unknown' ? t('byAuthor') + details.author : '', details.version && details.version !== 'Unknown' ? details.version : ''].filter(Boolean).join(' • ');
   $('#detail-preview').src = details.previewUrl; $('#detail-preview').alt = details.displayName || details.id;
   $('#detail-description').textContent = plainDescription(details.description) || (language === 'ru' ? 'Описание для этой темы пока не добавлено.' : 'No description has been added for this theme yet.');
-  $('#detail-install').textContent = details.installedId ? t('remove') : t('download'); $('#theme-details').hidden = false;
+  $('#detail-install').disabled = false; $('#detail-install').textContent = details.installedId ? t('remove') : t('download'); $('#theme-details').hidden = false;
   $('#theme-details').scrollIntoView({ block: 'nearest' });
+}
+async function openCatalogDetails(id) {
+  const details = await controls.getCatalogThemeDetails(id);
+  const installed = await controls.listThemes();
+  details.installedId = installed.find(theme => theme.catalogId === details.id)?.id || null;
+  fillDetails(details);
+}
+// A pack (cursors, sounds, icons, wallpapers, assistants, add-ons, combos) opens the same details.
+const catalogIndex = new Map();
+async function openPackDetails(id) {
+  const item = catalogIndex.get(id); if (!item) return;
+  let description = '';
+  try { description = controls.getCatalogPackDetails ? (await controls.getCatalogPackDetails(id)).description : await (await fetch(item.descriptionUrl)).text(); } catch {}
+  const installedPack = ((controls.listPacks ? await controls.listPacks().catch(() => []) : []) || []).find(pack => pack.catalogId === id);
+  fillDetails({ ...item, kind: 'pack', description, installedId: installedPack?.id || null });
 }
 $('#discovery-list').addEventListener('click', event => {
   if (event.target.closest('button')) return;
-  const card = event.target.closest('.theme-card'); const button = card?.querySelector('[data-theme]'); if (button?.dataset.kind === 'pack') return; const id = button?.dataset.theme;
+  const card = event.target.closest('.theme-card'); const button = card?.querySelector('[data-theme]'); const id = button?.dataset.theme;
+  if (id && button.dataset.kind === 'pack') { openPackDetails(id).catch(error => { $('#discovery-status').textContent = error.message; $('#discovery-status').classList.add('error'); }); return; }
   if (id) openCatalogDetails(id).catch(error => { $('#discovery-status').textContent = error.message; $('#discovery-status').classList.add('error'); });
 });
 $('#detail-back').onclick = () => { $('#theme-details').hidden = true; };
 $('#detail-install').onclick = async () => {
   if (!selectedCatalogTheme) return;
   const button = $('#detail-install'); button.disabled = true; button.textContent = t('downloading');
-  try { if (selectedCatalogTheme.installedId) { await controls.removeTheme(selectedCatalogTheme.installedId); button.textContent = t('removed'); } else { await controls.installCatalogTheme(selectedCatalogTheme.id); button.textContent = t('installedDone'); } await showInstalled(); await showDiscovery(); }
+  const pack = selectedCatalogTheme.kind === 'pack';
+  try { if (selectedCatalogTheme.installedId) { if (pack) await controls.removePack(selectedCatalogTheme.installedId); else await controls.removeTheme(selectedCatalogTheme.installedId); button.textContent = t('removed'); } else { if (pack) await controls.installCatalogPack(selectedCatalogTheme.id); else await controls.installCatalogTheme(selectedCatalogTheme.id); button.textContent = t('installedDone'); } if (pack) packsChanged(); await showInstalled(); await showDiscovery(); }
   catch (error) { button.disabled = false; button.textContent = error.message; }
 };
 
@@ -85,6 +99,7 @@ async function showDiscovery() {
     const all = [...themes.filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((theme, index) => ({ ...theme, position: index }));
     const packsByCatalog = new Map(installedPacks.filter(pack => pack.catalogId).map(pack => [pack.catalogId, pack]));
     all.forEach(theme => { if (theme.author) authorsByCatalog.set(theme.id, theme.author); });
+    catalogIndex.clear(); all.forEach(theme => catalogIndex.set(theme.id, theme));
     const authors = [...new Set(all.map(theme => theme.author).filter(author => author && author !== 'Unknown'))].sort((a, b) => a.localeCompare(b));
     const chosenAuthor = $('#catalog-author').value;
     $('#catalog-author').innerHTML = `<option value="">${esc(t('allAuthors'))}</option>` + authors.map(author => `<option value="${esc(author)}">${esc(author)}</option>`).join('');
