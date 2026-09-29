@@ -270,10 +270,28 @@ async function adminRequest({ server, method = 'GET', path: route = '', body } =
   return { status: response.status, ok: response.ok, data };
 }
 function openThemeEditor(owner) { return openAddon(owner, 'theme-editor'); }
+// The "Installing Update" window (Catalog and client updates): a window of its own, modal over the
+// Update window. The Update window hands it the items ({id, kind: pack | theme | client, name, release})
+// and gets the result back ({ok, failed, go}).
+const installJobs = new Map(); let installWindow;
+function cleanInstallItems(items) {
+  return (Array.isArray(items) ? items : []).slice(0, 200).map(item => ({ id: String(item?.id || '').slice(0, 120), kind: ['pack', 'theme', 'client'].includes(item?.kind) ? item.kind : 'pack', name: String(item?.name || item?.id || '').slice(0, 200),
+    ...(item?.kind === 'client' && item.release && typeof item.release === 'object' ? { release: { tag: String(item.release.tag || ''), version: String(item.release.version || ''), page: String(item.release.page || ''), assets: (Array.isArray(item.release.assets) ? item.release.assets : []).slice(0, 40).map(asset => ({ name: String(asset?.name || ''), url: String(asset?.url || ''), size: Number(asset?.size) || 0 })) } } : {}) })).filter(item => item.id);
+}
+function openInstallWindow(owner, items) {
+  return new Promise(resolve => {
+    if (installWindow && !installWindow.isDestroyed()) { installWindow.focus(); resolve({ ok: [], failed: [], busy: true }); return; }
+    const job = { items: cleanInstallItems(items), resolve, done: false };
+    installWindow = new BrowserWindow({ title: 'Installing Update', width: 520, height: 420, resizable: false, minimizable: false, maximizable: false, parent: owner || undefined, modal: Boolean(owner), frame: false, transparent: false, backgroundColor: '#ece9d8', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+    const id = installWindow.webContents.id; installJobs.set(id, job);
+    installWindow.on('closed', () => { if (!job.done) resolve({ ok: [], failed: [], closed: true }); installJobs.delete(id); installWindow = null; });
+    installWindow.loadFile(path.join(__dirname, 'assets', 'html', 'install_update.html'));
+  });
+}
 function openThemeBrowser(owner) {
   if (themeBrowserWindow && !themeBrowserWindow.isDestroyed()) { themeBrowserWindow.focus(); return; }
   themeBrowserWindow = new BrowserWindow({
-    title: 'Nekochat Reloaded Catalog', width: 940, height: 660, minWidth: 640, minHeight: 420,
+    title: 'Nekochat Reloaded Update', width: 940, height: 660, minWidth: 640, minHeight: 420,
     parent: owner, frame: false, transparent: false, backgroundColor: '#ece9d8',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
@@ -1011,7 +1029,7 @@ const updateMode = () => process.platform === 'win32' ? (process.env.PORTABLE_EX
   : process.platform === 'linux' ? (process.env.APPIMAGE ? 'install' : 'download') : 'download';
 const updateAsset = () => process.platform === 'win32' ? (process.env.PORTABLE_EXECUTABLE_FILE ? /-portable\.exe$/i : /Setup-[^/]*\.exe$/i)
   : process.platform === 'linux' ? (process.env.APPIMAGE ? /\.AppImage$/i : /\.deb$/i) : null;
-function sendUpdateStatus(status) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', status); }
+function sendUpdateStatus(status) { for (const win of BrowserWindow.getAllWindows()) { try { if (!win.isDestroyed()) win.webContents.send('update:status', status); } catch {} } }
 let updater;
 async function installUpdate(release = {}, options = {}) {
   const tag = String(release.tag || '');
@@ -1183,6 +1201,9 @@ app.whenReady().then(async () => {
     const report = data => { try { event.sender.send('pack:progress', { id: key, ...data }); } catch {} };
     return installCatalogPack(key, report, controller.signal).catch(error => { throw error?.name === 'AbortError' ? new Error('Cancelled') : error; }).finally(() => packInstalls.delete(key));
   });
+  ipcMain.handle('install:open', (event, items) => openInstallWindow(BrowserWindow.fromWebContents(event.sender), items));
+  ipcMain.handle('install:job', event => installJobs.get(event.sender.id)?.items || []);
+  ipcMain.on('install:finish', (event, summary) => { const job = installJobs.get(event.sender.id); if (!job) return; job.done = true; job.resolve(summary && typeof summary === 'object' ? summary : { ok: [], failed: [] }); BrowserWindow.fromWebContents(event.sender)?.close(); });
   ipcMain.handle('pack:cancel', (_, id) => { packInstalls.get(String(id || ''))?.abort(); return true; });
   ipcMain.handle('pack:list', () => listPacks());
   ipcMain.handle('pack:remove', (_, id) => removePack(String(id || '')));
