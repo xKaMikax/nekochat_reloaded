@@ -59,7 +59,7 @@ const ACTIONS = {
   catalog: () => controls.openThemeBrowser(), editor: () => controls.openThemeEditor(), profile: () => controls.openProfileSettings(),
   admin: () => controls.openAdminPanel(stored('nk_server_url') || 'https://nekochat.komdu.is-cool.dev'),
   update: () => { try { localStorage.setItem('nk_update_check', String(Date.now())); } catch {} applet('updates'); },
-  help: () => window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener'),
+  help: () => (controls.openHelp ? controls.openHelp('control') : window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener')),
   close: () => controls.close(),
 };
 // Icons missing on this platform (the theme editor needs the desktop app; the admin panel is off

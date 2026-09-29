@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base href="../../">
+  <title>Help and Support Center</title><link id="frame-style" rel="stylesheet" href="assets/css/style.css"><link id="frame-theme" rel="stylesheet" href="data:text/css,"><link rel="stylesheet" href="assets/css/control-panel.css"><link rel="stylesheet" href="assets/css/help-center.css">
+<script src="assets/js/android-bridge.js"></script><link rel="stylesheet" href="assets/css/android.css">
+</head>
+<body>
+  <div class="xp-window help-window">
+    <header class="xp-titlebar"><span class="xp-app-icon has-icon" style="background-image:url('assets/images/help/help.png')"></span><span class="xp-title">Справка и поддержка</span><div class="xp-window-controls"><button id="close" aria-label="Закрыть"></button></div></header>
+    <div class="xp-body-frame"><i class="xp-side xp-side-left"></i><main class="control-panel help-center">
+      <div class="help-toolbar">
+        <button class="help-tool" id="hc-back" type="button" disabled><img src="assets/images/help/back.png" alt=""><span data-i18n="back"></span></button>
+        <button class="help-tool" id="hc-forward" type="button" disabled><img src="assets/images/help/forward.png" alt=""><span data-i18n="forward"></span></button>
+        <button class="help-tool" id="hc-home" type="button"><img src="assets/images/help/home.png" alt=""><span data-i18n="home"></span></button>
+        <button class="help-tool" id="hc-index" type="button"><img src="assets/images/help/index.png" alt=""><span data-i18n="index"></span></button>
+        <button class="help-tool" id="hc-favorites" type="button"><img src="assets/images/help/favorites.png" alt=""><span data-i18n="favorites"></span></button>
+        <button class="help-tool" id="hc-history" type="button"><img src="assets/images/help/history.png" alt=""><span data-i18n="history"></span></button>
+        <i class="cp-tool-separator"></i>
+        <button class="help-tool" id="hc-support" type="button"><img src="assets/images/help/support.png" alt=""><span data-i18n="support"></span></button>
+        <button class="help-tool" id="hc-options" type="button"><img src="assets/images/help/options.png" alt=""><span data-i18n="options"></span></button>
+      </div>
+      <div class="help-band">
+        <form class="help-search" id="hc-search"><label><span data-i18n="search"></span><input type="search" id="hc-query" autocomplete="off"></label><button type="submit" title="Search"><img src="assets/images/help/go.png" alt=""></button><small data-i18n="searchHint"></small></form>
+        <div class="help-brand"><b><img src="assets/images/help/help.png" alt=""><span data-i18n="title"></span></b><small id="hc-version"></small></div>
+      </div>
+      <div class="cp-body help-body">
+        <aside class="help-pane" id="hc-pane"></aside>
+        <section class="help-main"><div class="help-actions"><button type="button" id="hc-add-favorite"><img src="assets/images/help/add-favorite.png" alt=""><span data-i18n="addFavorite"></span></button><button type="button" id="hc-view"><img src="assets/images/help/change-view.png" alt=""><span data-i18n="changeView"></span></button><button type="button" id="hc-print"><img src="assets/images/help/print.png" alt=""><span data-i18n="print"></span></button><button type="button" id="hc-locate"><img src="assets/images/help/locate.png" alt=""><span data-i18n="locate"></span></button></div><article class="help-page" id="hc-page"></article></section>
+      </div>
+    </main><i class="xp-side xp-side-right"></i></div>
+    <i class="xp-bottom"></i>
+  </div>
+  <script src="assets/js/version.js"></script>
+  <script src="assets/js/packs.js"></script>
+  <script src="assets/js/help-center.js"></script>
+</body>
+</html>

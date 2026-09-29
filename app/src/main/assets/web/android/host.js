@@ -129,6 +129,14 @@
     controlPanelWindow = createWindow({ url: '/assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
     controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
   }
+  // Help and Support Center.
+  let helpWindow;
+  function openHelp(owner, topic) {
+    const page = typeof topic === 'string' && /^[a-z-]+$/.test(topic) ? topic : '';
+    if (!isDestroyed(helpWindow)) { focus(helpWindow); if (page) send(helpWindow, 'help:topic', page); return; }
+    helpWindow = createWindow({ url: `/assets/html/help_center.html${page ? `?topic=${page}` : ''}`, width: 820, height: 580, minWidth: 460, minHeight: 360, parent: owner });
+    helpWindow.onClosed = () => { helpWindow = null; };
+  }
   // Control Panel applets (Display, Sounds, Mouse…): Display Properties showing only their pages.
   const appletWindows = new Map();
   function openApplet(owner, applet, tab) {
@@ -249,6 +257,7 @@
       openThemeSettings: tab => openThemeSettings(windowOwner(win), tab),
       openControlPanel: () => openControlPanel(win),
       openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
+      openHelp: topic => openHelp(windowOwner(win), topic),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),
@@ -294,6 +303,7 @@
       applyDisplaySettings: async settings => { activeDisplay = await invoke('display:apply', settings || {}); notifyDisplayChanged(activeDisplay); return clone(activeDisplay); },
       onThemeChanged: on('theme:changed'),
       onSettingsTab: on('settings:show-tab'),
+      onHelpTopic: on('help:topic'),
       onDisplayChanged: on('display:changed'),
       onProfileChanged: on('profile:changed'),
       onRoomCreated: on('room:created'),

@@ -126,7 +126,7 @@ function fail(error) { const node = $('#ua-error'); if (node) node.textContent =
 async function upload(path, blob, name) { const form = new FormData(); form.append('file', blob, name); changed({ ...me, ...await call(path, { method: 'POST', body: form }) }); }
 const ACTIONS = {
   current: () => { const session = savedSessions().find(isCurrent); if (session) pickAccount(session.key); else go('account'); },
-  help: () => window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener'),
+  help: () => (controls.openHelp ? controls.openHelp('privacy') : window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener')),
   theme: () => (controls.openApplet ? controls.openApplet('display', 'themes') : controls.openThemeSettings?.()),
   browse: () => $('#avatar-file').click(),
   'browse-banner': () => $('#banner-file').click(),
