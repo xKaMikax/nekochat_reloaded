@@ -34,7 +34,7 @@
   const clone = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 
   // ---- windows -----------------------------------------------------------------------
-  function createWindow({ url, width, height, minWidth = 0, minHeight = 0, parent = null, maximized = false, onClose }) {
+  function createWindow({ url, srcdoc = null, width, height, minWidth = 0, minHeight = 0, parent = null, maximized = false, onClose }) {
     const win = { url, parent, minWidth, minHeight, listeners: new Map(), queue: [], loaded: false, destroyed: false, onClose, closingSilently: false };
     win.element = document.createElement('div');
     win.element.className = 'nk-window';
@@ -51,7 +51,8 @@
       // Electron's 'ready-to-show': deliver what was sent before the page was ready.
       win.queue.splice(0).forEach(([channel, data]) => send(win, channel, data));
     });
-    win.frame.src = url;
+    // Add-ons are given as the page itself: a blob: page does not open in the phone's web view.
+    if (srcdoc !== null) win.frame.srcdoc = srcdoc; else win.frame.src = url;
     focus(win);
     return win;
   }
@@ -197,7 +198,7 @@
     const html = fill(await (await fetch(own[entryName])).text()).replace(/<head>/i, `<head><script>window.NK_ADDON = ${JSON.stringify({ id: key, files: urls }).replace(/</g, '\\u003c')};</script>`);
     const search = new URLSearchParams(Object.entries(query || {}).filter(([name, value]) => /^\w+$/.test(name) && typeof value === 'string' && value.length < 300)).toString();
     const size = info.window || {};
-    const win = createWindow({ url: `${URL.createObjectURL(new Blob([html], { type: 'text/html' }))}${search ? `#${search}` : ''}`, width: size.width || 640, height: size.height || 480, minWidth: size.minWidth || 200, minHeight: size.minHeight || 150, parent: owner });
+    const win = createWindow({ url: '', srcdoc: search ? html.replace(/<head>/i, `<head><script>location.hash = ${JSON.stringify(search).replace(/</g, '\\u003c')};</script>`) : html, width: size.width || 640, height: size.height || 480, minWidth: size.minWidth || 200, minHeight: size.minHeight || 150, parent: owner });
     addonWindows.set(key, win);
     win.onClosed = () => { if (addonWindows.get(key) === win) addonWindows.delete(key); };
     return true;
