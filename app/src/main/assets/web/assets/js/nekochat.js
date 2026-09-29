@@ -37,6 +37,14 @@ if (detachedChat) document.documentElement.classList.add('detached-chat');
 const sounds = Object.freeze({ navigation: 'navigation.wav', notify: 'notify.wav', logon: 'logon.wav', logoff: 'logoff.wav', ringin: 'ringin.wav', ringout: 'ringout.wav', exclamation: 'exclamation.wav', default: 'default.wav', error: 'error.wav', critical: 'critical-stop.wav' });
 // Sound scheme and volume from Display Properties (localStorage, shared by every window).
 function soundSettings() { let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} return { scheme, volume: Math.min(100, Math.max(0, Number.isFinite(volume) ? volume : 72)) }; }
+// A chat's own notification sound and volume (right click on a chat → Notification sound):
+// nk_chat_sounds = { 'room:1': { sound: 'default' | 'none' | …, volume: 0–100 } }, synced.
+function chatSoundSettings() { try { const value = JSON.parse(localStorage.getItem('nk_chat_sounds') || '{}'); return value && typeof value === 'object' ? value : {}; } catch { return {}; } }
+function playChatSound(key) {
+  const own = chatSoundSettings()[key] || {}; if (own.sound === 'none') return;
+  const audio = playSound(sounds[own.sound] ? own.sound : 'notify');
+  if (Number.isFinite(Number(own.volume))) audio.volume = Math.min(1, audio.volume * Number(own.volume) / 100);
+}
 function playSound(name) { const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl(name, sounds[name]) : `assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
 function showSystemDialog(message, type = 'error', title = 'Nekochat Reloaded', options = {}) {
   if (desktopControls?.showSystemDialog) { desktopControls.showSystemDialog({ message: String(message || t('unknownError')), type, title, ...options }); return; }
@@ -200,7 +208,7 @@ function setDraft(key, text, sync = true) {
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
-const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
+const SYNCED_KEYS = ['nk_chat_sounds', 'nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
 let profileUser = null;
 const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
@@ -691,7 +699,7 @@ function socketMessage(payload) {
     // A mention of you notifies even in a muted chat (Do not disturb still stays quiet).
     if ((!isMuted(key) || mentionsMe(message.content)) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
   }
-  if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playSound('notify'); return; }
+  if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playChatSound(key); return; }
   const messageId = messageKey(message);
   if ([...document.querySelectorAll('#messages article')].some(node => node.dataset.key === messageId)) return;
   if (mine) {
