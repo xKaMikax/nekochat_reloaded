@@ -69,13 +69,13 @@ const ICONS = [
   { id: 'display', icon: 'display', action: 'themes' },
   { id: 'mouse', icon: 'mouse', action: 'mouse' },
   { id: 'catalog', icon: 'catalog', action: 'catalog' },
-  { id: 'editor', icon: 'theme-editor', action: 'editor', available: () => Boolean(controls.openThemeEditor) },
+  { id: 'editor', icon: 'theme-editor', action: 'editor', available: () => Boolean(controls.openThemeEditor) && Boolean(window.nkAddonInstalled?.('theme-editor')) },
   { id: 'sounds', icon: 'sounds', action: 'sounds' },
   { id: 'network', icon: 'network-connections', action: 'network' },
   { id: 'backups', icon: 'backups', action: 'backups' },
   { id: 'updates', icon: 'updates', action: 'updates' },
   { id: 'users', icon: 'users', action: 'profile' },
-  { id: 'admin', icon: 'admin', action: 'admin', available: () => Boolean(controls.openAdminPanel) && stored('nk_show_admin_button') === '1' },
+  { id: 'admin', icon: 'admin', action: 'admin', available: () => Boolean(controls.openAdminPanel) && stored('nk_show_admin_button') === '1' && Boolean(window.nkAddonInstalled?.('admin')) },
   { id: 'regional', icon: 'regional', action: 'regional' },
   { id: 'assistant', icon: 'assistant', action: 'assistant' },
 ];
@@ -209,3 +209,6 @@ controls.onThemeChanged(applyFrame);
 controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
 Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); });
 applyText();
+// The Theme Editor and the Admin Panel are add-ons from the Catalog: their icons come and go with them.
+window.addEventListener('nk-addons-ready', () => render());
+window.nkAddons?.().catch(() => {});

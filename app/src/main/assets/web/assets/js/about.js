@@ -1,12 +1,14 @@
 // About box, like Windows XP's (ShellAbout): the banner with the orange stripe, the program,
 // its version and copyright, who it is "licensed to" (the signed-in account) and the server.
-// ?app=minesweeper shows the game's About box.
+// ?app=catalog or ?app=addon:<id> shows the About box of the Catalog or of an add-on.
 const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
-const app = new URLSearchParams(location.search).get('app') === 'minesweeper' ? 'minesweeper' : 'nekochat';
+// ?app=nekochat | catalog | addon:<id> (an add-on from the Catalog: its name, icon, author).
+const app = new URLSearchParams(location.search || location.hash.slice(1)).get('app') || 'nekochat';
+let addon = null;
 const words = {
-  ru: { title: 'О программе Nekochat Reloaded', titleMines: 'О программе «Сапёр»', name: 'Nekochat Reloaded', nameMines: 'Сапёр', version: 'Версия {version} ({platform})', copyright: '© 2026 KaMika', credits: 'При участии VASHYAN-CMD', creditsMines: 'Из Windows XP: Robert Donner и Curt Johnson', license: 'Это неофициальный клиент Nekochat в стиле Windows XP. Выполнен вход:', nobody: '(вход не выполнен)', server: 'Сервер Nekochat: {server}', edition: '{platform} Edition', close: 'Закрыть' },
-  en: { title: 'About Nekochat Reloaded', titleMines: 'About Minesweeper', name: 'Nekochat Reloaded', nameMines: 'Minesweeper', version: 'Version {version} ({platform})', copyright: 'Copyright © 2026 KaMika', credits: 'With VASHYAN-CMD', creditsMines: 'From Windows XP, by Robert Donner and Curt Johnson', license: 'This is an unofficial Nekochat client in the style of Windows XP. Logged on as:', nobody: '(not logged on)', server: 'Nekochat server: {server}', edition: '{platform} Edition', close: 'Close' },
+  ru: { title: 'О программе Nekochat Reloaded', titleOf: 'О программе «{name}»', catalog: 'Каталог', catalogCredits: 'Темы, пакеты и дополнения из коллекции Nekochat Reloaded Themes', addonBy: 'Автор: {author}', name: 'Nekochat Reloaded', version: 'Версия {version} ({platform})', copyright: '© 2026 KaMika', credits: 'При участии VASHYAN-CMD', creditsMines: 'Из Windows XP: Robert Donner и Curt Johnson', license: 'Это неофициальный клиент Nekochat в стиле Windows XP. Выполнен вход:', nobody: '(вход не выполнен)', server: 'Сервер Nekochat: {server}', edition: '{platform} Edition', close: 'Закрыть' },
+  en: { title: 'About Nekochat Reloaded', titleOf: 'About {name}', catalog: 'Catalog', catalogCredits: 'Themes, packs and add-ons from the Nekochat Reloaded Themes collection', addonBy: 'By {author}', name: 'Nekochat Reloaded', version: 'Version {version} ({platform})', copyright: 'Copyright © 2026 KaMika', credits: 'With VASHYAN-CMD', creditsMines: 'From Windows XP, by Robert Donner and Curt Johnson', license: 'This is an unofficial Nekochat client in the style of Windows XP. Logged on as:', nobody: '(not logged on)', server: 'Nekochat server: {server}', edition: '{platform} Edition', close: 'Close' },
 };
 const PLATFORMS = { win32: 'Windows', linux: 'Linux', darwin: 'macOS', android: 'Android', ios: 'iPhone', web: 'Web' };
 let language = 'ru', platform = 'Desktop';
@@ -19,22 +21,25 @@ function signedIn() {
   } catch { return { user: null, server: '' }; }
 }
 function render() {
-  const mines = app === 'minesweeper'; const { user, server } = signedIn();
+  const { user, server } = signedIn();
+  const addonName = addon ? (addon.name?.[language] || addon.name?.en || addon.id) : '';
+  const name = app === 'catalog' ? t('catalog') : app.startsWith('addon:') ? addonName || app.slice(6) : t('name');
   document.documentElement.lang = language;
-  document.title = t(mines ? 'titleMines' : 'title'); $('#about-title').textContent = document.title;
-  const icon = mines ? 'assets/games/minesweeper/icon-32.png' : 'assets/images/nekochat_icon.png';
-  $('#about-icon').src = icon; $('#about-titleicon').style.backgroundImage = `url('${mines ? 'assets/games/minesweeper/icon.png' : icon}')`;
+  document.title = app === 'nekochat' ? t('title') : t('titleOf', { name }); $('#about-title').textContent = document.title;
+  const icon = app === 'catalog' ? 'assets/images/control-panel/catalog.png' : addon?.icon32 || 'assets/images/nekochat_icon.png';
+  $('#about-icon').src = icon; $('#about-titleicon').style.backgroundImage = `url('${addon?.icon || icon}')`;
   $('#about-banner-copy').textContent = t('copyright');
   $('#about-edition').textContent = t('edition', { platform });
-  $('#about-name').textContent = t(mines ? 'nameMines' : 'name');
-  $('#about-version').textContent = t('version', { version: window.NEKOCHAT_RELOADED_VERSION || '', platform });
-  $('#about-copyright').textContent = t('copyright');
-  $('#about-credits').textContent = t(mines ? 'creditsMines' : 'credits');
+  $('#about-name').textContent = app === 'nekochat' ? t('name') : `${name} — Nekochat Reloaded`;
+  $('#about-version').textContent = t('version', { version: addon?.version || window.NEKOCHAT_RELOADED_VERSION || '', platform });
+  $('#about-copyright').textContent = addon?.about?.[language]?.copyright || addon?.about?.en?.copyright || t('copyright');
+  $('#about-credits').textContent = app === 'catalog' ? t('catalogCredits') : addon ? (addon.about?.[language]?.credits || addon.about?.en?.credits || t('addonBy', { author: addon.author || 'KaMika' })) : t('credits');
   $('#about-license').textContent = t('license');
   $('#about-user').textContent = user ? `${user.display_name || user.username} (@${user.username})` : t('nobody');
   $('#about-server').textContent = t('server', { server });
   $('#close').setAttribute('aria-label', t('close'));
 }
+if (app.startsWith('addon:')) window.nkAddons?.().then(list => { addon = list.find(item => item.id === app.slice(6)) || null; render(); });
 $('#about-ok').onclick = () => controls.close();
 $('#close').onclick = () => controls.close();
 document.addEventListener('keydown', event => { if (event.key === 'Escape' || event.key === 'Enter') controls.close(); });

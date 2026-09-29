@@ -322,7 +322,7 @@ class ThemeManager(private val context: Context) {
             val id = entry.optString("pack_id", entry.optString("id", "pack-${index + 1}"))
             val directory = entry.optString("directory", id).trim('/')
             val rawType = entry.optString("type", entry.optString("Type")).lowercase()
-            val type = if (rawType in listOf("cursors", "sounds", "icons", "wallpapers", "assistants", "combo")) rawType else "combo"
+            val type = if (rawType in listOf("cursors", "sounds", "icons", "wallpapers", "assistants", "addons", "combo")) rawType else "combo"
             // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
             val includes = if (type == "combo") (entry.optJSONObject("Includes") ?: entry.optJSONObject("includes")) else null
             // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
@@ -332,6 +332,8 @@ class ThemeManager(private val context: Context) {
                 .put("displayName", entry.optString("DisplayName", entry.optString("displayName", id))).put("contains", contains)
                 .put("author", details.optString("Author", entry.optString("Author", "Unknown"))).put("added", details.optString("Added", entry.optString("Added", "")))
                 .put("version", details.optString("Version", "")).put("previewUrl", entry.optString("Preview", if (type == "wallpapers" && fileList.isNotEmpty()) "$CATALOG_ROOT/$directory/${enc(fileList[0])}" else "$CATALOG_ROOT/$directory/Preview.png")).put("files", JSONArray(fileList))
+                // Add-ons (like the Theme Editor) may need the desktop app: "Platforms": ["desktop"].
+                .put("platforms", entry.optJSONArray("Platforms") ?: entry.optJSONArray("platforms") ?: JSONObject.NULL)
                 .put("zipUrl", entry.optString("PackZIP", "$CATALOG_ROOT/$directory/Pack.ZIP")).put("includes", includes ?: JSONObject.NULL))
         }
         return result
@@ -348,7 +350,7 @@ class ThemeManager(private val context: Context) {
             val fileList = item.optJSONArray("files")?.let { list -> (0 until list.length()).map { list.getString(it) } }.orEmpty()
             if (fileList.isNotEmpty()) {
                 // No Pack.ZIP: download the listed files into the folder of the pack's type.
-                val folder = File(temporary, item.getString("type").let { if (it == "assistants") "assistant" else it }).apply { mkdirs() }
+                val folder = File(temporary, item.getString("type").let { when (it) { "assistants" -> "assistant"; "addons" -> "addon"; else -> it } }).apply { mkdirs() }
                 for (name in fileList) {
                     val (status, bytes) = download("$CATALOG_ROOT/${item.getString("directory")}/${enc(name)}")
                     if (status !in 200..299) throw IllegalStateException("Unable to download $name ($status).")
@@ -360,7 +362,7 @@ class ThemeManager(private val context: Context) {
                 extractZip(zip, temporary)
             }
             val info = try { JSONObject(File(temporary, "pack.json").readText()) } catch (_: Exception) { JSONObject() }
-            val contains = listOf("sounds", "cursors", "icons", "wallpapers", "assistant", "theme").filter { File(temporary, it).isDirectory }
+            val contains = listOf("sounds", "cursors", "icons", "wallpapers", "assistant", "addon", "theme").filter { File(temporary, it).isDirectory }
             // The theme of a combo goes to the installed themes, like a catalog theme.
             var themeId: String? = null
             if ("theme" in contains) {
