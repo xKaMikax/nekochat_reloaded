@@ -13,12 +13,12 @@
   }
   let files = source();
   const words = {
-    ru: { hello: 'Что вы хотите сделать?', searchAll: 'Найти сообщения во всех чатах', search: 'Найти в этом чате', go: 'Перейти к другому чату', unread: 'Непрочитанные ({count})', noUnread: 'Непрочитанных сообщений нет.', status: 'Сменить статус', tip: 'Дайте совет', help: 'Справка и поддержка', hide: 'Скрыть {name}', back: 'Назад',
+    ru: { hello: 'Что вы хотите сделать?', searchAll: 'Найти сообщения во всех чатах', search: 'Найти в этом чате', go: 'Перейти к другому чату', unread: 'Непрочитанные ({count})', noUnread: 'Непрочитанных сообщений нет.', status: 'Сменить статус', tip: 'Дайте совет', help: 'Справка и поддержка', mines: 'Сыграть в «Сапёр»', hide: 'Скрыть {name}', back: 'Назад',
       searchPrompt: 'Что вы хотите найти? Я поищу во всех ваших чатах.', paneTitle: 'Помощник по поиску', whatFind: 'Что вы хотите найти?', words: 'Всё слово или часть слова:', where: 'Где искать:', whereAll: 'Во всех чатах', whereRooms: 'Только в комнатах', whereDms: 'Только в личных', whereHere: 'В открытом чате', from: 'От кого:', anyone: 'От кого угодно', close: 'Закрыть', resultsCount: 'Результатов: {count}', find: 'Найти', searching: 'Ищу во всех чатах…', found: 'Нашёл: {count}. Щёлкните, чтобы открыть.', notFound: 'Ничего не нашёл. Попробуйте другое слово.', searchAgain: 'Искать ещё',
       mention: '{name} упомянул(а) вас в {chat}', open: 'Открыть', unreadIn: 'Непрочитанные чаты:',
       statuses: { online: 'В сети', away: 'Отошёл', dnd: 'Не беспокоить', invisible: 'Невидимка' },
       tips: ['Ctrl+K — быстрый переход к любому чату.', 'Ctrl+F ищет в открытом чате, а я — во всех сразу.', 'Alt+↑ и Alt+↓ листают список чатов.', 'Ответить на сообщение можно из меню ⋯ рядом со временем.', '**жирный**, *курсив*, ~~зачёркнутый~~ и `код` работают в сообщениях.', 'Щёлкните по чату правой кнопкой: избранное, звук, архив.', 'Шапку чата можно вытащить мышью — чат откроется в своём окне.', 'Темы, курсоры, звуки, обои и помощники — в Каталоге.', 'В Панели управления → Мышь можно выбрать другие указатели.', 'Черновики сохраняются и переходят на другие устройства.'] },
-    en: { hello: 'What would you like to do?', searchAll: 'Search messages in all chats', search: 'Search this chat', go: 'Go to another chat', unread: 'Unread ({count})', noUnread: 'There are no unread messages.', status: 'Change my status', tip: 'Give me a tip', help: 'Help and Support', hide: 'Hide {name}', back: 'Back',
+    en: { hello: 'What would you like to do?', searchAll: 'Search messages in all chats', search: 'Search this chat', go: 'Go to another chat', unread: 'Unread ({count})', noUnread: 'There are no unread messages.', status: 'Change my status', tip: 'Give me a tip', help: 'Help and Support', mines: 'Play Minesweeper', hide: 'Hide {name}', back: 'Back',
       searchPrompt: 'What do you want to find? I will look in all your chats.', paneTitle: 'Search Companion', whatFind: 'What do you want to search for?', words: 'All or part of a word:', where: 'Look in:', whereAll: 'All chats', whereRooms: 'Rooms only', whereDms: 'Direct messages only', whereHere: 'The open chat', from: 'From:', anyone: 'Anyone', close: 'Close', resultsCount: 'Results: {count}', find: 'Search', searching: 'Searching all chats…', found: 'Found {count}. Click one to open it.', notFound: 'I could not find anything. Try another word.', searchAgain: 'Search again',
       mention: '{name} mentioned you in {chat}', open: 'Open', unreadIn: 'Chats with unread messages:',
       statuses: { online: 'Online', away: 'Away', dnd: 'Do not disturb', invisible: 'Invisible' },
@@ -121,7 +121,7 @@
   const chatName = (kind, id) => { try { if (kind === 'room') return `# ${rooms.find(room => room.id === id)?.name ?? ''}`; return displayName(users.find(user => user.id === id)); } catch { return ''; } };
   function menu() {
     let count = 0; try { count = unread.size; } catch {}
-    say(t('hello'), [[t('searchAll'), 'search-all'], [fill(t('unread'), { count }), 'unread'], [t('go'), 'go'], [t('search'), 'search'], [t('status'), 'status'], [t('tip'), 'tip'], ...(window.windowControls?.openHelp ? [[t('help'), 'help']] : []), [fill(t('hide'), { name: data.name || 'Rover' }), 'hide']]);
+    say(t('hello'), [[t('searchAll'), 'search-all'], [fill(t('unread'), { count }), 'unread'], [t('go'), 'go'], [t('search'), 'search'], [t('status'), 'status'], [t('tip'), 'tip'], ...(window.windowControls?.openGame ? [[t('mines'), 'mines']] : []), ...(window.windowControls?.openHelp ? [[t('help'), 'help']] : []), [fill(t('hide'), { name: data.name || 'Rover' }), 'hide']]);
   }
   // Search Companion, like Windows XP's: a pane in place of the chat list with the question, the
   // words, where to look and from whom, and the results under it. Rover sits at its bottom.
@@ -215,6 +215,7 @@
       if (action === 'open-chat') { closeBalloon(); const [kind, id] = value.split(':'); try { openChat(kind, Number(id)); } catch {} return; }
       if (action === 'status') { say(t('status'), [...Object.entries(t('statuses')).map(([status, label]) => [label, 'set-status', status]), [t('back'), 'menu']]); return; }
       if (action === 'set-status') { try { chooseStatus(value); } catch {} play('Acknowledge'); say(t('statuses')[value]); return; }
+      if (action === 'mines') { closeBalloon(); window.windowControls?.openGame?.({ game: 'minesweeper' }); return; }
       if (action === 'help') { closeBalloon(); window.windowControls?.openHelp?.(); return; }
       if (action === 'tip') { const tips = t('tips'); play('Thinking'); say(tips[Math.floor(Math.random() * tips.length)], [[t('tip'), 'tip'], [t('back'), 'menu']]); return; }
       if (action === 'search') { closeBalloon(); key('f', { ctrlKey: true }); return; }

@@ -1,0 +1,16 @@
+/* Minesweeper, like Windows XP's: the grey board with sunken edges, LED counters and the face. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.mine-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.mine-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.mine-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.mine-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.mine-app { align-items: flex-start; background: #c0c0c0; overflow: auto; }
+.mine-app .cp-menu { align-self: stretch; }
+.mine-board-frame { display: inline-flex; flex-direction: column; gap: 6px; margin: 6px; padding: 6px; background: #c0c0c0; box-shadow: inset 3px 3px #fff, inset -3px -3px #808080; }
+.mine-status { display: flex; align-items: center; justify-content: space-between; padding: 4px 5px; box-shadow: inset 2px 2px #808080, inset -2px -2px #fff; }
+.mine-led { display: inline-flex; padding: 1px; background: #000; box-shadow: 1px 1px #fff, -1px -1px #808080; }
+.mine-led i { display: block; width: 13px; height: 23px; background: url('../games/minesweeper/digits.png') no-repeat; }
+.mine-face { width: 26px; height: 26px; padding: 0; border: 1px solid #808080; background: url('../games/minesweeper/faces.png') no-repeat; background-origin: border-box; cursor: pointer; }
+.mine-grid { display: grid; box-shadow: inset 3px 3px #808080, inset -3px -3px #fff; padding: 3px; }
+.mine-cell { display: block; width: 16px; height: 16px; background: url('../games/minesweeper/cells.png') no-repeat; cursor: default; }
+.mine-challenge { margin: 0 8px 8px; max-width: 480px; color: #000; }
