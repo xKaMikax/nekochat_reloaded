@@ -104,3 +104,4 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
   .help-page { padding: 12px 14px; }
 }
 @media print { .help-toolbar, .help-band, .help-pane, .help-actions, .xp-titlebar { display: none !important; } .help-page { background: #fff; color: #000; } }
+.help-pane .help-tree { flex-direction: column; flex-wrap: nowrap; }
