@@ -413,3 +413,9 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .file-card .file-card-download { flex: none !important; width: auto !important; align-self: center !important; margin: 0 !important; }
 .file-card-text { min-width: 0; }
 .attach-control .attach-button { width: 30px !important; min-width: 30px !important; max-width: 30px; padding: 0 !important; }
+/* The Infinity Memory tick is the theme's own check box. */
+.attach-infinity { gap: 6px; color: var(--xp-theme-windowtext, #000); user-select: none; }
+.attach-infinity input { appearance: none; -webkit-appearance: none; flex: none; width: 13px; height: 13px; margin: 0; padding: 0; border: 0; background: var(--xp-checkbox-unchecked, linear-gradient(#fff, #ddd)) center / 13px 13px no-repeat; cursor: pointer; }
+.attach-infinity:hover input { background-image: var(--xp-checkbox-unchecked-hover, var(--xp-checkbox-unchecked, linear-gradient(#fff, #ddd))); }
+.attach-infinity input:checked { background-image: var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8)); }
+.attach-infinity:hover input:checked { background-image: var(--xp-checkbox-checked-hover, var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8))); }
