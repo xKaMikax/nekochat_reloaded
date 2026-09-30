@@ -279,7 +279,7 @@ document.addEventListener('click', event => {
 });
 document.addEventListener('keydown', event => { if (event.key === 'F1') { event.preventDefault(); controls.openHelpViewer?.('catalog'); } else if (event.key === 'Escape') closeMenu(); });
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+window.nkClickSounds?.();
 function applyText() {
   document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#close').setAttribute('aria-label', t('close'));
   $('#wu-brand').textContent = t('title'); $('#wu-tag').textContent = t('tag'); $('[data-menu="help"]').textContent = t('help');
@@ -288,3 +288,4 @@ $('#close').onclick = () => controls.close();
 controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); if (state.page === 'history') fillHistory(); });
 controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); render(); });
 Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); render(); return loadCatalog(); }).then(render).catch(error => { $('#wu-main').innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; });
+

@@ -76,15 +76,19 @@ async function run(items) {
   const missed = items.filter(item => !summary.ok.some(ok => ok.id === item.id));
   for (const item of missed) if (!summary.failed.some(entry => entry.item.id === item.id)) summary.failed.push({ item, error: t('dlCancelled') });
   if (missed.length) {
+    window.nkPlaySound?.('exclamation');
     $('#dl-panel').innerHTML = `<div class="dl-head done"><img src="assets/images/windows-update-48.png" alt=""><div><b>${esc(t('dlSome'))}</b>${restart ? `<p>${esc(t('dlRestartText'))}</p>` : ''}</div></div><div class="dl-label dl-missed-title"><b>${esc(t('dlNotInstalled'))}</b></div><div class="dl-missed">${missed.map(item => `<div>${esc(item.name)}</div>`).join('')}</div><div class="dl-buttons end"><a href="#" class="dl-link">${esc(t('dlConfigure'))}</a><span class="dl-buttons two">${restart ? `<button type="button" class="dl-cancel" data-do="restart">${esc(t('dlRestart'))}</button>` : ''}<button type="button" class="dl-cancel" data-do="close">${esc(t('dlClose'))}</button></span></div>`;
     $('[data-do="close"]').onclick = finish; $('[data-do="close"]').focus();
     $('[data-do="restart"]')?.addEventListener('click', () => controls.restartToUpdate?.());
     $('.dl-link').onclick = event => { event.preventDefault(); summary.go = 'history'; finish(); };
     return;
   }
+  window.nkPlaySound?.('notify');
   $('#dl-panel').innerHTML = `<div class="dl-head done"><img src="assets/images/windows-update-48.png" alt=""><div><b>${esc(t('dlComplete'))}</b>${restart ? `<p>${esc(t('dlRestartText'))}</p>` : ''}</div></div><div class="dl-buttons end"><a href="#" class="dl-link">${esc(t('dlConfigure'))}</a><span class="dl-buttons two">${restart ? `<button type="button" class="dl-cancel" data-do="restart">${esc(t('dlRestart'))}</button>` : ''}<button type="button" class="dl-cancel" data-do="close">${esc(t('dlClose'))}</button></span></div>`;
   $('[data-do="close"]').onclick = finish; $('[data-do="close"]').focus();
   $('[data-do="restart"]')?.addEventListener('click', () => controls.restartToUpdate?.());
   $('.dl-link').onclick = event => { event.preventDefault(); summary.go = 'history'; finish(); };
 }
 Promise.all([controls.getActiveTheme(), controls.getDisplaySettings(), controls.getInstallJob()]).then(([theme, display, items]) => { applyFrame(theme); language = display?.language === 'en' ? 'en' : 'ru'; controls.onThemeChanged?.(applyFrame); if (items.length) run(items); else controls.finishInstall(summary); });
+
+window.nkClickSounds?.();
