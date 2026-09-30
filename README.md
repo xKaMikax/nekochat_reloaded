@@ -30,6 +30,10 @@ Interactive docs (Swagger UI): `/api/docs` (alias `/docs`); OpenAPI spec: `/api/
 | DELETE | `/games/{id}` | ends the game (`game_end` event) |
 | GET | `/scores/{game}?limit=10` | the high scores of a game (`pinball`): the best first, one row per user id of your Nekochat server, `{rank, user_id, name, score, me}`, plus your own place |
 | POST | `/scores/{game}` | `{score}` → sends the score of a game just played; only your best is kept; answers `{new_best, scores, me, players}` |
+| POST | `/files?name=&mime=` | the body is a file (up to 20 MB, 500 MB in all per user) → stored for good ("Infinity Memory"); answers `{id, name, size, path: "/f/<id>/<secret>"}` |
+| GET | `/files` | your stored files and how much room is left |
+| DELETE | `/files/{id}` | removes a stored file |
+| GET | `/f/{id}/{secret}` | downloads a file by its link, no sign-in (the secret is the key); always an attachment |
 | POST | `/logout` | ends this session |
 | DELETE | `/me` | forgets the account and everything stored for it |
 

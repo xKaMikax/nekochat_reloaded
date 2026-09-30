@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import html
 import ipaddress
 import re
@@ -29,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.10.0"
+VERSION = "0.11.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -39,6 +40,10 @@ MAX_READ_STATE_CHATS = 2000
 BACKUPS = Path(os.environ.get("RELOADED_BACKUPS", str(DATABASE.resolve().parent / "backups")))
 MAX_BACKUP_BYTES = int(os.environ.get("RELOADED_BACKUP_MB", "50")) * 1024 * 1024
 MAX_BACKUPS = int(os.environ.get("RELOADED_MAX_BACKUPS", "10"))
+# Infinity Memory: files kept for good next to a chat message (the file is also sent live over the Nekochat server).
+FILES = Path(os.environ.get("RELOADED_FILES", str(DATABASE.resolve().parent / "files")))
+MAX_FILE_BYTES = int(os.environ.get("RELOADED_FILE_MB", "20")) * 1024 * 1024
+MAX_FILES_BYTES = int(os.environ.get("RELOADED_FILES_TOTAL_MB", "500")) * 1024 * 1024
 
 DESCRIPTION = """
 Companion server for the **Nekochat Reloaded** clients: settings and read state shared between
@@ -56,6 +61,7 @@ TAGS = [
     {"name": "chats", "description": "Reactions, pinned messages, typing and read receipts of rooms and direct chats"},
     {"name": "scores", "description": "The high scores of games with a single high score table (3D Pinball): one best score per user, per Nekochat server"},
     {"name": "games", "description": "Games between users (Reversi, Checkers, Backgammon, Hearts, Spades...): sessions with an ordered log of moves"},
+    {"name": "files", "description": "Infinity Memory: files (up to 20 MB) kept on this server, shared by a link nobody can guess"},
     {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
 ]
@@ -156,6 +162,16 @@ def migrate() -> None:
                 updated_at INTEGER NOT NULL,
                 PRIMARY KEY (game, server, nekochat_id)
             );
+            CREATE TABLE IF NOT EXISTS files (
+                id TEXT PRIMARY KEY,             -- random; also the file name in the files folder
+                secret_hash TEXT NOT NULL,       -- sha256 of the secret in the download link
+                account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                mime TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                sha256 TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS read_state (
                 account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 chat TEXT NOT NULL,              -- "room:<id>" or "dm:<user id>"
@@ -244,7 +260,7 @@ def health():
 
 @app.get("/api/info", tags=["server"])
 def info():
-    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status", "games", "scores"]}
+    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status", "games", "scores", "files"]}
 
 
 @app.post("/link", tags=["account"])
@@ -886,6 +902,82 @@ def post_score(game: str, payload: ScoreIn, account: sqlite3.Row = Depends(curre
     return {"new_best": new_best, **score_table(game, account, 10)}
 
 
+# ---- files (Infinity Memory) ------------------------------------------------------------------
+# A file sent with "Infinity Memory" is also stored here, so a friend who was offline can still get
+# it. Whoever has the link (an unguessable secret) can download it; only the owner can list or delete.
+def file_path(file_id: str) -> Path:
+    return FILES / file_id
+
+
+def file_view(row: sqlite3.Row, secret: str | None = None) -> dict[str, Any]:
+    view = {"id": row["id"], "name": row["name"], "mime": row["mime"], "size": row["size"], "sha256": row["sha256"], "created_at": row["created_at"]}
+    if secret:
+        view["secret"] = secret
+        view["path"] = f"/f/{row['id']}/{secret}"
+    return view
+
+
+@app.post("/files", tags=["files"], status_code=201,
+          openapi_extra={"requestBody": {"required": True, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}}})
+async def upload_file(request: Request, name: str = "", mime: str = "", account: sqlite3.Row = Depends(current_account)):
+    """Stores the request body (up to 20 MB) and answers the link path `/f/<id>/<secret>` to put in a message."""
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_FILE_BYTES:
+        raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
+    with database() as db:
+        used = db.execute("SELECT COALESCE(SUM(size), 0) FROM files WHERE account_id = ?", (account["id"],)).fetchone()[0]
+    data = bytearray()
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > MAX_FILE_BYTES:
+            raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
+    if not data:
+        raise HTTPException(400, "The file is empty")
+    if used + len(data) > MAX_FILES_BYTES:
+        raise HTTPException(409, f"Your files take {used // (1024 * 1024)} MB of {MAX_FILES_BYTES // (1024 * 1024)} MB; delete some first")
+    file_id, secret = secrets.token_hex(8), secrets.token_urlsafe(16)
+    FILES.mkdir(parents=True, exist_ok=True)
+    temporary = FILES / f"{file_id}.part"
+    temporary.write_bytes(data)
+    temporary.replace(file_path(file_id))
+    clean = "".join(ch for ch in name.strip() if ch not in '/\\\r\n\0')[:120] or "file"
+    kind = mime.strip()[:100] if re.fullmatch(r"[\w.+-]+/[\w.+-]+", mime.strip()) else "application/octet-stream"
+    with database() as db:
+        db.execute("INSERT INTO files (id, secret_hash, account_id, name, mime, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                   (file_id, token_hash(secret), account["id"], clean, kind, len(data), hashlib.sha256(data).hexdigest(), now()))
+        row = db.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+    return file_view(row, secret)
+
+
+@app.get("/files", tags=["files"])
+def list_files(account: sqlite3.Row = Depends(current_account)):
+    with database() as db:
+        rows = db.execute("SELECT * FROM files WHERE account_id = ? ORDER BY created_at DESC", (account["id"],)).fetchall()
+    return {"files": [file_view(row) for row in rows], "max_bytes": MAX_FILE_BYTES, "total_bytes": MAX_FILES_BYTES, "used_bytes": sum(row["size"] for row in rows)}
+
+
+@app.delete("/files/{file_id}", tags=["files"])
+def delete_file(file_id: str, account: sqlite3.Row = Depends(current_account)):
+    with database() as db:
+        row = db.execute("SELECT id FROM files WHERE id = ? AND account_id = ?", (file_id, account["id"])).fetchone()
+        if not row:
+            raise HTTPException(404, "No such file")
+        db.execute("DELETE FROM files WHERE id = ?", (file_id,))
+    file_path(file_id).unlink(missing_ok=True)
+    return {"ok": True}
+
+
+@app.get("/f/{file_id}/{secret}", tags=["files"], response_class=FileResponse, include_in_schema=True)
+def download_file(file_id: str, secret: str):
+    """Downloads a file by its link. No sign-in: the secret in the link is the key. Always sent as an attachment."""
+    with database() as db:
+        row = db.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+    if not row or not hmac.compare_digest(row["secret_hash"], token_hash(secret)) or not file_path(file_id).is_file():
+        raise HTTPException(404, "No such file")
+    return FileResponse(file_path(file_id), media_type=row["mime"], filename=row["name"], content_disposition_type="attachment",
+                        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400"})
+
+
 # ---- backups ---------------------------------------------------------------------------------
 def backup_path(backup_id: str) -> Path:
     return BACKUPS / f"{backup_id}.zip"
@@ -968,7 +1060,10 @@ def delete_me(account: sqlite3.Row = Depends(current_account)):
     """Forgets everything this server keeps about the account (sessions, settings, read state, backups)."""
     with database() as db:
         files = [row["id"] for row in db.execute("SELECT id FROM backups WHERE account_id = ?", (account["id"],))]
+        stored = [row["id"] for row in db.execute("SELECT id FROM files WHERE account_id = ?", (account["id"],))]
         db.execute("DELETE FROM accounts WHERE id = ?", (account["id"],))
     for backup_id in files:
         backup_path(backup_id).unlink(missing_ok=True)
+    for file_id in stored:
+        file_path(file_id).unlink(missing_ok=True)
     return {"ok": True}
