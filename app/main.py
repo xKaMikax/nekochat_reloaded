@@ -42,7 +42,7 @@ MAX_BACKUP_BYTES = int(os.environ.get("RELOADED_BACKUP_MB", "50")) * 1024 * 1024
 MAX_BACKUPS = int(os.environ.get("RELOADED_MAX_BACKUPS", "10"))
 # Infinity Memory: files kept for good next to a chat message (the file is also sent live over the Nekochat server).
 FILES = Path(os.environ.get("RELOADED_FILES", str(DATABASE.resolve().parent / "files")))
-MAX_FILE_BYTES = int(os.environ.get("RELOADED_FILE_MB", "20")) * 1024 * 1024
+MAX_FILE_BYTES = int(os.environ.get("RELOADED_FILE_MB", "50")) * 1024 * 1024
 MAX_FILES_BYTES = int(os.environ.get("RELOADED_FILES_TOTAL_MB", "500")) * 1024 * 1024
 
 DESCRIPTION = """
@@ -61,7 +61,7 @@ TAGS = [
     {"name": "chats", "description": "Reactions, pinned messages, typing and read receipts of rooms and direct chats"},
     {"name": "scores", "description": "The high scores of games with a single high score table (3D Pinball): one best score per user, per Nekochat server"},
     {"name": "games", "description": "Games between users (Reversi, Checkers, Backgammon, Hearts, Spades...): sessions with an ordered log of moves"},
-    {"name": "files", "description": "Infinity Memory: files (up to 20 MB) kept on this server, shared by a link nobody can guess"},
+    {"name": "files", "description": "Infinity Memory: files (up to 50 MB) kept on this server, shared by a link nobody can guess"},
     {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
 ]
@@ -920,7 +920,7 @@ def file_view(row: sqlite3.Row, secret: str | None = None) -> dict[str, Any]:
 @app.post("/files", tags=["files"], status_code=201,
           openapi_extra={"requestBody": {"required": True, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}}})
 async def upload_file(request: Request, name: str = "", mime: str = "", account: sqlite3.Row = Depends(current_account)):
-    """Stores the request body (up to 20 MB) and answers the link path `/f/<id>/<secret>` to put in a message."""
+    """Stores the request body (up to 50 MB) and answers the link path `/f/<id>/<secret>` to put in a message."""
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > MAX_FILE_BYTES:
         raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
