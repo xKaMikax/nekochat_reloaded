@@ -81,6 +81,17 @@
     document.addEventListener('click', event => { if (event.target.closest?.('button, a[href], input[type="checkbox"], input[type="radio"], .pointer-row, .wu-check')) window.nkPlaySound('navigation'); });
     document.addEventListener('change', event => { if (event.target.matches?.('select')) window.nkPlaySound('navigation'); });
   };
+  // The official server asks every client to say who it is (X-Neko-Client: name/version (os; app),
+  // and ?c= on sockets). The app part is "PC" on the desktop, then Android, iPhone or Web.
+  window.nkClientHeader = () => {
+    const has = name => Boolean(document.querySelector(`script[src$="${name}"]`));
+    const platform = `${navigator.platform || ''} ${navigator.userAgent || ''}`;
+    const desktop = /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'macos' : /Linux|X11/i.test(platform) ? 'linux' : 'pc';
+    const app = has('android-bridge.js') ? 'Android' : has('ios-bridge.js') ? 'iPhone' : has('web-bridge.js') ? 'Web' : 'PC';
+    const os = app === 'Android' ? 'android' : app === 'iPhone' ? 'ios' : desktop;
+    const version = String(window.NEKOCHAT_RELOADED_VERSION || '0').replace(/[^0-9A-Za-z.+-]/g, '') || '0';
+    return `nekochat-reloaded/${version} (${os}; ${app})`;
+  };
   // An error shown in a window (role="alert" or an .error line) sounds like a Windows XP error.
   const errorTexts = new WeakMap();
   const watchErrors = () => new MutationObserver(records => {

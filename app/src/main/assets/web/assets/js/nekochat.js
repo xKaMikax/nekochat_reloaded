@@ -1,5 +1,19 @@
 const DEFAULT_API = 'https://nekochat.komdu.is-cool.dev';
 let API = localStorage.getItem('nk_server_url') || DEFAULT_API;
+// Every request to the Nekochat server tells which client it is (X-Neko-Client).
+const clientId = () => window.nkClientHeader?.() || 'nekochat-reloaded/0 (pc; PC)';
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+  try {
+    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (url.origin === new URL(API).origin) {
+      const headers = new Headers(init.headers || (typeof input === 'string' ? undefined : input.headers));
+      if (!headers.has('X-Neko-Client')) headers.set('X-Neko-Client', clientId());
+      init = { ...init, headers };
+    }
+  } catch {}
+  return nativeFetch(input, init);
+};
 const xpLogonBackgrounds = [
   ['xp_1024x1280.jpg', 1024, 1280], ['xp_1024x768.jpg', 1024, 768], ['xp_1280x1024.jpg', 1280, 1024],
   ['xp_1280x768.jpg', 1280, 768], ['xp_1280x960.jpg', 1280, 960], ['xp_1360x768.jpg', 1360, 768],
@@ -557,6 +571,9 @@ function renderMessageContent(content) {
   // A challenge for another game ([nkchallenge:<add-on>:<seed>[:<option>]]) gets a Play button too.
   const generic = lines.join('\n').match(/\[nkchallenge:([\w-]{1,40}):(\d{1,10})(?::([\w-]{1,20}))?\]/);
   if (generic) { lines.splice(0, lines.length, ...lines.join('\n').replace(generic[0], '').trimEnd().split('\n')); const icon = window.nkAddonList?.().find(item => item.id === generic[1])?.icon32; game = `<button type="button" class="game-challenge" data-addon="${esc(generic[1])}" data-seed="${generic[2]}" data-level="${esc(generic[3] || '')}">${icon ? `<img src="${esc(icon)}" alt="">` : ''}${esc(t('gamePlay'))}</button>`; }
+  // A file kept in Infinity Memory (📎 name (size) ∞ link) is drawn as a file card; other clients see the text.
+  const file = window.nkFileCard?.(lines.join('\n'));
+  if (file) { return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}${file.rest ? `<p>${formatText(file.rest)}</p>` : ''}${window.nkFileCardHtml(file)}`; }
   return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${formatText(lines.join('\n'))}</p>${game}`;
 }
 // Sends a message to any chat: the open one the usual way, another straight over the socket.
@@ -772,7 +789,7 @@ function websocketUrl() {
   const url = new URL(API);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.pathname = `${url.pathname.replace(/\/$/, '')}/ws`.replace(/^\/\//, '/');
-  url.search = ''; url.searchParams.set('token', token);
+  url.search = ''; url.searchParams.set('token', token); url.searchParams.set('c', clientId());
   return url.href;
 }
 // The server explains a rejected action in {type:'error', message}; repeats are shown once.
@@ -788,6 +805,12 @@ function socketMessage(payload) {
   if (type === 'status') {
     const user = users.find(item => item.id === (payload.user_id ?? payload.user?.id));
     if (user) { user.is_online = payload.is_online ?? payload.online ?? true; renderList(); }
+    return;
+  }
+  if (type === 'presence_update' && payload.user?.id != null) {
+    // Name, picture, status or colour of someone changed: show it without a reload.
+    const user = users.find(item => item.id === payload.user.id);
+    if (user) { Object.assign(user, payload.user); renderList(); }
     return;
   }
   if (type === 'error' && payload.message) { showServerError(String(payload.message)); return; }
@@ -1061,7 +1084,7 @@ function isDuplicateCallEvent(payload) {
 }
 function eventStreamUrl() {
   const url = new URL(`${API.replace(/\/$/, '')}/stream`);
-  url.searchParams.set('token', token);
+  url.searchParams.set('token', token); url.searchParams.set('c', clientId());
   return url.href;
 }
 function eventStreamMessage(event, data) {
