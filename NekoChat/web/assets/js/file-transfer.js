@@ -105,13 +105,14 @@
   function renderTray() {
     let tray = $$('#transfer-tray');
     if (!transfers.size) { tray?.remove(); return; }
-    if (!tray) { tray = document.createElement('aside'); tray.id = 'transfer-tray'; tray.className = 'transfer-tray'; (document.querySelector('.conversation') || document.body).append(tray); }
-    tray.innerHTML = `<header><b>${esc(tr('transfers'))}</b></header>` + [...transfers.entries()].map(([key, item]) => {
-      const percent = item.size ? Math.min(100, Math.round(item.done * 100 / item.size)) : 0;
-      const state = item.error ? item.error : item.state === 'done' ? (item.dir === 'in' ? tr('received') : item.unconfirmed ? tr('notConfirmed') : tr('sent')) : (item.dir === 'in' ? tr('receiving') : tr('sending'));
-      return `<div class="transfer-row ${item.error ? 'error' : ''}" data-key="${esc(key)}"><div><b>${esc(item.name)}</b> <small>${esc(size(item.size))} · ${esc(item.dir === 'in' ? tr('from', { name: item.peer }) : tr('to', { name: item.peer }))}</small></div>`
-        + `<div class="transfer-bar"><i style="width:${item.state === 'done' && !item.error ? 100 : percent}%"></i></div><small>${esc(state)}</small>`
-        + `${item.url ? `<button type="button" class="transfer-save xp-button" data-key="${esc(key)}">${esc(tr('save'))}</button>` : ''}<button type="button" class="transfer-close" data-key="${esc(key)}" aria-label="${esc(tr('close'))}">×</button></div>`;
+    if (!tray) { tray = document.createElement('aside'); tray.id = 'transfer-tray'; tray.className = 'transfer-tray'; const bar = $$('#attach-bar'); if (bar) bar.before(tray); else (document.querySelector('.conversation') || document.body).append(tray); }
+    tray.innerHTML = [...transfers.entries()].map(([key, item]) => {
+      const percent = item.state === 'done' && !item.error ? 100 : item.size ? Math.min(100, Math.round(item.done * 100 / item.size)) : 0;
+      const state = item.error ? item.error : item.state === 'done' ? (item.dir === 'in' ? tr('received') : item.unconfirmed ? tr('notConfirmed') : tr('sent')) : `${item.dir === 'in' ? tr('receiving') : tr('sending')} ${percent}%`;
+      return `<div class="transfer-row ${item.error ? 'error' : ''}" data-key="${esc(key)}"><img class="transfer-icon" src="assets/images/file.png" alt="">`
+        + `<div class="transfer-main"><div class="transfer-line"><b class="transfer-name" title="${esc(item.name)}">${esc(item.name)}</b><small>${esc(size(item.size))} · ${esc(item.dir === 'in' ? tr('from', { name: item.peer }) : tr('to', { name: item.peer }))}</small></div>`
+        + `<div class="transfer-progress"><div class="transfer-bar"><i style="width:${percent}%"></i></div><small class="transfer-state">${esc(state)}</small></div></div>`
+        + `<div class="transfer-actions">${item.url ? `<button type="button" class="transfer-save xp-button" data-key="${esc(key)}">${esc(tr('save'))}</button>` : ''}<button type="button" class="transfer-close" data-key="${esc(key)}" aria-label="${esc(tr('close'))}">×</button></div></div>`;
     }).join('');
   }
   document.addEventListener('click', event => {
