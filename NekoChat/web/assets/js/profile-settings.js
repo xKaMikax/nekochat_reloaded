@@ -44,7 +44,7 @@ let language = 'ru';
 const t = key => words[language][key];
 let me = null, display = {};
 const call = async (path, options = {}, session = account) => {
-  const response = await fetch(session.server.replace(/\/$/, '') + path, { ...options, headers: { Authorization: `Bearer ${session.token}`, ...(options.headers || {}) } });
+  const response = await fetch(session.server.replace(/\/$/, '') + path, { ...options, headers: { Authorization: `Bearer ${session.token}`, 'X-Neko-Client': window.nkClientHeader?.() || 'nekochat-reloaded/0 (pc; PC)', ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : Array.isArray(data.detail) ? data.detail.map(item => item.msg).filter(Boolean).join('; ') : `${t('error')} (${response.status})`);
   return data;
