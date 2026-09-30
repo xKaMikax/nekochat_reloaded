@@ -1,116 +1,291 @@
+// The Catalog, in the style of Windows Update / Microsoft Update: a banner, a plain side panel
+// (Home, Install Items, Select by Type, Options), a Welcome page (Express / Custom), "Customize your
+// results" lists with check boxes, "Review and Install Items", XP's "Installing Update" window and
+// "Review Your Installation Results". What was installed stays under "Update History" (apply a theme,
+// open an add-on, remove).
 const controls = window.windowControls;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
 const words = {
-  ru: { title:'Каталог Nekochat Reloaded', installed:'Установленные', discovery:'Каталог', installedIntro:'Темы, установленные на этом компьютере. Luna и Classic встроены в клиент.', discoveryIntro:'Темы, курсоры, звуки, иконки и обои для чата из каталога Nekochat Reloaded Themes. Их можно скачать и установить.', loadingInstalled:'Загрузка установленных тем…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных тем.', found:'Найдено: ', apply:'Применить', using:'Используется', applying:'Применение…', download:'Установить', downloading:'Установка…', installedDone:'Установлено', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', defaultScheme:'Стандартная', installedType:'Установлена', back:'← Назад', close:'Закрыть', sort:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', author:'Автор:', allAuthors:'Все', byAuthor:'Автор: ', schemes:'Схемы: ', type:'Тип:', types:{ '':'Все', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Иконки', wallpapers:'Обои для чата', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'иконки', wallpapers:'обои' }, contains:'Внутри: ', noPacks:'Здесь пока пусто.' },
-  en: { title:'Nekochat Reloaded Catalog', installed:'Installed', discovery:'Discovery', installedIntro:'Themes installed on this computer. Luna and Classic are built into the client.', discoveryIntro:'Themes, cursors, sounds, icons and chat wallpapers from the Nekochat Reloaded Themes catalog. Download and install them here.', loadingInstalled:'Loading installed themes…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There are no available themes in the catalog yet.', found:'Found: ', apply:'Apply', using:'In use', applying:'Applying…', download:'Install', downloading:'Installing…', installedDone:'Installed', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', defaultScheme:'Default', installedType:'Installed', back:'← Back', close:'Close', sort:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', author:'Author:', allAuthors:'All', byAuthor:'By ', schemes:'Schemes: ', type:'Type:', types:{ '':'All', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers' }, contains:'Contains: ', noPacks:'Nothing here yet.' }
+  ru: { title:'Обновление Nekochat Reloaded', tag:'Новые версии, темы, игры, звуки и многое другое для вашего Nekochat Reloaded', loadingInstalled:'Загрузка установленного…', loadingCatalog:'Загрузка каталога…', noThemes:'Установленных тем пока нет.', noCatalog:'В каталоге пока нет доступных элементов.', apply:'Применить', using:'Используется', applying:'Применение…', remove:'Удалить', removing:'Удаление…', removed:'Удалено', builtIn:'Встроена', byAuthor:'Автор: ', schemes:'Схемы: ', contains:'Внутри: ', open:'Открыть', close:'Закрыть', types:{ '':'Все', client:'Обновления клиента', theme:'Темы', cursors:'Курсоры', sounds:'Звуки', icons:'Значки', wallpapers:'Обои для чата', assistants:'Помощники', addons:'Дополнения', combo:'Комбо' }, parts:{ theme:'тема', cursors:'курсоры', sounds:'звуки', icons:'значки', wallpapers:'обои', assistant:'помощник', assistants:'помощник', addon:'дополнение', addons:'дополнение' }, help:'Справка', helpTopics:'Вызов справки', about:'О программе «Обновление»',
+    home:'Главная', installItems:'Установить ({n})', byType:'Выбор по типу', byAuthor2:'Выбор по автору', options:'Параметры', history:'История установки', sortBy:'Сортировка:', sortDate:'По дате добавления', sortName:'По имени', sortAuthor:'По автору', allTypes:'Все элементы',
+    welcome:'Добро пожаловать', welcomeTo:'в Обновление Nekochat Reloaded', keepUp:'Пополните свой Nekochat Reloaded', homeIntro:'Посмотрите, что нового: обновления приложения, темы, курсоры, звуки, значки, обои для чата, помощники и дополнения (игры, Редактор тем).', express:'Экспресс', expressText:'Показать самое новое (рекомендуется)', custom:'Выборочно', customText:'Выбрать из тем, курсоров, звуков, значков, обоев, помощников и дополнений', privacy:'Вопросы о конфиденциальности?', privacyText:'При просмотре каталога приложение только загружает список с GitHub. Сведения о вашем компьютере не отправляются.',
+    boxInstalled:'Установлено: {n}', boxInstalledText:'На этом компьютере установлено элементов каталога: {n}.', boxHistory:'Открыть историю установки.', clientAvailable:'Доступно обновление приложения: {name}', installNow:'Установить сейчас', news:'Новинки',
+    customize:'Настройте результаты', selectTitle:'Выберите: {type}', selectIntro:'Отметьте то, что хотите установить, и выберите «Просмотреть и установить».', reviewLink:'Просмотреть и установить', total:'Всего: {n}', totalSize:'Всего: {n}, {size}', sizeLabel:'Размер загрузки:', sizeTotal:'Размер загрузки (всего): {size}', clearAll:'Снять все', selectAll:'Выбрать все', installedMark:'установлено', added:'Добавлено:', version:'Версия:', type:'Тип:', noDescription:'Описание пока не добавлено.',
+    reviewTitle:'Просмотр и установка', installBtn:'Установить', noneSelected:'Ничего не отмечено. Вернитесь к списку и отметьте нужное.', reviewNote:'Проверьте список и нажмите «Установить».',
+    yourResults:'Ваши результаты', resultsTitle:'Итоги установки', restartTitle:'Перезапустите, чтобы завершить установку', restartText:'Приложение не будет обновлено, пока вы его не перезапустите. Сохраните открытые черновики и перезапустите сейчас.', restartNow:'Перезапустить сейчас', moreAvailable:'Доступны ещё элементы', moreAvailableText:'Загляните в каталог и установите то, что вам нужно.', summary:'Сводка установки', successful:'Успешно:', failed:'Ошибки:', remaining:'Осталось:', successfulItems:'Успешно установлено', failedItems:'Не удалось установить', historyTitle:'История установки', historyHeading:'Просмотр истории установки', colName:'Название', colType:'Тип', colStatus:'Состояние', historyIntro:'Установленные на этом компьютере темы и элементы каталога. Luna и Classic встроены в клиент.',
+  },
+  en: { title:'Nekochat Reloaded Update', tag:'Get new versions, themes, games, sounds and more for your Nekochat Reloaded', loadingInstalled:'Loading what is installed…', loadingCatalog:'Loading catalog…', noThemes:'No installed themes yet.', noCatalog:'There is nothing in the catalog yet.', apply:'Apply', using:'In use', applying:'Applying…', remove:'Remove', removing:'Removing…', removed:'Removed', builtIn:'Built-in', byAuthor:'By ', schemes:'Schemes: ', contains:'Contains: ', open:'Open', close:'Close', types:{ '':'All', client:'Client updates', theme:'Themes', cursors:'Cursors', sounds:'Sounds', icons:'Icons', wallpapers:'Chat wallpapers', assistants:'Assistants', addons:'Add-ons', combo:'Combos' }, parts:{ theme:'theme', cursors:'cursors', sounds:'sounds', icons:'icons', wallpapers:'wallpapers', assistant:'assistant', assistants:'assistant', addon:'add-on', addons:'add-on' }, help:'Help', helpTopics:'Help Topics', about:'About Update',
+    home:'Update Home', installItems:'Install Items ({n})', byType:'Select by Type', byAuthor2:'Select by Author', options:'Options', history:'Review your update history', sortBy:'Sort by:', sortDate:'Date added', sortName:'Name', sortAuthor:'Author', allTypes:'All items',
+    welcome:'Welcome', welcomeTo:'to Nekochat Reloaded Update', keepUp:'Keep your Nekochat Reloaded up to date', homeIntro:'Check what is new: app updates, themes, cursors, sounds, icons, chat wallpapers, assistants and add-ons (games, the Theme Editor).', express:'Express', expressText:'Get the newest items (recommended)', custom:'Custom', customText:'Select from themes, cursors, sounds, icons, wallpapers, assistants and add-ons', privacy:'Concerned about privacy?', privacyText:'When you browse the catalog, the app only downloads the list from GitHub. Nothing about your computer is sent.',
+    boxInstalled:'Installed items: {n}', boxInstalledText:'Catalog items installed on this computer: {n}.', boxHistory:'View your update history.', clientAvailable:'An update for the app is available: {name}', installNow:'Install now', news:'News',
+    customize:'Customize your results', selectTitle:'Select {type}', selectIntro:'Check what you want to install, then choose Review and install items.', reviewLink:'Review and install items', total:'Total: {n} items', totalSize:'Total: {n} items, {size}', sizeLabel:'Download size:', sizeTotal:'Download size (total): {size}', clearAll:'Clear All', selectAll:'Select All', installedMark:'installed', added:'Added:', version:'Version:', type:'Type:', noDescription:'No description has been added yet.',
+    reviewTitle:'Review and Install Items', installBtn:'Install Items', noneSelected:'Nothing is selected. Go back to the list and check what you need.', reviewNote:'Check the list and choose Install Items.',
+    yourResults:'Your results', resultsTitle:'Review Your Installation Results', restartTitle:'Restart now to finish installing updates', restartText:'Nekochat Reloaded will not be up to date until you restart it. Please save any unsent messages and restart now.', restartNow:'Restart now', moreAvailable:'More items are available', moreAvailableText:'Look through the catalog and install what you need.', summary:'Installation Summary', successful:'Successful:', failed:'Failed:', remaining:'Remaining:', successfulItems:'Successful Items', failedItems:'Failed Items', historyTitle:'Update History', historyHeading:'Review Your Update History', colName:'Name', colType:'Type', colStatus:'Status', historyIntro:'Themes and catalog items installed on this computer. Luna and Classic are built into the client.',
+  },
 };
 let language = 'ru'; let activeTheme;
-let selectedCatalogTheme;
-const authorsByCatalog = new Map();
 const t = key => words[language][key];
+const fill = (text, values = {}) => String(text).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
+const TYPES = ['client', 'theme', 'cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'addons', 'combo'];
+const state = { page: 'home', type: '', author: '', sort: 'date', items: [], installedThemes: [], installedPacks: [], selected: new Set(), expanded: new Set(), results: null, loaded: false };
+const descriptions = new Map();
 function applyFrame(theme) { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }
-function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#installed-tab').textContent = t('installed'); $('#discovery-tab').textContent = t('discovery'); $('[data-panel="installed"]').textContent = t('installedIntro'); $('[data-panel="discovery"]').textContent = t('discoveryIntro'); $('#detail-back').textContent = t('back'); $('#close').setAttribute('aria-label', t('close')); $('#sort-label').textContent = t('sort'); $('#author-label').textContent = t('author'); $('#type-label').textContent = t('type'); [...$('#catalog-type').options].forEach(option => { option.textContent = t('types')[option.value]; }); [['date', 'sortDate'], ['name', 'sortName'], ['author', 'sortAuthor']].forEach(([value, key]) => { $(`#catalog-sort option[value="${value}"]`).textContent = t(key); }); }
-function switchTab(tab) { const installed = tab === 'installed'; $('#installed-tab').classList.toggle('active', installed); $('#discovery-tab').classList.toggle('active', !installed); $('#installed-panel').hidden = !installed; $('#discovery-panel').hidden = installed; }
-// The card names the author (a click filters the catalog by them) and lists colour schemes only
-// when there are several; the theme's file type and a lone "Default" scheme mean nothing to people.
-function themeCard(theme, label) { const schemeList = (theme.schemes || theme.colorSchemes || []).map(item => typeof item === 'string' ? item : item.name || item.id).filter(Boolean); const schemes = schemeList.length > 1 ? t('schemes') + schemeList.join(', ') : ''; const author = theme.author && theme.author !== 'Unknown' ? theme.author : authorsByCatalog.get(theme.catalogId) || ''; const inside = theme.kind === 'pack' ? t('contains') + (theme.contains || []).map(part => t('parts')[part] || part).join(', ') : ''; const preview = theme.previewUrl ? `<img class="theme-preview" src="${esc(theme.previewUrl)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'theme-preview placeholder',textContent:'Theme'}))">` : '<span class="theme-preview placeholder">Theme</span>'; return `<article class="theme-card${theme.id === activeTheme?.id ? ' active' : ''}">${preview}<div class="theme-info"><h2>${esc(theme.name || theme.displayName || theme.id)}</h2>${author ? `<p class="theme-author" data-author="${esc(author)}" title="${esc(t('byAuthor') + author)}">${esc(t('byAuthor') + author)}</p>` : ''}${schemes ? `<p>${esc(schemes)}</p>` : ''}${inside ? `<p>${esc(inside)}</p>` : ''}<button type="button" data-theme="${esc(theme.id)}">${esc(label)}</button></div></article>`; }
-async function showInstalled() { const list = $('#installed-list'); list.innerHTML = `<p class="browser-status">${t('loadingInstalled')}</p>`; try { activeTheme = await controls.getActiveTheme(); const themes = await controls.listThemes(); list.innerHTML = themes.length ? themes.map(theme => themeCard(theme, theme.id === activeTheme?.id ? t('using') : t('apply'))).join('') : `<p class="empty-list">${t('noThemes')}</p>`; list.querySelectorAll('button[data-theme]').forEach(button => { const theme = themes.find(item => item.id === button.dataset.theme); if (theme?.id === activeTheme?.id) { button.disabled = true; return; } button.onclick = async () => { button.disabled = true; button.textContent = t('applying'); try { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } }; }); } catch (error) { list.innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; } }
-async function showDiscovery() { const status = $('#discovery-status'), list = $('#discovery-list'); status.textContent = t('loadingCatalog'); status.classList.remove('error'); list.innerHTML = ''; try { const themes = (await controls.listCatalogThemes()).filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase())); status.textContent = themes.length ? `${t('found')}${themes.length}` : t('noCatalog'); list.innerHTML = themes.map(theme => themeCard(theme, t('download'))).join(''); list.querySelectorAll('button[data-theme]').forEach(button => button.onclick = async () => { button.disabled = true; button.textContent = t('downloading'); try { await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } }); } catch (error) { status.textContent = error.message; status.classList.add('error'); } }
-$('#installed-tab').onclick = () => switchTab('installed'); $('#discovery-tab').onclick = () => { switchTab('discovery'); showDiscovery(); }; $('#close').onclick = () => controls.close(); controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); showInstalled(); }); controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); showInstalled(); if (!$('#discovery-panel').hidden) showDiscovery(); }); Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); return showInstalled(); });
+// Add-ons made for the desktop app ("Platforms": ["desktop"]) are hidden on phones and the web.
+let platform = 'desktop';
+Promise.resolve(controls.getUpdateInfo?.()).then(info => { platform = ['android', 'ios'].includes(info?.platform) ? info.platform : info?.mode === 'reload' ? 'web' : 'desktop'; }).catch(() => {});
+const fitsPlatform = item => !Array.isArray(item.platforms) || !item.platforms.length || item.platforms.includes(platform);
+// Tells the other windows that add-ons changed, so their buttons appear or go away.
+function packsChanged() { try { localStorage.setItem('nk_packs_changed', String(Date.now())); } catch {} window.nkAddons?.(true); }
+const plainDescription = value => String(value || '').replace(/^#+\s*/gm, '').replace(/[*`_]/g, '').trim();
+const itemName = item => String(item.displayName || item.name || item.id);
+const itemAuthor = item => (item.author && item.author !== 'Unknown' ? item.author : '');
+const isInstalled = item => item.kind === 'pack' ? state.installedPacks.some(pack => pack.catalogId === item.id) : state.installedThemes.some(theme => theme.catalogId === item.id);
+const available = () => state.items.filter(item => !isInstalled(item));
 
-function plainDescription(value) { return String(value || '').replace(/^#+\s*/gm, '').replace(/[*`_]/g, '').trim(); }
-async function openCatalogDetails(id) {
-  const details = await controls.getCatalogThemeDetails(id);
-  const installed = await controls.listThemes();
-  details.installedId = installed.find(theme => theme.catalogId === details.id)?.id || null;
-  selectedCatalogTheme = details;
-  $('#detail-name').textContent = details.displayName || details.id;
-  $('#detail-meta').textContent = [details.author && details.author !== 'Unknown' ? t('byAuthor') + details.author : '', details.version && details.version !== 'Unknown' ? details.version : ''].filter(Boolean).join(' • ');
-  $('#detail-preview').src = details.previewUrl; $('#detail-preview').alt = details.displayName || details.id;
-  $('#detail-description').textContent = plainDescription(details.description) || (language === 'ru' ? 'Описание для этой темы пока не добавлено.' : 'No description has been added for this theme yet.');
-  $('#detail-install').textContent = details.installedId ? t('remove') : t('download'); $('#theme-details').hidden = false;
-  $('#theme-details').scrollIntoView({ block: 'nearest' });
+// ---- data ------------------------------------------------------------------------------------
+async function loadCatalog() {
+  const [themes, installedThemes, catalogPacks, installedPacks] = await Promise.all([controls.listCatalogThemes(), controls.listThemes(), controls.listCatalogPacks ? controls.listCatalogPacks().catch(() => []) : [], controls.listPacks ? controls.listPacks().catch(() => []) : []]);
+  // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
+  state.items = [...themes.filter(theme => !['luna', 'classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((item, position) => ({ ...item, position })).filter(fitsPlatform);
+  state.installedThemes = installedThemes; state.installedPacks = installedPacks; state.loaded = true;
+  updateInfo = await controls.getUpdateInfo?.().catch(() => null);
+  const client = await findClientUpdate(); if (client) state.items.unshift(client);
+  for (const id of [...state.selected]) if (!state.items.some(item => item.id === id) || isInstalled(state.items.find(item => item.id === id))) state.selected.delete(id);
 }
-$('#discovery-list').addEventListener('click', event => {
-  if (event.target.closest('button')) return;
-  const card = event.target.closest('.theme-card'); const button = card?.querySelector('[data-theme]'); if (button?.dataset.kind === 'pack') return; const id = button?.dataset.theme;
-  if (id) openCatalogDetails(id).catch(error => { $('#discovery-status').textContent = error.message; $('#discovery-status').classList.add('error'); });
-});
-$('#detail-back').onclick = () => { $('#theme-details').hidden = true; };
-$('#detail-install').onclick = async () => {
-  if (!selectedCatalogTheme) return;
-  const button = $('#detail-install'); button.disabled = true; button.textContent = t('downloading');
-  try { if (selectedCatalogTheme.installedId) { await controls.removeTheme(selectedCatalogTheme.installedId); button.textContent = t('removed'); } else { await controls.installCatalogTheme(selectedCatalogTheme.id); button.textContent = t('installedDone'); } await showInstalled(); await showDiscovery(); }
-  catch (error) { button.disabled = false; button.textContent = error.message; }
+// ---- client updates: a newer release on GitHub is the first item of the list --------------------
+function versionParts(text) {
+  const match = String(text || '').match(/(\d+(?:\.\d+)*)(?:[-.]?beta[-.]?(\d+))?/i); if (!match) return null;
+  return { numbers: match[1].split('.').map(Number), beta: match[2] === undefined ? null : Number(match[2]) };
+}
+function compareVersions(a, b) {
+  for (let i = 0; i < Math.max(a.numbers.length, b.numbers.length); i += 1) { const diff = (a.numbers[i] || 0) - (b.numbers[i] || 0); if (diff) return diff; }
+  if (a.beta === b.beta) return 0; if (a.beta === null) return 1; if (b.beta === null) return -1; return a.beta - b.beta;
+}
+async function findClientUpdate() {
+  try {
+    const info = await controls.getUpdateInfo?.(); const mode = info?.mode || 'download';
+    if (mode === 'reload' || !controls.openInstallWindow) return null;
+    const current = versionParts(window.NEKOCHAT_RELOADED_VERSION); if (!current) return null;
+    const releases = await (await fetch('https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases?per_page=20', { headers: { Accept: 'application/vnd.github+json' } })).json();
+    let beta = false; try { beta = localStorage.getItem('nk_update_beta') === '1'; } catch {}
+    let found = null;
+    for (const release of Array.isArray(releases) ? releases : []) {
+      if (release.draft || (release.prerelease && !beta)) continue;
+      const parts = versionParts(release.tag_name); if (!parts || compareVersions(parts, current) <= 0) continue;
+      if (!found || compareVersions(parts, versionParts(found.tag_name)) > 0) found = release;
+    }
+    if (!found) return null;
+    const version = found.tag_name.replace(/^build_v/i, '');
+    const notes = String(found.body || '').replace(/^\s*#[^\n]*\n+/, '');
+    descriptions.set('client-update', plainDescription(notes).slice(0, 900));
+    return { id: 'client-update', kind: 'client', type: 'client', displayName: `Nekochat Reloaded ${version}${found.prerelease ? ' (preview)' : ''}`, author: 'Nekochat Reloaded Team', version, added: String(found.published_at || '').slice(0, 10), previewUrl: '', position: -1, sortFirst: true,
+      release: { tag: found.tag_name, version, page: found.html_url, assets: (found.assets || []).map(asset => ({ name: asset.name, url: asset.browser_download_url, size: asset.size })) } };
+  } catch { return null; }
+}
+// Download sizes: a pack asks the main process (HEAD requests), the client update takes the release's asset.
+const sizes = new Map();
+const formatSize = bytes => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+let updateInfo = null;
+function clientAssetSize(item) {
+  const info = updateInfo || {}, platform = info.platform, mode = info.mode;
+  const pattern = platform === 'win32' ? (mode === 'install' ? /Setup-[^/]*\.exe$/i : /-portable\.exe$/i) : platform === 'linux' ? (mode === 'install' ? /\.AppImage$/i : /\.deb$/i) : platform === 'android' ? /\.apk$/i : platform === 'ios' ? /\.ipa$/i : null;
+  return item.release?.assets?.find(asset => pattern?.test(asset.name))?.size || 0;
+}
+async function sizeOf(item) {
+  if (sizes.has(item.id)) return sizes.get(item.id);
+  let bytes = 0;
+  if (item.kind === 'client') bytes = clientAssetSize(item);
+  else if (item.kind === 'pack') bytes = Number(await controls.getCatalogPackSize?.(item.id).catch(() => 0)) || 0;
+  sizes.set(item.id, bytes); return bytes;
+}
+async function totalOfSelected() { const items = state.items.filter(item => state.selected.has(item.id)); const list = await Promise.all(items.map(sizeOf)); return { count: items.length, bytes: list.reduce((sum, size) => sum + size, 0) }; }
+async function refreshTotal() {
+  const { count, bytes } = await totalOfSelected();
+  const line = document.querySelector('.wu-actionline span'); if (line) line.textContent = bytes ? fill(t('totalSize'), { n: count, size: formatSize(bytes) }) : fill(t('total'), { n: count });
+  const review = document.querySelector('.wu-review-size'); if (review) review.textContent = bytes ? fill(t('sizeTotal'), { size: formatSize(bytes) }) : '';
+}
+async function fillSize(id) { const item = state.items.find(entry => entry.id === id); const node = document.querySelector(`[data-size="${CSS.escape(id)}"]`); if (!item || !node) return; const bytes = await sizeOf(item); node.textContent = bytes ? `${t('sizeLabel')} ${formatSize(bytes)}` : ''; }
+async function describe(item) {
+  if (descriptions.has(item.id)) return descriptions.get(item.id);
+  let text = '';
+  try { text = item.kind === 'pack' ? (controls.getCatalogPackDetails ? (await controls.getCatalogPackDetails(item.id)).description : await (await fetch(item.descriptionUrl)).text()) : (await controls.getCatalogThemeDetails(item.id)).description; } catch {}
+  const plain = plainDescription(String(text).replace(/^\s*#[^\n]*\n+/, '')); descriptions.set(item.id, plain); return plain;
+}
+function sorted(list) {
+  const by = { name: (a, b) => itemName(a).localeCompare(itemName(b)), author: (a, b) => itemAuthor(a).localeCompare(itemAuthor(b)) || itemName(a).localeCompare(itemName(b)), date: (a, b) => String(b.added || '').localeCompare(String(a.added || '')) || b.position - a.position }[state.sort];
+  return [...list].sort((a, b) => (b.sortFirst ? 1 : 0) - (a.sortFirst ? 1 : 0) || by(a, b));
+}
+const visible = () => sorted(available().filter(item => (!state.type || item.type === state.type) && (!state.author || itemAuthor(item) === state.author)));
+
+// ---- side panel -----------------------------------------------------------------------------
+function renderSide() {
+  const counts = Object.fromEntries(TYPES.map(type => [type, available().filter(item => item.type === type).length]));
+  const authors = [...new Set(available().map(itemAuthor).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const link = (go, label, extra = '', active = false) => `<a href="#" class="wu-link${active ? ' on' : ''}" data-go="${go}" ${extra}>${label}</a>`;
+  $('#wu-side').innerHTML = `${link('home', esc(t('home')), '', state.page === 'home')}
+    ${state.selected.size ? `<a href="#" class="wu-install" data-go="review"><img src="assets/images/wu/arrow.png" alt="">${esc(fill(t('installItems'), { n: state.selected.size }))}</a>` : ''}
+    <h4>${esc(t('byType'))}</h4>
+    ${TYPES.filter(type => counts[type]).map(type => link('type', `${esc(t('types')[type])} (${counts[type]})`, `data-type="${type}"`, state.page === 'select' && state.type === type && !state.author)).join('')}
+    ${authors.length > 1 ? `<h4>${esc(t('byAuthor2'))}</h4>${authors.map(author => link('author', `${esc(author)} (${available().filter(item => itemAuthor(item) === author).length})`, `data-author="${esc(author)}"`, state.page === 'select' && state.author === author)).join('')}` : ''}
+    <h4>${esc(t('options'))}</h4>
+    ${link('history', esc(t('history')), '', state.page === 'history')}
+    <label class="wu-sort">${esc(t('sortBy'))}<select id="wu-sort"><option value="date">${esc(t('sortDate'))}</option><option value="name">${esc(t('sortName'))}</option><option value="author">${esc(t('sortAuthor'))}</option></select></label>`;
+  $('#wu-sort').value = state.sort;
+}
+
+// ---- pages -----------------------------------------------------------------------------------
+const strip = (title, sub = '') => `<div class="wu-strip"><div class="wu-strip-text"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div></div>`;
+const rowHTML = (item, open = false) => {
+  const checked = state.selected.has(item.id), expanded = open || state.expanded.has(item.id);
+  const preview = item.previewUrl ? `<img class="wu-thumb" src="${esc(item.previewUrl)}" alt="" onerror="this.remove()">` : '';
+  return `<div class="wu-row" data-id="${esc(item.id)}"><label class="wu-checkline"><input type="checkbox" class="wu-check" data-id="${esc(item.id)}"${checked ? ' checked' : ''}></label><button type="button" class="wu-plus" data-expand="${esc(item.id)}" aria-label="+">${expanded ? '−' : '+'}</button><a href="#" class="wu-name" data-expand="${esc(item.id)}">${esc(itemName(item))}</a><span class="wu-by">${itemAuthor(item) ? `(${esc(itemAuthor(item))})` : ''}</span>
+    <div class="wu-detail"${expanded ? '' : ' hidden'}>${preview}<div class="wu-detail-text"><p data-desc="${esc(item.id)}">${esc(descriptions.get(item.id) ?? '…')}</p><p class="wu-meta" data-size="${esc(item.id)}"></p><p class="wu-meta">${esc(t('type'))} ${esc(t('types')[item.type] || item.type)}${item.version && item.version !== 'Unknown' ? ` · ${esc(t('version'))} ${esc(item.version)}` : ''}${item.added ? ` · ${esc(t('added'))} ${esc(item.added)}` : ''}</p></div></div></div>`;
 };
-
-async function removeInstalledTheme(id, button) {
-  button.disabled = true; button.textContent = t('removing');
-  try { await controls.removeTheme(id); button.textContent = t('removed'); await showInstalled(); await showDiscovery(); }
-  catch (error) { button.disabled = false; button.textContent = error.message; }
+const clientItem = () => state.items.find(item => item.kind === 'client');
+function clientNotice() { const item = clientItem(); return item ? `<div class="wu-notice"><b>${esc(fill(t('clientAvailable'), { name: itemName(item) }))}</b><p><button type="button" class="wu-btn" data-act="client">${esc(t('installNow'))}</button></p></div>` : ''; }
+function homePage() {
+  return `${strip(t('welcome'), t('welcomeTo'))}<div class="wu-two"><div class="wu-content">
+    <h2 class="wu-h">${esc(t('keepUp'))}</h2>${clientNotice()}<p>${esc(t('homeIntro'))}</p>
+    <div class="wu-choice"><button type="button" class="wu-btn" data-go="express">${esc(t('express'))}</button><span><b>${esc(t('expressText'))}</b></span></div>
+    <div class="wu-choice"><button type="button" class="wu-btn" data-go="custom">${esc(t('custom'))}</button><span>${esc(t('customText'))}</span></div>
+    <p><b>${esc(t('privacy'))}</b> ${esc(t('privacyText'))}</p></div>
+    <div class="wu-boxes"><div class="wu-box ok"><header><img src="assets/images/wu/shield-3-32.png" alt=""><b>${esc(fill(t('boxInstalled'), { n: state.installedPacks.filter(pack => pack.catalogId).length + state.installedThemes.filter(theme => theme.catalogId).length }))}</b></header><p>${esc(fill(t('boxInstalledText'), { n: state.installedPacks.filter(pack => pack.catalogId).length + state.installedThemes.filter(theme => theme.catalogId).length }))}</p><p><a href="#" data-go="history">${esc(t('boxHistory'))}</a></p></div>
+</div></div>`;
 }
-async function removeInstalledPack(id, button) {
-  button.disabled = true; button.textContent = t('removing');
-  try { await controls.removePack(id); button.textContent = t('removed'); await showInstalled(); await showDiscovery(); }
-  catch (error) { button.disabled = false; button.textContent = error.message; }
+function selectPage() {
+  const list = visible(), typeLabel = state.author ? state.author : t('types')[state.type] || t('allTypes');
+  const groups = new Map();
+  for (const item of list) { const key = state.type || state.author ? (state.author ? t('types')[item.type] : itemAuthor(item) || t('types')[item.type]) : t('types')[item.type]; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(item); }
+  return `${strip(t('customize'))}<div class="wu-content full"><h2 class="wu-h">${esc(fill(t('selectTitle'), { type: typeLabel }))}</h2><p>${esc(t('selectIntro'))}</p>
+    <div class="wu-actionline"><a href="#" class="wu-go" data-go="review"><img src="assets/images/wu/arrow.png" alt="">${esc(t('reviewLink'))}</a><span>${esc(fill(t('total'), { n: state.selected.size }))}</span></div>
+    ${list.length ? `<div class="wu-group-box"><div class="wu-tools"><button type="button" class="wu-btn small" data-act="clear">${esc(t('clearAll'))}</button> <button type="button" class="wu-btn small" data-act="all">${esc(t('selectAll'))}</button></div>${[...groups].map(([name, items]) => `<div class="wu-groupbar">${esc(name)}</div>${items.map(item => rowHTML(item)).join('')}`).join('')}</div>` : `<p class="wu-empty">${esc(state.loaded ? t('noCatalog') : t('loadingCatalog'))}</p>`}</div>`;
 }
-async function showInstalled() {
-  const list = $('#installed-list'); list.innerHTML = `<p class="browser-status">${t('loadingInstalled')}</p>`;
+function reviewPage() {
+  const items = sorted(state.items.filter(item => state.selected.has(item.id)));
+  return `${strip(t('customize'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('reviewTitle'))}</h2>
+    ${items.length ? `<p>${esc(t('reviewNote'))}</p><p><button type="button" class="wu-btn" data-act="install">${esc(t('installBtn'))}</button> <span class="wu-meta">${esc(fill(t('total'), { n: items.length }))}</span> <span class="wu-meta wu-review-size"></span></p><div class="wu-group-box">${items.map(item => rowHTML(item, true)).join('')}</div>` : `<p>${esc(t('noneSelected'))}</p>`}</div>`;
+}
+function resultsPage() {
+  const r = state.results || { ok: [], failed: [] }, remaining = available().length;
+  const list = items => items.map(entry => `<div class="wu-plain">${esc(itemName(entry.item || entry))}${entry.error ? ` — ${esc(entry.error)}` : ''}</div>`).join('');
+  return `${strip(t('yourResults'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('resultsTitle'))}</h2>
+    ${r.restart ? `<div class="wu-notice"><b>${esc(t('restartTitle'))}</b><p>${esc(t('restartText'))}</p><button type="button" class="wu-btn" data-act="restart">${esc(t('restartNow'))}</button></div>` : ''}
+    ${remaining ? `<div class="wu-notice"><b>${esc(t('moreAvailable'))}</b><p>${esc(t('moreAvailableText'))}</p><button type="button" class="wu-btn" data-go="custom">${esc(t('custom'))}</button></div>` : ''}
+    <div class="wu-groupbar">${esc(t('summary'))}</div><table class="wu-summary"><tr><td><img src="assets/images/wu/shield-3-16.png" alt=""> ${esc(t('successful'))}</td><td>${r.ok.length}</td></tr><tr><td><img src="assets/images/wu/shield-5-16.png" alt=""> ${esc(t('failed'))}</td><td>${r.failed.length}</td></tr><tr><td><img src="assets/images/wu/shield-4-16.png" alt=""> ${esc(t('remaining'))}</td><td>${remaining}</td></tr></table>
+    ${r.ok.length ? `<h3 class="wu-h3"><img src="assets/images/wu/shield-3-32.png" alt="">${esc(t('successfulItems'))}</h3><div class="wu-groupbar">${esc(t('title'))}</div>${list(r.ok)}` : ''}
+    ${r.failed.length ? `<h3 class="wu-h3"><img src="assets/images/wu/shield-5-32.png" alt="">${esc(t('failedItems'))}</h3>${list(r.failed)}` : ''}</div>`;
+}
+// The history: what is installed, with its actions (apply a theme, open an add-on, remove).
+function historyPage() { return `${strip(t('historyTitle'))}<div class="wu-content full"><h2 class="wu-h">${esc(t('historyHeading'))}</h2><p>${esc(t('historyIntro'))}</p><table class="wu-history"><thead><tr><th>${esc(t('colName'))}</th><th>${esc(t('colType'))}</th><th>${esc(t('colStatus'))}</th><th></th></tr></thead><tbody id="history-body"><tr><td colspan="4">${esc(t('loadingInstalled'))}</td></tr></tbody></table></div>`; }
+async function fillHistory() {
+  const body = $('#history-body'); if (!body) return;
   try {
     activeTheme = await controls.getActiveTheme(); const themes = await controls.listThemes();
-    list.innerHTML = themes.length ? themes.map(theme => themeCard(theme, theme.removable ? t('remove') : theme.id === activeTheme?.id ? t('using') : t('apply'))).join('') : `<p class="empty-list">${t('noThemes')}</p>`;
-    list.querySelectorAll('button[data-theme]').forEach(button => {
-      const theme = themes.find(item => item.id === button.dataset.theme);
-      if (theme.removable) button.onclick = () => removeInstalledTheme(theme.id, button);
-      else if (theme.id === activeTheme?.id) button.disabled = true;
-      else button.onclick = async () => { button.disabled = true; button.textContent = t('applying'); try { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await showInstalled(); } catch (error) { button.disabled = false; button.textContent = error.message; } };
-    });
-    // Installed packs follow the themes; they are chosen in Display Properties.
     const packs = controls.listPacks ? await controls.listPacks().catch(() => []) : [];
-    if (packs.length) {
-      list.insertAdjacentHTML('beforeend', packs.map(pack => themeCard({ ...pack, kind: 'pack', displayName: pack.name, contains: pack.contains }, t('remove')).replace('data-theme=', 'data-pack=')).join(''));
-      list.querySelectorAll('button[data-pack]').forEach(button => { button.onclick = () => removeInstalledPack(button.dataset.pack, button); });
+    const addons = packs.some(pack => (pack.contains || []).includes('addon')) ? await (window.nkAddons?.(true) || []).catch?.(() => []) || [] : [];
+    const rows = [];
+    for (const theme of themes) rows.push({ name: theme.name || theme.displayName || theme.id, type: t('types').theme, status: theme.builtIn === true || !theme.removable ? (theme.id === activeTheme?.id ? t('using') : t('builtIn')) : (theme.id === activeTheme?.id ? t('using') : t('installedMark')), actions: [...(theme.removable ? [] : theme.id === activeTheme?.id ? [] : [[t('apply'), async () => { activeTheme = await controls.applyTheme(theme.id); applyFrame(activeTheme); await fillHistory(); }]]), ...(theme.removable ? [[t('remove'), () => controls.removeTheme(theme.id)]] : [])] });
+    for (const pack of packs) {
+      const addon = addons.find(item => item.packId === pack.id);
+      rows.push({ name: pack.name || pack.id, type: (pack.contains || []).map(part => t('parts')[part] || part).join(', '), status: t('installedMark'), actions: [...(addon && controls.openAddon ? [[t('open'), () => controls.openAddon(addon.id)]] : []), [t('remove'), async () => { await controls.removePack(pack.id); packsChanged(); }]] });
     }
-  } catch (error) { list.innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; }
+    body.innerHTML = rows.length ? '' : `<tr><td colspan="4">${esc(t('noThemes'))}</td></tr>`;
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><b>${esc(row.name)}</b></td><td>${esc(row.type)}</td><td>${esc(row.status)}</td><td class="wu-actions"></td>`;
+      for (const [label, action] of row.actions) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'wu-btn small'; button.textContent = label;
+        button.onclick = async () => { button.disabled = true; try { await action(); await loadCatalog(); render(); } catch (error) { button.disabled = false; button.textContent = error.message; } };
+        tr.lastElementChild.append(button);
+      }
+      body.append(tr);
+    }
+  } catch (error) { body.innerHTML = `<tr><td colspan="4" class="browser-status error">${esc(error.message)}</td></tr>`; }
 }
-async function showDiscovery() {
-  const status = $('#discovery-status'), list = $('#discovery-list'); status.textContent = t('loadingCatalog'); status.classList.remove('error'); list.innerHTML = '';
-  try {
-    const [themes, installed, catalogPacks, installedPacks] = await Promise.all([controls.listCatalogThemes(), controls.listThemes(), controls.listCatalogPacks ? controls.listCatalogPacks().catch(() => []) : [], controls.listPacks ? controls.listPacks().catch(() => []) : []]);
-    // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
-    const all = [...themes.filter(theme => !['luna','classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((theme, index) => ({ ...theme, position: index }));
-    const packsByCatalog = new Map(installedPacks.filter(pack => pack.catalogId).map(pack => [pack.catalogId, pack]));
-    all.forEach(theme => { if (theme.author) authorsByCatalog.set(theme.id, theme.author); });
-    const authors = [...new Set(all.map(theme => theme.author).filter(author => author && author !== 'Unknown'))].sort((a, b) => a.localeCompare(b));
-    const chosenAuthor = $('#catalog-author').value;
-    $('#catalog-author').innerHTML = `<option value="">${esc(t('allAuthors'))}</option>` + authors.map(author => `<option value="${esc(author)}">${esc(author)}</option>`).join('');
-    $('#catalog-author').value = authors.includes(chosenAuthor) ? chosenAuthor : '';
-    const sort = $('#catalog-sort').value; const name = theme => String(theme.displayName || theme.id);
-    const type = $('#catalog-type').value;
-    const catalog = all.filter(theme => (!type || theme.type === type) && (!$('#catalog-author').value || theme.author === $('#catalog-author').value)).sort((a, b) =>
-      sort === 'name' ? name(a).localeCompare(name(b)) :
-      sort === 'author' ? String(a.author).localeCompare(String(b.author)) || name(a).localeCompare(name(b)) :
-      String(b.added || '').localeCompare(String(a.added || '')) || b.position - a.position);
-    const installedByCatalog = new Map(installed.filter(theme => theme.catalogId).map(theme => [theme.catalogId, theme]));
-    status.textContent = catalog.length ? `${t('found')}${catalog.length}` : type && type !== 'theme' ? t('noPacks') : t('noCatalog');
-    const isInstalled = theme => theme.kind === 'pack' ? packsByCatalog.has(theme.id) : installedByCatalog.has(theme.id);
-    list.innerHTML = catalog.map(theme => themeCard({ ...theme, cardKind: theme.kind }, isInstalled(theme) ? t('remove') : t('download')).replace('data-theme=', `data-kind="${theme.kind}" data-theme=`)).join('');
-    list.querySelectorAll('button[data-theme]').forEach(button => button.onclick = async () => {
-      const pack = button.dataset.kind === 'pack';
-      const existing = pack ? packsByCatalog.get(button.dataset.theme) : installedByCatalog.get(button.dataset.theme);
-      if (existing) return pack ? removeInstalledPack(existing.id, button) : removeInstalledTheme(existing.id, button);
-      button.disabled = true; button.textContent = t('downloading');
-      try { if (pack) await controls.installCatalogPack(button.dataset.theme); else await controls.installCatalogTheme(button.dataset.theme); button.textContent = t('installedDone'); await showInstalled(); await showDiscovery(); }
-      catch (error) { button.disabled = false; button.textContent = error.message; }
-    });
-  } catch (error) { status.textContent = error.message; status.classList.add('error'); }
+// ---- rendering and navigation ---------------------------------------------------------------
+function render() {
+  const page = { home: homePage, select: selectPage, review: reviewPage, results: resultsPage, history: historyPage }[state.page]();
+  const main = $('#wu-main'); const scroll = main.scrollTop; main.innerHTML = page; main.scrollTop = scroll; renderSide();
+  main.querySelectorAll('.wu-detail:not([hidden]) [data-desc]').forEach(async element => { const item = state.items.find(entry => entry.id === element.dataset.desc); if (!item) return; const text = await describe(item); const node = main.querySelector(`[data-desc="${CSS.escape(item.id)}"]`); if (node) node.textContent = text || t('noDescription'); });
+  main.querySelectorAll('.wu-detail:not([hidden])').forEach(detail => fillSize(detail.closest('.wu-row').dataset.id));
+  if (state.page === 'select' || state.page === 'review') refreshTotal();
+  if (state.page === 'history') fillHistory();
 }
+function go(page, options = {}) { Object.assign(state, { page }, options); $('#wu-main').scrollTop = 0; render(); }
+async function refresh() { await loadCatalog(); render(); }
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-go], [data-expand], [data-open], [data-act]');
+  if (event.target.closest('a[href="#"]')) event.preventDefault();
+  if (!target) return;
+  if (target.dataset.go) {
+    const g = target.dataset.go;
+    if (g === 'home') go('home', { type: '', author: '' });
+    else if (g === 'type') go('select', { type: target.dataset.type, author: '' });
+    else if (g === 'author') go('select', { author: target.dataset.author, type: '' });
+    else if (g === 'express') go('select', { type: '', author: '', sort: 'date' });
+    else if (g === 'custom') go('select', { type: '', author: '' });
+    else go(g);
+    return;
+  }
+  if (target.dataset.open) { state.expanded.add(target.dataset.open); go('select', { type: '', author: '' }); return; }
+  if (target.dataset.expand) {
+    const id = target.dataset.expand; if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+    const row = target.closest('.wu-row'), detail = row.querySelector('.wu-detail'), open = state.expanded.has(id) || state.page === 'review';
+    detail.hidden = !open; row.querySelector('.wu-plus').textContent = open ? '−' : '+';
+    if (open) fillSize(id);
+    if (open) { const item = state.items.find(entry => entry.id === id); describe(item).then(text => { const node = row.querySelector('[data-desc]'); if (node) node.textContent = text || t('noDescription'); }); }
+    return;
+  }
+  if (target.dataset.act === 'clear') { state.selected.clear(); render(); }
+  if (target.dataset.act === 'all') { visible().forEach(item => state.selected.add(item.id)); render(); }
+  if (target.dataset.act === 'install') installSelected();
+  if (target.dataset.act === 'restart') controls.restartToUpdate?.();
+  if (target.dataset.act === 'client') { const item = clientItem(); if (item) { state.selected.add(item.id); go('review'); } }
+});
+document.addEventListener('change', event => {
+  if (event.target.classList?.contains('wu-check')) { const id = event.target.dataset.id; if (event.target.checked) state.selected.add(id); else state.selected.delete(id); renderSide(); if (state.page === 'review') render(); else refreshTotal(); }
+  if (event.target.id === 'wu-sort') { state.sort = event.target.value; render(); }
+});
+
+// ---- installing ------------------------------------------------------------------------------
+async function installSelected() {
+  const items = sorted(state.items.filter(item => state.selected.has(item.id)));
+  if (!items.length) return;
+  // The install runs in a window of its own (Installing Update); it answers with what was done.
+  const job = items.map(item => ({ id: item.id, kind: item.kind, name: itemName(item), ...(item.kind === 'client' ? { release: item.release } : {}) }));
+  const answer = await controls.openInstallWindow(job);
+  const byId = id => state.items.find(item => item.id === id);
+  const summary = { ok: (answer?.ok || []).map(entry => byId(entry.id)).filter(Boolean), failed: (answer?.failed || []).map(entry => ({ item: byId(entry.item?.id) || entry.item, error: entry.error })), go: answer?.go || '', restart: Boolean(answer?.restart) };
+  if (!summary.ok.length && !summary.failed.length) return; // the window was closed at once
+  if (summary.ok.some(item => item.kind === 'pack')) packsChanged();
+  summary.ok.forEach(item => state.selected.delete(item.id));
+  state.results = summary; await loadCatalog(); render();
+  go(summary.go === 'history' ? 'history' : 'results');
+}
+
+// ---- Help menu, sounds and start ------------------------------------------------------------
+function closeMenu() { document.querySelector('.cp-menu-popup')?.remove(); document.querySelectorAll('[data-menu].open').forEach(button => button.classList.remove('open')); }
+$('#catalog-menu').addEventListener('click', event => {
+  const button = event.target.closest('[data-menu]'); if (!button) return; event.stopPropagation();
+  const wasOpen = button.classList.contains('open'); closeMenu(); if (wasOpen) return;
+  const popup = document.createElement('div'); popup.className = 'cp-menu-popup';
+  popup.innerHTML = `<button type="button" data-command="help">${esc(t('helpTopics'))}</button><hr><button type="button" data-command="about">${esc(t('about'))}</button>`;
+  const rect = button.getBoundingClientRect(); popup.style.left = `${rect.left}px`; popup.style.top = `${rect.bottom}px`; document.body.append(popup); button.classList.add('open');
+});
+document.addEventListener('click', event => {
+  const command = event.target.closest('.cp-menu-popup [data-command]')?.dataset.command; if (!event.target.closest('#catalog-menu')) closeMenu();
+  if (command === 'help') controls.openHelpViewer?.('catalog'); else if (command === 'about') controls.openAbout?.('catalog');
+});
+document.addEventListener('keydown', event => { if (event.key === 'F1') { event.preventDefault(); controls.openHelpViewer?.('catalog'); } else if (event.key === 'Escape') closeMenu(); });
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
-$('#catalog-sort').onchange = () => showDiscovery();
-$('#catalog-type').onchange = () => showDiscovery();
-$('#catalog-author').onchange = () => showDiscovery();
-// A click on the author of a card shows only that author's themes.
-document.addEventListener('click', event => { const author = event.target.closest?.('.theme-author')?.dataset.author; if (!author || $('#discovery-panel').hidden) return; event.stopPropagation(); $('#catalog-author').value = author; showDiscovery(); }, true);
+window.nkClickSounds?.();
+function applyText() {
+  document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#close').setAttribute('aria-label', t('close'));
+  $('#wu-brand').textContent = t('title'); $('#wu-tag').textContent = t('tag'); $('[data-menu="help"]').textContent = t('help');
+}
+$('#close').onclick = () => controls.close();
+controls.onThemeChanged(theme => { activeTheme = theme; applyFrame(theme); if (state.page === 'history') fillHistory(); });
+controls.onDisplayChanged(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); render(); });
+Promise.all([controls.getActiveTheme(), controls.getDisplaySettings()]).then(([theme, display]) => { activeTheme = theme; language = display?.language === 'en' ? 'en' : 'ru'; applyFrame(theme); applyText(); render(); return loadCatalog(); }).then(render).catch(error => { $('#wu-main').innerHTML = `<p class="browser-status error">${esc(error.message)}</p>`; });
 

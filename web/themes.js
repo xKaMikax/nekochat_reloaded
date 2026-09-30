@@ -686,12 +686,13 @@
       const id = String(entry.pack_id || entry.id || `pack-${index + 1}`);
       const directory = String(entry.directory || id).replace(/^\/+|\/+$/g, '');
       const rawType = String(entry.type || entry.Type || '').toLowerCase();
-      const type = ['cursors', 'sounds', 'icons', 'wallpapers', 'combo'].includes(rawType) ? rawType : 'combo';
+      const type = ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants', 'addons', 'combo'].includes(rawType) ? rawType : 'combo';
       // A combo is only a list of other catalog items: { theme, cursors, sounds, icons } → their ids.
       const includes = type === 'combo' && typeof (entry.Includes || entry.includes) === 'object' ? { ...(entry.Includes || entry.includes) } : null;
       // Plain files instead of Pack.ZIP: "Files": ["Autumn.jpg"] in the folder, installed under <type>/.
       const files = (Array.isArray(entry.Files || entry.files) ? (entry.Files || entry.files) : []).map(String).filter(name => /^[^/\\]+$/.test(name) && name !== '.' && name !== '..');
       return { id, type, kind: 'pack', directory, files, displayName: entry.DisplayName || entry.displayName || id, includes, contains: includes ? Object.keys(includes) : entry.Contains || entry.contains || [type],
+        platforms: Array.isArray(entry.Platforms || entry.platforms) ? (entry.Platforms || entry.platforms).map(String) : null,
         author: details.Author || entry.Author || 'Unknown', added: String(details.Added || entry.Added || ''), version: details.Version || '',
         previewUrl: entry.Preview || (type === 'wallpapers' && files[0] ? `${CATALOG_ROOT}/${directory}/${encodeURIComponent(files[0])}` : `${CATALOG_ROOT}/${directory}/Preview.png`), zipUrl: entry.PackZIP || `${CATALOG_ROOT}/${directory}/Pack.ZIP` };
     });
@@ -703,7 +704,7 @@
     if (item.includes) {
       let theme = null; const parts = [];
       if (item.includes.theme) { const existing = (await listThemes()).find(entry => entry.catalogId === item.includes.theme); theme = existing ? existing.id : (await installCatalogTheme(item.includes.theme)).id; }
-      for (const part of ['cursors', 'sounds', 'icons', 'wallpapers']) {
+      for (const part of ['cursors', 'sounds', 'icons', 'wallpapers', 'assistants']) {
         const ref = item.includes[part]; if (!ref) continue;
         if (!catalog.some(pack => pack.id === ref && !pack.includes)) throw new ThemeError(`The combo lists a missing ${part} pack: ${ref}`);
         const existing = (await dbAll('packs')).find(pack => pack.catalogId === ref);
@@ -719,7 +720,7 @@
       for (const name of item.files) {
         const response = await fetch(`${CATALOG_ROOT}/${item.directory}/${encodeURIComponent(name)}`);
         if (!response.ok) throw new ThemeError(`Unable to download ${name} (${response.status}).`);
-        entries[`${item.type}/${name}`] = new Uint8Array(await response.arrayBuffer());
+        entries[`${({ assistants: 'assistant', addons: 'addon' })[item.type] || item.type}/${name}`] = new Uint8Array(await response.arrayBuffer());
       }
     } else {
       const response = await fetch(item.zipUrl);
@@ -727,7 +728,7 @@
       entries = await readZip(await response.arrayBuffer());
     }
     let info = {}; try { info = JSON.parse(new TextDecoder().decode(entries['pack.json'])); } catch {}
-    const contains = ['sounds', 'cursors', 'icons', 'wallpapers', 'theme'].filter(part => Object.keys(entries).some(name => name.startsWith(`${part}/`) && name.length > part.length + 1));
+    const contains = ['sounds', 'cursors', 'icons', 'wallpapers', 'assistant', 'addon', 'theme'].filter(part => Object.keys(entries).some(name => name.startsWith(`${part}/`) && name.length > part.length + 1));
     const safeId = item.id.replace(/[^a-zA-Z0-9._-]/g, '_');
     // The theme of a combo goes to the installed themes, like a catalog theme.
     let theme = null;
@@ -753,10 +754,11 @@
       const cursors = {}; for (const [kind, value] of Object.entries(await readJson('cursors/cursors.json'))) { const url = urls[`cursors/${typeof value === 'string' ? value : value?.file}`]; if (url) cursors[kind] = { url, x: value?.x, y: value?.y }; }
       const icons = {}; for (const [name, file] of Object.entries(await readJson('icons/icons.json'))) { const url = urls[`icons/${file}`]; if (url) icons[name] = url; }
       const wallpapers = {}; for (const [name, url] of Object.entries(urls)) { const match = name.match(/^wallpapers\/([^/]+)\.(jpe?g|png|webp)$/i); if (match) wallpapers[match[1]] = url; }
-      result.push({ id: record.id, catalogId: record.catalogId || null, type: record.type, name: record.name, author: record.author || '', contains: record.contains || [], theme: record.theme || null, parts: record.parts || [], files: urls, sounds, cursors, icons, wallpapers });
+      const assistant = urls['assistant/agent.json'] && urls['assistant/frames.png'] ? { json: urls['assistant/agent.json'], frames: urls['assistant/frames.png'], sounds: Object.fromEntries(Object.entries(urls).map(([name, url]) => [name.match(/^assistant\/sound(\d+)\.(wav|mp3|ogg)$/i)?.[1], url]).filter(([index]) => index !== undefined)) } : null;
+      result.push({ id: record.id, catalogId: record.catalogId || null, type: record.type, name: record.name, author: record.author || '', contains: record.contains || [], theme: record.theme || null, parts: record.parts || [], files: urls, sounds, cursors, icons, wallpapers, assistant });
     }
     // A combo has no files of its own: it takes the sounds, cursors, icons and wallpapers of its parts.
-    for (const pack of result) for (const part of pack.parts) { const source = result.find(item => item.id === part); if (source) { Object.assign(pack.sounds, source.sounds); Object.assign(pack.cursors, source.cursors); Object.assign(pack.icons, source.icons); Object.assign(pack.wallpapers, source.wallpapers); } }
+    for (const pack of result) for (const part of pack.parts) { const source = result.find(item => item.id === part); if (source) { Object.assign(pack.sounds, source.sounds); Object.assign(pack.cursors, source.cursors); Object.assign(pack.icons, source.icons); Object.assign(pack.wallpapers, source.wallpapers); pack.assistant ||= source.assistant; } }
     return result;
   }
   async function removePack(id) {

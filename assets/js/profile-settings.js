@@ -17,7 +17,8 @@ const words = {
     title: 'Учётные записи пользователей', back: 'Назад', home: 'Домой', close: 'Закрыть', minimize: 'Свернуть', maximize: 'Развернуть',
     pickTask: 'Выберите задание...', orPick: 'или выберите учётную запись для изменения', changeAccount: 'Изменить учётную запись', changeLogon: 'Изменить параметры входа в систему',
     learnAbout: 'См. также', relatedTasks: 'Связанные задачи', currentPicture: 'Текущий рисунок', helpAccounts: 'Учётные записи Nekochat', helpPictures: 'Использование своего рисунка', helpLogon: 'Параметры входа', changeTheme: 'Изменить тему компьютера',
-    whatChange: 'Что вы хотите изменить в своей учётной записи?', whatChangeOther: 'Что вы хотите изменить в учётной записи «{name}»?', editStatus: 'Изменить статус и описание', changePicture: 'Изменить рисунок', changeBanner: 'Изменить баннер', changeColour: 'Изменить цвет профиля',
+    whatChange: 'Что вы хотите изменить в своей учётной записи?', whatChangeOther: 'Что вы хотите изменить в учётной записи «{name}»?', editStatus: 'Изменить статус и описание', changePicture: 'Изменить рисунок', changeBanner: 'Изменить баннер', changeColour: 'Изменить цвет профиля', changeName: 'Изменить имя', changePassword: 'Изменить пароль',
+    nameTitle: 'Введите новое имя', nameLabel: 'Имя, которое видят другие:', passwordTitle: 'Измените пароль', oldPassword: 'Текущий пароль:', newPassword: 'Новый пароль (не короче 6 символов):', repeatPassword: 'Введите новый пароль ещё раз:', passwordShort: 'Новый пароль короче 6 символов', passwordMismatch: 'Пароли не совпадают', passwordChanged: 'Пароль изменён', nameEmpty: 'Имя не может быть пустым',
     accountNote: 'Эти сведения видят другие пользователи Nekochat в вашем профиле.', online: 'Учётная запись Nekochat',
     statusTitle: 'Измените статус и описание', status: 'Введите статус:', bio: 'Расскажите о себе:', apply: 'Изменить', cancel: 'Отмена',
     pictureTitle: 'Выберите новый рисунок для учётной записи', pictureNote: 'Выбранный рисунок увидят все в вашем профиле и в чатах.', browse: 'Обзор других рисунков', changePictureButton: 'Изменить рисунок',
@@ -29,7 +30,8 @@ const words = {
     title: 'User Accounts', back: 'Back', home: 'Home', close: 'Close', minimize: 'Minimize', maximize: 'Maximize',
     pickTask: 'Pick a task...', orPick: 'or pick an account to change', changeAccount: 'Change an account', changeLogon: 'Change the way users log on or off',
     learnAbout: 'Learn About', relatedTasks: 'Related Tasks', currentPicture: 'Current Picture', helpAccounts: 'Nekochat accounts', helpPictures: 'Using your own picture', helpLogon: 'Logon options', changeTheme: 'Change the computer theme',
-    whatChange: 'What do you want to change about your account?', whatChangeOther: 'What do you want to change about {name}\'s account?', editStatus: 'Change my status and bio', changePicture: 'Change my picture', changeBanner: 'Change my banner', changeColour: 'Change my profile colour',
+    whatChange: 'What do you want to change about your account?', whatChangeOther: 'What do you want to change about {name}\'s account?', editStatus: 'Change my status and bio', changePicture: 'Change my picture', changeBanner: 'Change my banner', changeColour: 'Change my profile colour', changeName: 'Change my name', changePassword: 'Change my password',
+    nameTitle: 'Type a new name for your account', nameLabel: 'The name others see:', passwordTitle: 'Change your password', oldPassword: 'Current password:', newPassword: 'New password (at least 6 characters):', repeatPassword: 'Type the new password again to confirm:', passwordShort: 'The new password is shorter than 6 characters', passwordMismatch: 'The passwords do not match', passwordChanged: 'Your password was changed', nameEmpty: 'The name cannot be empty',
     accountNote: 'Other Nekochat users see these details in your profile.', online: 'Nekochat account',
     statusTitle: 'Change your status and bio', status: 'Type your status:', bio: 'Tell others about yourself:', apply: 'Change', cancel: 'Cancel',
     pictureTitle: 'Pick a new picture for your account', pictureNote: 'The picture you choose appears in your profile and in chats.', browse: 'Browse for more pictures', changePictureButton: 'Change Picture',
@@ -42,7 +44,7 @@ let language = 'ru';
 const t = key => words[language][key];
 let me = null, display = {};
 const call = async (path, options = {}, session = account) => {
-  const response = await fetch(session.server.replace(/\/$/, '') + path, { ...options, headers: { Authorization: `Bearer ${session.token}`, ...(options.headers || {}) } });
+  const response = await fetch(session.server.replace(/\/$/, '') + path, { ...options, headers: { Authorization: `Bearer ${session.token}`, 'X-Neko-Client': window.nkClientHeader?.() || 'nekochat-reloaded/0 (pc; PC)', ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : Array.isArray(data.detail) ? data.detail.map(item => item.msg).filter(Boolean).join('; ') : `${t('error')} (${response.status})`);
   return data;
@@ -98,8 +100,14 @@ function render() {
       + `<h2 class="cp-section">${esc(t('orPick'))}</h2><div class="ua-tiles">${allAccounts().map(session => tile(session, true)).join('')}</div></div>`;
     pane.innerHTML = box(t('learnAbout'), [['help-16', t('helpAccounts'), 'help'], ['help-16', t('helpLogon'), 'help']]);
   } else if (page === 'account') {
-    content.innerHTML = `<div class="ua-page"><h1 class="ua-heading">${esc(isCurrent(account) || !me ? t('whatChange') : t('whatChangeOther').replace('{name}', me.display_name || me.username))}</h1><div class="ua-split"><div class="cp-tasks">${task(t('editStatus'), 'status')}${task(t('changePicture'), 'picture')}${task(t('changeBanner'), 'banner')}${task(t('changeColour'), 'colour')}</div>${tile({ ...account, user: me }, false)}</div><p class="ua-note">${esc(t('accountNote'))}</p></div>`;
+    content.innerHTML = `<div class="ua-page"><h1 class="ua-heading">${esc(isCurrent(account) || !me ? t('whatChange') : t('whatChangeOther').replace('{name}', me.display_name || me.username))}</h1><div class="ua-split"><div class="cp-tasks">${task(t('changeName'), 'name')}${task(t('editStatus'), 'status')}${task(t('changePassword'), 'password')}${task(t('changePicture'), 'picture')}${task(t('changeBanner'), 'banner')}${task(t('changeColour'), 'colour')}</div>${tile({ ...account, user: me }, false)}</div><p class="ua-note">${esc(t('accountNote'))}</p></div>`;
     pane.innerHTML = box(t('relatedTasks'), [['', t('changeLogon'), 'go:logon'], ['', t('changeTheme'), 'theme']]) + box(t('learnAbout'), [['help-16', t('helpAccounts'), 'help']]);
+  } else if (page === 'name') {
+    content.innerHTML = `<div class="ua-page"><h1 class="ua-heading">${esc(t('nameTitle'))}</h1><label class="ua-field">${esc(t('nameLabel'))}<input id="ua-name" maxlength="40" value="${esc(me?.display_name || me?.username || '')}"></label><p class="ua-error" id="ua-error"></p>${buttons('apply', 'save-name')}</div>`;
+    pane.innerHTML = box(t('learnAbout'), [['help-16', t('helpAccounts'), 'help']]);
+  } else if (page === 'password') {
+    content.innerHTML = `<div class="ua-page"><h1 class="ua-heading">${esc(t('passwordTitle'))}</h1><label class="ua-field">${esc(t('oldPassword'))}<input id="ua-old" type="password" autocomplete="current-password" maxlength="256"></label><label class="ua-field">${esc(t('newPassword'))}<input id="ua-new" type="password" autocomplete="new-password" maxlength="256"></label><label class="ua-field">${esc(t('repeatPassword'))}<input id="ua-new2" type="password" autocomplete="new-password" maxlength="256"></label><p class="ua-error" id="ua-error"></p>${buttons('apply', 'save-password')}</div>`;
+    pane.innerHTML = box(t('learnAbout'), [['help-16', t('helpAccounts'), 'help']]);
   } else if (page === 'status') {
     content.innerHTML = `<div class="ua-page"><h1 class="ua-heading">${esc(t('statusTitle'))}</h1><label class="ua-field">${esc(t('status'))}<input id="ua-status" maxlength="80" value="${esc(me?.status || '')}"></label><label class="ua-field">${esc(t('bio'))}<textarea id="ua-bio" maxlength="500">${esc(me?.bio || '')}</textarea></label><p class="ua-error" id="ua-error"></p>${buttons('apply', 'save-status')}</div>`;
     pane.innerHTML = box(t('learnAbout'), [['help-16', t('helpAccounts'), 'help']]);
@@ -126,11 +134,18 @@ function fail(error) { const node = $('#ua-error'); if (node) node.textContent =
 async function upload(path, blob, name) { const form = new FormData(); form.append('file', blob, name); changed({ ...me, ...await call(path, { method: 'POST', body: form }) }); }
 const ACTIONS = {
   current: () => { const session = savedSessions().find(isCurrent); if (session) pickAccount(session.key); else go('account'); },
-  help: () => window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener'),
+  help: () => (controls.openHelp ? controls.openHelp('privacy') : window.open('https://github.com/xKaMikax/nekochat_reloaded', '_blank', 'noopener')),
   theme: () => (controls.openApplet ? controls.openApplet('display', 'themes') : controls.openThemeSettings?.()),
   browse: () => $('#avatar-file').click(),
   'browse-banner': () => $('#banner-file').click(),
   'save-status': async () => { try { changed(await call('/users/me/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: $('#ua-status').value.trim(), bio: $('#ua-bio').value.trim(), profile_color: me?.profile_color || '#316ac5' }) })); go('account'); } catch (error) { fail(error); } },
+  'save-name': async () => { const name = $('#ua-name').value.trim(); if (!name) { fail(Error(t('nameEmpty'))); return; } try { changed(await call('/users/me/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ display_name: name }) })); go('account'); } catch (error) { fail(error); } },
+  'save-password': async () => {
+    const oldPassword = $('#ua-old').value, newPassword = $('#ua-new').value;
+    if (newPassword.length < 6) { fail(Error(t('passwordShort'))); return; }
+    if (newPassword !== $('#ua-new2').value) { fail(Error(t('passwordMismatch'))); return; }
+    try { await call('/users/me/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }) }); alert(t('passwordChanged')); go('account'); } catch (error) { fail(error); }
+  },
   'save-colour': async () => { try { changed(await call('/users/me/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: me?.status || '', bio: me?.bio || '', profile_color: $('#ua-colour').value }) })); go('account'); } catch (error) { fail(error); } },
   'save-picture': async () => { if (!selectedPicture) return; try { const blob = await (await fetch(`assets/images/account-pictures/${selectedPicture}.png`)).blob(); await upload('/users/me/avatar', blob, `${selectedPicture}.png`); go('account'); } catch (error) { fail(error); } },
   'save-logon': async () => { try { display = await controls.applyDisplaySettings({ ...display, loginUi: $('#ua-welcome').checked ? 'xp' : 'classic' }) || display; go('home'); } catch (error) { fail(error); } },
@@ -179,4 +194,4 @@ $('#close').onclick = () => controls.close();
   handle.onpointerdown = event => { let x = event.screenX, y = event.screenY; handle.setPointerCapture(event.pointerId); handle.onpointermove = move => { controls.resize(direction, move.screenX - x, move.screenY - y); x = move.screenX; y = move.screenY; }; handle.onpointerup = () => { handle.onpointermove = null; }; };
   document.body.append(handle);
 });
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+window.nkClickSounds?.();

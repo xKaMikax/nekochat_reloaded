@@ -49,6 +49,7 @@ async function applySelection() {
   localStorage.setItem('nk_show_admin_button', $('#show-admin-button').checked ? '1' : '0');
   localStorage.setItem('nk_media_socket', $('#media-socket').checked ? '1' : '0');
   localStorage.setItem('nk_hide_last_seen', $('#show-last-seen').checked ? '0' : '1');
+  localStorage.setItem('nk_auto_away_minutes', $('#auto-away').value);
   localStorage.setItem('nk_update_auto', $('#update-auto').checked ? '1' : '0');
   // Automatic Updates applet: the four XP choices (nekochat.js updatePolicy()).
   const updateChoice = document.querySelector('[name="update-mode"]:checked')?.value;
@@ -58,6 +59,7 @@ async function applySelection() {
   localStorage.setItem('nk_sound_scheme', $('#sound-scheme').value);
   applyPackChoices();
   localStorage.setItem('nk_sound_volume', $('#sound-volume').value);
+  localStorage.setItem('nk_font_size', $('#font-size').value); window.nkPacks?.applyLook();
   localStorage.setItem('nk_chat_wallpaper_opacity', $('#chat-wallpaper-opacity').value);
   saveWallpaper();
   localStorage.setItem('nk_active_theme', result.id);
@@ -87,6 +89,7 @@ async function refreshPacks() {
   const stored = localStorage.getItem('nk_chat_wallpaper') || 'none';
   wallpaper.value = [...wallpaper.options].some(option => option.value === stored) ? stored : 'none';
   renderDesktopList();
+  refreshAssistantChoice();
   renderPointers();
 }
 async function applyPackChoices() {
@@ -97,6 +100,8 @@ async function applyPackChoices() {
   localStorage.setItem('nk_cursor_pack', JSON.stringify(cursor.startsWith('pack:') ? packFor(cursor)?.cursors || {} : {}));
   localStorage.setItem('nk_icon_scheme', icon);
   localStorage.setItem('nk_icon_pack', JSON.stringify(packFor(icon)?.icons || {}));
+  const assistant = $('#assistant-choice')?.value;
+  if (assistant) { localStorage.setItem('nk_assistant_pack', JSON.stringify(assistantPack(assistant) || null)); localStorage.setItem('nk_assistant', assistant); }
   window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons();
 }
 async function previewSelection() { refreshPreview(await controls.previewTheme($('#theme-list').value, $('#colour-scheme').value)); }
@@ -111,12 +116,19 @@ const APPLETS = {
   display: { title: 'Display Properties', icon: 'display', pages: [{ page: 'themes' }, { page: 'desktop' }, { page: 'appearance' }, { page: 'display', label: 'Settings', hide: ['#display-language', '#cursor-scheme'] }] },
   sounds: { title: 'Sounds and Audio Devices Properties', icon: 'sounds', pages: [{ page: 'sounds' }, { id: 'audio', label: 'Audio', rows: ['#mic-device', '#noise-suppression'] }] },
   mouse: { title: 'Mouse Properties', icon: 'mouse', pages: [{ id: 'pointers', label: 'Pointers', build: buildPointersPage }] },
-  regional: { title: 'Regional and Language Options', icon: 'regional', pages: [{ id: 'languages', label: 'Languages', rows: ['#display-language'] }] },
+  regional: { title: 'Regional and Language Options', icon: 'regional', pages: [{ id: 'languages', label: 'Regional Options', build: buildRegionalPage }] },
   network: { title: 'Network Connections', icon: 'network-connections', pages: [{ id: 'server', label: 'Nekochat Reloaded', rows: ['#reloaded-enabled', '#reloaded-server', '#media-socket', '#screen-codec', '#dns-provider', '#dns-custom'] }] },
   updates: { title: 'Automatic Updates', icon: 'updates', pages: [{ id: 'updates', label: 'Automatic Updates', build: buildUpdatesPage }] },
   backups: { title: 'Backup', icon: 'backups', pages: [{ page: 'backups' }] },
-  privacy: { title: 'User Accounts', icon: 'users', pages: [{ id: 'privacy', label: 'Privacy', rows: ['#show-last-seen', '#show-admin-button'] }] },
+  privacy: { title: 'User Accounts', icon: 'users', pages: [{ id: 'privacy', label: 'Privacy', rows: ['#show-last-seen', '#auto-away', '#show-admin-button'] }] },
+  assistant: { title: 'Assistant', icon: 'assistant', pages: [{ id: 'assistant', label: 'Assistant', build: buildAssistantPage }] },
 };
+// Regional and Language Options, like XP's Regional Options tab: a group box with the choice.
+function buildRegionalPage(section) {
+  section.classList.add('regional-page');
+  section.innerHTML = '<fieldset class="xp-group"><legend>Standards and formats</legend><p>This option affects the language of the menus, windows and help of Nekochat Reloaded.</p><p class="regional-slot"></p><p class="regional-note">Changes are saved when you click Apply.</p></fieldset>';
+  section.querySelector('.regional-slot').append($('#display-language').closest('label'));
+}
 // Mouse Properties → Pointers, like XP's: the scheme, a preview and every pointer of the scheme.
 const POINTER_NAMES = [['default', 'Normal Select'], ['help', 'Help Select'], ['progress', 'Working In Background'], ['wait', 'Busy'], ['crosshair', 'Precision Select'], ['text', 'Text Select'],
   ['not-allowed', 'Unavailable'], ['ns-resize', 'Vertical Resize'], ['ew-resize', 'Horizontal Resize'], ['nwse-resize', 'Diagonal Resize 1'], ['nesw-resize', 'Diagonal Resize 2'], ['move', 'Move'], ['pointer', 'Link Select']];
@@ -135,6 +147,31 @@ function renderPointers() {
   list.innerHTML = POINTER_NAMES.map(([kind, name]) => `<div class="pointer-row${kind === selected ? ' selected' : ''}" data-kind="${kind}"><span>${esc(name)}</span>${set[kind]?.url ? `<img src="${esc(set[kind].url)}" alt="">` : '<i></i>'}</div>`).join('');
   renderPointerPreview(selected);
 }
+// Assistant: an assistant pack from the Catalog, or none; a preview of the first
+// frame. Saved on Apply as nk_assistant (+ nk_assistant_pack with the pack's files).
+function buildAssistantPage(section) {
+  section.classList.add('assistant-page');
+  section.innerHTML = '<h2>Assistant</h2><p>The assistant sits in the chat window. Click him to search all your chats, see unread chats, change your status or get a tip.</p><div class="assistant-choice"><canvas id="assistant-preview" width="80" height="80"></canvas><label>Character:<select id="assistant-choice"></select></label></div><p>More assistants are in the Catalog.</p>';
+  section.querySelector('#assistant-choice').addEventListener('change', previewAssistant);
+}
+const assistantPack = value => value.startsWith('pack:') ? packs.find(pack => `pack:${pack.id}` === value)?.assistant : null;
+function refreshAssistantChoice() {
+  const select = $('#assistant-choice'); if (!select) return;
+  select.innerHTML = packs.filter(pack => pack.assistant).map(pack => `<option value="pack:${esc(pack.id)}">${esc(pack.name)}${pack.author ? ` — ${esc(pack.author)}` : ''}</option>`).join('') + '<option value="none">(None)</option>';
+  const stored = localStorage.getItem('nk_assistant') || 'none';
+  select.value = [...select.options].some(option => option.value === stored) ? stored : (select.options.length > 1 ? select.options[0].value : 'none');
+  previewAssistant();
+}
+async function previewAssistant() {
+  const value = $('#assistant-choice').value, canvas = $('#assistant-preview'), context = canvas.getContext('2d');
+  context.clearRect(0, 0, 80, 80); if (value === 'none') return;
+  const files = assistantPack(value); if (!files) return;
+  try {
+    const [agent, image] = await Promise.all([fetch(files.json).then(response => response.json()), new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = files.frames; })]);
+    const frame = (agent.animations.RestPose || Object.values(agent.animations)[0]).frames[0];
+    for (const [index, x, y] of [...frame.images].reverse()) context.drawImage(image, (index % agent.columns) * agent.width, Math.floor(index / agent.columns) * agent.height, agent.width, agent.height, x * 80 / agent.width, y * 80 / agent.height, 80, 80);
+  } catch {}
+}
 // Automatic Updates, like XP's: a banner and the four choices, plus the beta channel and Check now.
 // Automatic and Download work on the desktop app; phones and the web ask before installing anyway.
 const UPDATE_CHOICES = [
@@ -149,7 +186,9 @@ function buildUpdatesPage(section) {
     + UPDATE_CHOICES.map(([value, title, text, icon]) => `<label class="updates-option"><input type="radio" name="update-mode" value="${value}"><span class="updates-title">${title}</span>${text ? `<span class="updates-detail">${icon ? `<img src="assets/images/control-panel/${icon}.png" alt="">` : '<i></i>'}<span>${text}</span></span>` : ''}</label>`).join('')
     + '<div class="updates-extra"></div>';
   const extra = section.querySelector('.updates-extra');
-  extra.append($('#update-beta').closest('label'), $('#update-check').closest('label'));
+  // Only the beta box stays; Check now is in Windows Update.
+  const checkNow = $('#update-check').closest('label'); checkNow.hidden = true; checkNow.style.setProperty('display', 'none', 'important');
+  extra.append($('#update-beta').closest('label'), checkNow);
   $('#update-auto').closest('label').hidden = true; section.append($('#update-auto').closest('label'));
   const stored = localStorage.getItem('nk_update_mode') || (localStorage.getItem('nk_update_auto') === '0' ? 'off' : 'notify');
   section.querySelectorAll('[name="update-mode"]').forEach(radio => { radio.checked = radio.value === stored; radio.addEventListener('change', () => { $('#update-auto').checked = radio.value !== 'off'; }); });
@@ -270,9 +309,51 @@ $('#desktop-browse').onclick = () => $('#chat-wallpaper-file').click();
 ['#chat-wallpaper-position', '#chat-wallpaper-color', '#chat-wallpaper-color-off', '#chat-wallpaper-opacity'].forEach(selector => $(selector).addEventListener('input', refreshDesktopPreview));
 $('#chat-wallpaper-position').value = localStorage.getItem('nk_chat_wallpaper_position') || 'stretch';
 { const colour = localStorage.getItem('nk_chat_wallpaper_color') || ''; $('#chat-wallpaper-color-off').checked = !colour; if (colour) $('#chat-wallpaper-color').value = colour; }
-$('#effects').onclick = () => alert('Effects are supplied by the selected Windows XP theme.');
-$('#advanced').onclick = () => alert('Advanced colour editing is available when the theme provides multiple colour schemes.');
+// Effects… and Advanced…, like XP's Appearance tab. They are saved when you click OK in them.
+const readJson = key => { try { return JSON.parse(localStorage.getItem(key) || 'null') || {}; } catch { return {}; } };
+function xpDialog(id, title, body) {
+  let dialog = document.getElementById(id); if (dialog) dialog.remove();
+  dialog = document.createElement('dialog'); dialog.id = id; dialog.className = 'xp-subdialog';
+  dialog.innerHTML = `<div class="xp-subdialog-title">${esc(title)}</div><div class="xp-subdialog-body">${body}<div class="xp-subdialog-buttons"><button type="button" data-close="ok">OK</button><button type="button" data-close="cancel">Cancel</button></div></div>`;
+  document.body.append(dialog); dialog.showModal(); return dialog;
+}
+$('#effects').onclick = () => {
+  const fx = readJson('nk_effects');
+  const dialog = xpDialog('effects-dialog', 'Effects', `<label class="xp-check"><input type="checkbox" id="fx-transition-on"${fx.transition !== 'none' ? ' checked' : ''}> Use the following transition effect for menus and tooltips:</label><select id="fx-transition"><option value="fade">Fade effect</option><option value="scroll">Scroll effect</option></select>`
+    + `<label class="xp-check"><input type="checkbox" id="fx-smoothing-on"${fx.smoothing !== 'none' ? ' checked' : ''}> Use the following method to smooth edges of screen fonts:</label><select id="fx-smoothing"><option value="standard">Standard</option><option value="cleartype">ClearType</option></select>`
+    + `<label class="xp-check"><input type="checkbox" id="fx-large"${fx.largeIcons ? ' checked' : ''}> Use large icons</label><label class="xp-check"><input type="checkbox" id="fx-shadows"${fx.shadows !== false ? ' checked' : ''}> Show shadows under menus</label>`);
+  dialog.querySelector('#fx-transition').value = fx.transition === 'scroll' ? 'scroll' : 'fade';
+  dialog.querySelector('#fx-smoothing').value = fx.smoothing === 'cleartype' ? 'cleartype' : 'standard';
+  dialog.onclick = event => {
+    const action = event.target.closest('[data-close]')?.dataset.close; if (!action) return;
+    if (action === 'ok') localStorage.setItem('nk_effects', JSON.stringify({ transition: dialog.querySelector('#fx-transition-on').checked ? dialog.querySelector('#fx-transition').value : 'none', smoothing: dialog.querySelector('#fx-smoothing-on').checked ? dialog.querySelector('#fx-smoothing').value : 'none', largeIcons: dialog.querySelector('#fx-large').checked, shadows: dialog.querySelector('#fx-shadows').checked }));
+    window.nkPacks?.applyLook(); dialog.close(); dialog.remove();
+  };
+};
+const LOOK_ITEMS = [['title', 'Active Title Bar', ['color1', 'color2', 'text']], ['inactive', 'Inactive Title Bar', ['color1', 'color2']], ['window', 'Window', ['color1', 'text']], ['selected', 'Selected Items', ['color1', 'text']], ['face', '3D Objects', ['color1']], ['message', 'Message Text', ['size', 'text', 'bold', 'italic']], ['tooltip', 'ToolTip', ['color1', 'text']]];
+$('#advanced').onclick = () => {
+  const look = readJson('nk_appearance');
+  const dialog = xpDialog('advanced-dialog', 'Advanced Appearance', `<div class="preview advanced-preview"><iframe src="assets/html/theme_preview.html" title="Preview"></iframe></div><p>If you select a windows and buttons setting other than Windows Classic, it will override the following settings, except in some older programs.</p>`
+    + `<div class="advanced-grid"><label>Item:<select id="look-item">${LOOK_ITEMS.map(([id, label]) => `<option value="${id}">${label}</option>`).join('')}</select></label><label>Size:<input id="look-size" type="number" min="8" max="28"></label><label>Color 1:<input id="look-color1" type="color"></label><label>Color 2:<input id="look-color2" type="color"></label><label>Font color:<input id="look-text" type="color"></label><span class="advanced-style"><label class="xp-check"><input type="checkbox" id="look-bold"> <b>B</b></label><label class="xp-check"><input type="checkbox" id="look-italic"> <i>I</i></label></span></div><button type="button" id="look-reset">Use default</button>`);
+  const previewFrame = dialog.querySelector('.advanced-preview iframe');
+  previewFrame.addEventListener('load', () => { if (previewTheme) previewFrame.contentWindow.postMessage({ type: 'theme-preview', theme: previewTheme }, '*'); });
+  const draft = JSON.parse(JSON.stringify(look));
+  const fields = ['size', 'color1', 'color2', 'text', 'bold', 'italic'];
+  const input = name => dialog.querySelector(`#look-${name}`);
+  const show = () => {
+    const [id, , allowed] = LOOK_ITEMS.find(([item]) => item === input('item').value); const values = draft[id] || {};
+    for (const name of fields) { const node = input(name); node.disabled = !allowed.includes(name); node.closest('label').classList.toggle('disabled', node.disabled); if (node.type === 'checkbox') node.checked = Boolean(values[name]); else node.value = values[name] ?? (node.type === 'color' ? '#000000' : ''); node.dataset.touched = values[name] !== undefined ? '1' : ''; }
+  };
+  for (const name of fields) input(name).addEventListener('input', () => { const id = input('item').value; const node = input(name); draft[id] = { ...(draft[id] || {}), [name]: node.type === 'checkbox' ? node.checked : node.value }; });
+  input('item').onchange = show; show();
+  dialog.querySelector('#look-reset').onclick = () => { delete draft[input('item').value]; show(); };
+  dialog.onclick = event => {
+    const action = event.target.closest('[data-close]')?.dataset.close; if (!action) return;
+    if (action === 'ok') localStorage.setItem('nk_appearance', JSON.stringify(draft));
+    window.nkPacks?.applyLook(); dialog.close(); dialog.remove();
+  };
+};
 controls.onThemeChanged(theme => { refreshFrame(theme); refreshPreview(theme); });
-Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#show-last-seen').checked = localStorage.getItem('nk_hide_last_seen') !== '1'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; refreshPacks(); $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
+Promise.all([refreshThemes(), controls.getActiveTheme(), controls.getDisplaySettings()]).then(([, theme, settings]) => { $('#display-language').value = settings.language || 'ru'; $('#login-ui').value = settings.loginUi || 'xp'; $('#noise-suppression').value = settings.noiseSuppression || 'webrtc'; $('#dns-provider').value = settings.dns || 'system'; $('#dns-custom').value = settings.dnsCustom || ''; $('#screen-codec').value = localStorage.getItem('nk_screen_codec') || 'auto'; $('#reloaded-server').value = localStorage.getItem('nk_reloaded_server') || ''; $('#reloaded-enabled').checked = localStorage.getItem('nk_reloaded_enabled') !== '0'; $('#reloaded-server').disabled = !$('#reloaded-enabled').checked; $('#show-admin-button').checked = localStorage.getItem('nk_show_admin_button') === '1'; $('#media-socket').checked = localStorage.getItem('nk_media_socket') !== '0'; $('#show-last-seen').checked = localStorage.getItem('nk_hide_last_seen') !== '1'; $('#auto-away').value = localStorage.getItem('nk_auto_away_minutes') ?? '10'; $('#update-auto').checked = localStorage.getItem('nk_update_auto') !== '0'; $('#update-beta').checked = localStorage.getItem('nk_update_beta') === '1'; refreshPacks(); $('#sound-volume').value = localStorage.getItem('nk_sound_volume') ?? 72; $('#font-size').value = localStorage.getItem('nk_font_size') || 'normal'; $('#sound-volume-value').textContent = `${$('#sound-volume').value}%`; $('#chat-wallpaper').value = localStorage.getItem('nk_chat_wallpaper') || 'none'; $('#chat-wallpaper-opacity').value = localStorage.getItem('nk_chat_wallpaper_opacity') ?? 35; $('#chat-wallpaper-opacity-value').textContent = `${$('#chat-wallpaper-opacity').value}%`; refreshDnsRows(); refreshMicDevices(settings.micDeviceId); refreshFrame(theme); refreshPreview(theme); }).catch(error => { $('#theme-error').textContent = error.message; });
 // XP click sound on buttons, like in the chat window.
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+window.nkClickSounds?.();

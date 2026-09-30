@@ -1,5 +1,19 @@
 const DEFAULT_API = 'https://nekochat.komdu.is-cool.dev';
 let API = localStorage.getItem('nk_server_url') || DEFAULT_API;
+// Every request to the Nekochat server tells which client it is (X-Neko-Client).
+const clientId = () => window.nkClientHeader?.() || 'nekochat-reloaded/0 (pc; PC)';
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+  try {
+    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (url.origin === new URL(API).origin) {
+      const headers = new Headers(init.headers || (typeof input === 'string' ? undefined : input.headers));
+      if (!headers.has('X-Neko-Client')) headers.set('X-Neko-Client', clientId());
+      init = { ...init, headers };
+    }
+  } catch {}
+  return nativeFetch(input, init);
+};
 const xpLogonBackgrounds = [
   ['xp_1024x1280.jpg', 1024, 1280], ['xp_1024x768.jpg', 1024, 768], ['xp_1280x1024.jpg', 1280, 1024],
   ['xp_1280x768.jpg', 1280, 768], ['xp_1280x960.jpg', 1280, 960], ['xp_1360x768.jpg', 1360, 768],
@@ -37,6 +51,14 @@ if (detachedChat) document.documentElement.classList.add('detached-chat');
 const sounds = Object.freeze({ navigation: 'navigation.wav', notify: 'notify.wav', logon: 'logon.wav', logoff: 'logoff.wav', ringin: 'ringin.wav', ringout: 'ringout.wav', exclamation: 'exclamation.wav', default: 'default.wav', error: 'error.wav', critical: 'critical-stop.wav' });
 // Sound scheme and volume from Display Properties (localStorage, shared by every window).
 function soundSettings() { let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} return { scheme, volume: Math.min(100, Math.max(0, Number.isFinite(volume) ? volume : 72)) }; }
+// A chat's own notification sound and volume (right click on a chat → Notification sound):
+// nk_chat_sounds = { 'room:1': { sound: 'default' | 'none' | …, volume: 0–100 } }, synced.
+function chatSoundSettings() { try { const value = JSON.parse(localStorage.getItem('nk_chat_sounds') || '{}'); return value && typeof value === 'object' ? value : {}; } catch { return {}; } }
+function playChatSound(key) {
+  const own = chatSoundSettings()[key] || {}; if (own.sound === 'none') return;
+  const audio = playSound(sounds[own.sound] ? own.sound : 'notify');
+  if (Number.isFinite(Number(own.volume))) audio.volume = Math.min(1, audio.volume * Number(own.volume) / 100);
+}
 function playSound(name) { const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl(name, sounds[name]) : `assets/sounds/${sounds[name]}`); const { scheme, volume } = soundSettings(); audio.volume = volume / 100; if (scheme !== 'none' && volume > 0) audio.play().catch(() => {}); return audio; }
 function showSystemDialog(message, type = 'error', title = 'Nekochat Reloaded', options = {}) {
   if (desktopControls?.showSystemDialog) { desktopControls.showSystemDialog({ message: String(message || t('unknownError')), type, title, ...options }); return; }
@@ -60,8 +82,8 @@ function playServerSound(kind, status = 0) {
   return playSound('default');
 }
 const translations = {
-  ru: { loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', themeBrowser: 'Каталог', personalize: 'Панель управления', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
-  en: { loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', themeBrowser: 'Catalog', personalize: 'Control Panel', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
+  ru: { games: 'Сапёр', gamePlay: 'Играть', gameChallenge2: '🎮 {name} вызывает вас на «{game}»: у всех одна и та же раздача. Кто лучше?', gameInviteTitle: 'Приглашение в игру', gameInviteText: '{name} приглашает вас сыграть в «{game}».', gameDecline: 'Отклонить', gameNoServer: 'Сервер Nekochat Reloaded не поддерживает игры. Обновите его до версии 0.9.', gameStartFailed: 'Не удалось начать игру.', gameEnded: 'Эта игра уже закончилась.', gameNeedsAddon: 'Чтобы играть, установите дополнение «Сапёр» в окне «Обновление Nekochat Reloaded».', gameOpenCatalog: 'Открыть обновление', gameChallenge: '🎮 {name} вызывает на «Сапёр» ({level}). Кто пройдёт быстрее?', logonUnread: 'Непрочитанных сообщений: {count}', logonLast: 'Последний вход: {when}', loginHint: 'Чтобы начать, выберите учётную запись', loginTitle: 'Вход в Nekochat', liveMessages: 'Сообщения реального времени', username: 'Имя пользователя', password: 'Пароль', displayName: 'Отображаемое имя', createAccount: 'Создать учётную запись', backToLogin: 'Вернуться ко входу', otherUser: 'Другой пользователь', chooseOtherUser: '← Выбрать другого пользователя', changeServer: 'Сменить URL сервера', loginFooter: 'После входа можно общаться в комнатах и личных диалогах.', rooms: 'Комнаты', direct: 'Личные', theme: 'Тема', chooseChat: 'Выберите комнату или диалог.', send: 'Отправить ›', search: 'Поиск...', emoji: 'Эмодзи', allEmoji: 'Все', emojiSearch: 'Поиск emoji…', emojiFound: 'Найдено', signIn: 'Войти', register: 'Создать учётную запись', ok: 'ОК', cancel: 'Отмена', serverUrl: 'URL сервера', editProfile: 'Изменить профиль', personalize: 'Панель управления', changeUser: 'Сменить пользователя', logout: 'Выйти из аккаунта', error: 'Ошибка', loginError: 'Ошибка входа', sessionEnded: 'Сеанс завершён', sessionExpired: 'Сохранённая сессия истекла. Войдите снова.', connectionFailed: 'Не удалось подключиться к серверу. Проверьте URL сервера и подключение к сети.', serverError: 'Ошибка сервера ({status})', historyFormat: 'Сервер вернул историю в неизвестном формате.', loadMessages: 'Не удалось загрузить сообщения', socketConnecting: 'Соединение с сервером ещё устанавливается.', callStart: 'Не удалось начать звонок', callAccept: 'Не удалось принять звонок', microphone: 'Не удалось включить микрофон', sendMessage: 'Не удалось отправить сообщение', screenShare: 'Демонстрация экрана', screenAccess: 'Не удалось получить доступ к экрану. Проверьте, что в системе доступен захват экрана, и повторите попытку.', roomAudioUnsupported: 'Аудиозвонки в комнатах API не поддерживает.', screenUnsupported: 'Демонстрация экрана не поддерживается этой версией Electron.', vp8Unsupported: 'Кодек VP8 недоступен для демонстрации экрана.', opusUnsupported: 'В этой версии приложения нет поддержки Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 кГц не поддержан этим Chromium.', roomCreate: 'Не удалось создать комнату', themeApply: 'Не удалось применить тему', themeImport: 'Не удалось импортировать тему', imageUpload: 'Не удалось загрузить изображение.', importingTheme: 'Импорт темы…', themeInstalled: 'Тема добавлена и применена.', call: 'Звонок', incomingCall: 'Входящий звонок: {name}', outgoingCall: 'Звонок: {name}', callWaiting: 'Ожидание ответа…', callConnecting: 'Подключение микрофона…', callConnected: 'Разговор по Opus', you: 'Вы', user: 'Пользователь' },
+  en: { games: 'Minesweeper', gamePlay: 'Play', gameChallenge2: '🎮 {name} challenges you to {game}: everyone gets the same deal. Who does better?', gameInviteTitle: 'Game invitation', gameInviteText: '{name} invites you to play {game}.', gameDecline: 'Decline', gameNoServer: 'The Nekochat Reloaded server does not support games. Update it to version 0.9.', gameStartFailed: 'Could not start the game.', gameEnded: 'This game is over.', gameNeedsAddon: 'To play, install the Minesweeper add-on in Nekochat Reloaded Update.', gameOpenCatalog: 'Open Update', gameChallenge: '🎮 {name} challenges you to Minesweeper ({level}). Who is fastest?', logonUnread: '{count} unread messages', logonLast: 'Last logged on: {when}', loginHint: 'To begin, choose an account', loginTitle: 'Sign in to Nekochat', liveMessages: 'Real-time messages', username: 'Username', password: 'Password', displayName: 'Display name', createAccount: 'Create an account', backToLogin: 'Back to sign in', otherUser: 'Other user', chooseOtherUser: '← Choose another user', changeServer: 'Change Server URL', loginFooter: 'After signing in, you can chat in rooms and direct messages.', rooms: 'Rooms', direct: 'Direct', theme: 'Theme', chooseChat: 'Choose a room or conversation.', send: 'Send ›', search: 'Search...', emoji: 'Emoji', allEmoji: 'All', emojiSearch: 'Search emoji…', emojiFound: 'Found', signIn: 'Sign in', register: 'Create account', ok: 'OK', cancel: 'Cancel', serverUrl: 'Server URL', editProfile: 'Edit profile', personalize: 'Control Panel', changeUser: 'Change user', logout: 'Log out', error: 'Error', loginError: 'Sign-in error', sessionEnded: 'Session ended', sessionExpired: 'The saved session has expired. Sign in again.', connectionFailed: 'Could not connect to the server. Check the server URL and network connection.', serverError: 'Server error ({status})', historyFormat: 'The server returned message history in an unknown format.', loadMessages: 'Could not load messages', socketConnecting: 'The connection to the server is still being established.', callStart: 'Could not start the call', callAccept: 'Could not accept the call', microphone: 'Could not enable the microphone', sendMessage: 'Could not send the message', screenShare: 'Screen sharing', screenAccess: 'Could not access the screen. Check that screen capture is available and try again.', roomAudioUnsupported: 'The API does not support audio calls in rooms.', screenUnsupported: 'Screen sharing is not supported by this version of Electron.', vp8Unsupported: 'VP8 is unavailable for screen sharing.', opusUnsupported: 'This version of the app does not support Opus WebCodecs.', opusConfigUnsupported: 'Opus 48 kHz is not supported by this Chromium build.', roomCreate: 'Could not create the room', themeApply: 'Could not apply the theme', themeImport: 'Could not import the theme', imageUpload: 'Could not upload the image.', importingTheme: 'Importing theme…', themeInstalled: 'Theme added and applied.', call: 'Call', incomingCall: 'Incoming call: {name}', outgoingCall: 'Calling: {name}', callWaiting: 'Waiting for an answer…', callConnecting: 'Connecting microphone…', callConnected: 'Opus call', you: 'You', user: 'User' },
 };
 function t(key, values = {}) { return String((translations[displaySettings?.language === 'en' ? 'en' : 'ru'] || translations.ru)[key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? ''); }
 // Call states are keys, so the call window follows the chosen language.
@@ -131,15 +153,27 @@ function writeSavedSessions(items) { localStorage.setItem(SAVED_SESSIONS_KEY, JS
 function rememberSession(user) {
   if (!token || !user?.id) return;
   const key = `${API}|${user.id}`;
-  writeSavedSessions([{ key, server: API, token, user }, ...savedSessions().filter(item => item?.key !== key)]);
+  const previous = savedSessions().find(item => item?.key === key) || {};
+  writeSavedSessions([{ ...previous, key, server: API, token, user, lastUsed: Date.now(), unreadTotal: 0 }, ...savedSessions().filter(item => item?.key !== key)]);
+}
+// Windows XP's account pictures for accounts without an avatar, the same one for the same account.
+const XP_PICTURES = ['airplane', 'astronaut', 'beach', 'butterfly', 'car', 'cat', 'chess', 'dirt-bike', 'dog', 'drip', 'duck', 'fish', 'frog', 'guitar', 'horses', 'kick', 'lift-off', 'palm-tree', 'pink-flower', 'red-flower', 'skater', 'snowflake', 'soccer-ball'];
+const xpPicture = user => `assets/images/account-pictures/${XP_PICTURES[Math.abs([...String(user?.username || user?.id || '')].reduce((sum, char) => sum * 31 + char.charCodeAt(0) | 0, 7)) % XP_PICTURES.length]}.png`;
+// Under the name, like "5 programs running" on XP's Welcome screen: the unread messages the
+// account had when you left it, or when it was last used.
+function savedUserNote(session) {
+  if (Number(session.unreadTotal) > 0) return t('logonUnread', { count: session.unreadTotal });
+  if (!session.lastUsed) return '';
+  try { return t('logonLast', { when: new Date(session.lastUsed).toLocaleString(displaySettings?.language === 'en' ? 'en-GB' : 'ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }); } catch { return ''; }
 }
 function renderSavedUsers() {
   const sessions = savedSessions(); const list = $('#saved-users');
   list.hidden = false;
   $('#auth-screen').classList.remove('account-selected');
   list.innerHTML = sessions.map((session, index) => {
-    const user = session.user || {}; const image = user.avatar ? `<img src="${esc(session.server)}/avatars/${encodeURIComponent(user.avatar)}" alt="">` : esc((user.display_name || user.username || '?')[0].toUpperCase());
-    return `<button class="saved-user" type="button" data-saved-session="${index}"><span class="xp-user-avatar">${image}</span><span><b>${esc(user.display_name || user.username)}</b><small>@${esc(user.username || '')}</small></span></button>`;
+    const user = session.user || {}; const image = `<img src="${user.avatar ? `${esc(session.server)}/avatars/${encodeURIComponent(user.avatar)}` : xpPicture(user)}" alt="">`;
+    const note = savedUserNote(session);
+    return `<button class="saved-user" type="button" data-saved-session="${index}"><span class="xp-user-avatar">${image}</span><span><b>${esc(user.display_name || user.username)}</b><small>@${esc(user.username || '')}</small>${note ? `<small class="saved-user-note${Number(session.unreadTotal) > 0 ? ' unread' : ''}">${esc(note)}</small>` : ''}</span></button>`;
   }).join('');
   $('#show-login-form').hidden = sessions.length === 0;
   $('#auth-form').hidden = sessions.length > 0;
@@ -200,7 +234,7 @@ function setDraft(key, text, sync = true) {
 // state of each chat, so every device of the user shows the same muted chats and unread counts.
 // The Nekochat token proves the account once (/link); afterwards only the companion's own
 // session token is used. When the companion is unreachable the client works without it.
-const SYNCED_KEYS = ['nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
+const SYNCED_KEYS = ['nk_chat_sounds', 'nk_sound_scheme', 'nk_sound_volume', 'nk_chat_wallpaper', 'nk_chat_wallpaper_opacity', 'nk_chat_wallpaper_position', 'nk_chat_wallpaper_color'];
 let profileUser = null;
 const companion = { url: '', token: '', readState: {}, timer: null, pushTimer: null, status: 'online', statuses: {}, clients: {}, lastSeen: {}, legacyStatuses: false };
 const latestIncoming = new Map(); // chat → id of the newest message that arrived while unread
@@ -252,7 +286,8 @@ function applyCompanionBundle(bundle) {
 // silences notifications and sounds here) and invisible (other Reloaded users see you offline).
 // "Away" is also set automatically after 10 minutes without activity and cleared on return.
 const STATUSES = ['online', 'away', 'dnd', 'invisible'];
-const AUTO_AWAY_AFTER = 10 * 60 * 1000;
+// "Away" after this many minutes without activity (User Accounts → Privacy; 0 turns it off).
+function autoAwayAfter() { let minutes = 10; try { const stored = localStorage.getItem('nk_auto_away_minutes'); if (stored !== null && stored !== '') minutes = Number(stored); } catch {} return minutes > 0 ? minutes * 60 * 1000 : Infinity; }
 let autoAway = false; let lastActivity = Date.now();
 const isDnd = () => companion.status === 'dnd';
 const statusLabel = status => t({ online: 'statusOnline', away: 'statusAway', dnd: 'dndOn', invisible: 'statusInvisible', offline: 'offline' }[status] || 'statusOnline');
@@ -275,7 +310,7 @@ function noteActivity() {
 }
 ['pointerdown', 'keydown', 'pointermove', 'wheel', 'touchstart'].forEach(name => window.addEventListener(name, noteActivity, { passive: true }));
 setInterval(() => {
-  if (companion.token && companion.status === 'online' && Date.now() - lastActivity > AUTO_AWAY_AFTER) { autoAway = true; setOwnStatus('away'); }
+  if (companion.token && companion.status === 'online' && Date.now() - lastActivity > autoAwayAfter()) { autoAway = true; setOwnStatus('away'); }
 }, 30000);
 // Live status changes from the companion (server 0.6+): others see a new status at once instead
 // of on the next 30-second poll, which stays as the fallback.
@@ -293,6 +328,12 @@ function openCompanionEvents() {
     renderList();
     if ($('#user-profile-dialog')?.open && profileUser && String(profileUser.id) === id) showUserProfile(profileUser);
   });
+  // Games (server 0.9+): an invitation, an entry of a game's log, the end of a game.
+  source.addEventListener('game_invite', event => { try { gameInvited(JSON.parse(event.data)); } catch {} });
+  source.addEventListener('game', event => { try { gameEntryArrived(JSON.parse(event.data)); } catch {} });
+  source.addEventListener('game_end', event => { try { gameEnded(JSON.parse(event.data).session); } catch {} });
+  // After a dropped connection the entries sent meanwhile are fetched again.
+  source.onopen = () => activeGames().forEach(id => syncGame(id));
   // A server without /events answers 404: EventSource gives up (CLOSED) and polling carries on.
   source.onerror = () => { if (source.readyState === EventSource.CLOSED && companion.events === source) companion.events = null; };
 }
@@ -523,8 +564,114 @@ function showUserProfile(user) {
 function renderMessageContent(content) {
   const lines = String(content ?? '').split('\n'); const quote = [];
   while (lines.length > 1 && lines[0].startsWith('> ')) quote.push(lines.shift().slice(2));
-  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${formatText(lines.join('\n'))}</p>`;
+  // A game challenge ([minesweeper:level:seed]) gets a Play button; other clients see the text.
+  let game = '';
+  const challenge = lines.join('\n').match(/\[minesweeper:(beginner|intermediate|expert):(\d{1,10})\]/);
+  if (challenge) { lines.splice(0, lines.length, ...lines.join('\n').replace(challenge[0], '').trimEnd().split('\n')); game = `<button type="button" class="game-challenge" data-game="minesweeper" data-level="${challenge[1]}" data-seed="${challenge[2]}"><img src="assets/images/games/minesweeper-32.png" alt="">${esc(t('gamePlay'))}</button>`; }
+  // A challenge for another game ([nkchallenge:<add-on>:<seed>[:<option>]]) gets a Play button too.
+  const generic = lines.join('\n').match(/\[nkchallenge:([\w-]{1,40}):(\d{1,10})(?::([\w-]{1,20}))?\]/);
+  if (generic) { lines.splice(0, lines.length, ...lines.join('\n').replace(generic[0], '').trimEnd().split('\n')); const icon = window.nkAddonList?.().find(item => item.id === generic[1])?.icon32; game = `<button type="button" class="game-challenge" data-addon="${esc(generic[1])}" data-seed="${generic[2]}" data-level="${esc(generic[3] || '')}">${icon ? `<img src="${esc(icon)}" alt="">` : ''}${esc(t('gamePlay'))}</button>`; }
+  // A file kept in Infinity Memory (📎 name (size) ∞ link) is drawn as a file card; other clients see the text.
+  const file = window.nkFileCard?.(lines.join('\n'));
+  if (file) { return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}${file.rest ? `<p>${formatText(file.rest)}</p>` : ''}${window.nkFileCardHtml(file)}`; }
+  return `${quote.length ? `<blockquote class="reply-quote">${esc(quote.join('\n'))}</blockquote>` : ''}<p>${formatText(lines.join('\n'))}</p>${game}`;
 }
+// Sends a message to any chat: the open one the usual way, another straight over the socket.
+function sendToChat(key, content) {
+  const [kind, id] = String(key).split(':'); const chatId = Number(id);
+  if (current && current.kind === kind && Number(current.data.id) === chatId) { sendChatMessage(content); return; }
+  sendSocketMessage(kind === 'room' ? { type: 'room_message', room_id: chatId, content } : { type: 'direct_message', to_id: chatId, content });
+}
+// Games: Play on a challenge opens the game; its result comes back through localStorage.
+document.addEventListener('click', event => {
+  const button = event.target.closest('.game-challenge'); if (!button || !current) return;
+  const addon = button.dataset.addon || button.dataset.game;
+  const play = () => button.dataset.addon ? desktopControls?.openAddon?.(addon, { seed: button.dataset.seed, level: button.dataset.level, chat: chatKey(current.kind, current.data.id) }) : desktopControls?.openGame?.({ game: button.dataset.game, level: button.dataset.level, seed: button.dataset.seed, chat: chatKey(current.kind, current.data.id) });
+  (window.nkHasAddon ? window.nkHasAddon(addon) : Promise.resolve(false)).then(has => has ? play() : offerCatalog());
+});
+// A game is an add-on from the Catalog: without it, Play offers to open the Catalog.
+function offerCatalog() {
+  let dialog = $('#addon-needed-dialog');
+  if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'addon-needed-dialog'; dialog.className = 'xp-dialog chat-sound-dialog'; document.body.append(dialog); }
+  dialog.innerHTML = `<div class="dialog-title">${esc(t('games'))}</div><div class="chat-sound-body"><p>${esc(t('gameNeedsAddon'))}</p><div class="chat-sound-actions"><button type="button" class="xp-button" data-do="catalog">${esc(t('gameOpenCatalog'))}</button><button type="button" class="xp-button" data-do="cancel">${esc(t('cancel'))}</button></div></div>`;
+  dialog.querySelector('[data-do="catalog"]').onclick = () => { dialog.close(); desktopControls?.openThemeBrowser?.(); };
+  dialog.querySelector('[data-do="cancel"]').onclick = () => dialog.close();
+  dialog.showModal();
+}
+window.addEventListener('storage', event => {
+  if (event.key !== 'nk_game_result' || !event.newValue) return;
+  try { const result = JSON.parse(event.newValue); if (/^(room|dm):\d+$/.test(result.chat) && result.text && Date.now() - Number(result.at) < 60000) sendToChat(result.chat, String(result.text).slice(0, 300)); } catch {}
+});
+// ---- Games between users (companion server 0.9+). A game is an add-on from the Catalog (its window);
+// the companion server carries the moves: every entry of a session's log is kept in localStorage
+// (nk_game_log:<session>), which the game window reads and watches. The window writes what it wants to
+// send to nk_game_out and this window posts it to the companion.
+const gameLogKey = id => `nk_game_log:${id}`;
+function gameLogRead(id) { try { return JSON.parse(localStorage.getItem(gameLogKey(id))) || null; } catch { return null; } }
+function activeGames() { try { return JSON.parse(localStorage.getItem('nk_game_logs') || '[]').filter(id => !gameLogRead(id)?.ended); } catch { return []; } }
+function gameLogWrite(id, log) {
+  try {
+    localStorage.setItem(gameLogKey(id), JSON.stringify(log));
+    const list = JSON.parse(localStorage.getItem('nk_game_logs') || '[]').filter(item => item !== id); list.push(id);
+    while (list.length > 12) localStorage.removeItem(gameLogKey(list.shift()));
+    localStorage.setItem('nk_game_logs', JSON.stringify(list));
+  } catch {}
+}
+function gameEntryArrived(entry) {
+  const log = gameLogRead(entry.session) || { entries: [], ended: false };
+  if (log.entries.some(item => item.seq === entry.seq)) return;
+  const { session, ...item } = entry; log.entries.push(item); log.entries.sort((a, b) => a.seq - b.seq);
+  gameLogWrite(session, log);
+}
+function gameEnded(id) {
+  const log = gameLogRead(id); if (log) { log.ended = true; gameLogWrite(id, log); }
+  const dialog = $('#game-invite-dialog'); if (dialog?.open && dialog.dataset.session === id) dialog.close();
+}
+async function syncGame(id) {
+  const game = await companionFetch('GET', `/games/${encodeURIComponent(id)}`); if (!game) return null;
+  gameLogWrite(id, { entries: game.log || [], ended: Boolean(game.closed), game: game.game, host: game.host, hostName: game.host_name });
+  return game;
+}
+function openGameWindow(game) {
+  desktopControls?.openAddon?.(game.game, { session: game.id, me: String(me.id), name: displayName(me), host: Number(game.host) === Number(me.id) ? '1' : '0', hostName: game.host_name || '', chat: game.chat || '' });
+}
+// The other side of a "Play with…" from the chat menu: makes the session (which invites the chat) and opens the window.
+async function startGame(chat, addonId) {
+  const game = await companionFetch('POST', '/games', { game: addonId, chat }, true);
+  if (game === false) { showSystemDialog(t('gameNoServer'), 'warning', t('games')); return; }
+  if (!game) { showSystemDialog(t('gameStartFailed'), 'error', t('games')); return; }
+  gameLogWrite(game.id, { entries: game.log || [], ended: false, game: game.game, host: game.host, hostName: game.host_name });
+  openGameWindow(game);
+}
+function gameName(id) { const addon = window.nkAddonList?.().find(item => item.id === id); return addon?.name?.[displaySettings?.language === 'en' ? 'en' : 'ru'] || addon?.name?.en || id; }
+function gameInvited(invite) {
+  if (Number(invite.from) === Number(me?.id) || isDnd() || !invite.session) return;
+  if (String(invite.chat).startsWith('room:') && !rooms.some(room => `room:${room.id}` === invite.chat)) return;
+  playSound('notify');
+  let dialog = $('#game-invite-dialog');
+  if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'game-invite-dialog'; dialog.className = 'xp-dialog chat-sound-dialog game-invite-dialog'; document.body.append(dialog); }
+  dialog.dataset.session = invite.session;
+  dialog.innerHTML = `<div class="dialog-title">${esc(t('gameInviteTitle'))}</div><div class="chat-sound-body"><p>${esc(t('gameInviteText', { name: invite.name || t('user'), game: gameName(invite.game) }))}</p><div class="chat-sound-actions"><button type="button" class="xp-button" data-do="play">${esc(t('gamePlay'))}</button><button type="button" class="xp-button" data-do="decline">${esc(t('gameDecline'))}</button></div></div>`;
+  dialog.querySelector('[data-do="decline"]').onclick = () => dialog.close();
+  dialog.querySelector('[data-do="play"]').onclick = async () => {
+    dialog.close();
+    if (!(window.nkHasAddon ? await window.nkHasAddon(invite.game) : false)) { offerCatalog(); return; }
+    const game = await syncGame(invite.session);
+    if (!game || game.closed) { showSystemDialog(t('gameEnded'), 'warning', t('games')); return; }
+    openGameWindow(game);
+  };
+  dialog.show();
+}
+window.addEventListener('storage', event => {
+  if (event.key !== 'nk_game_out' || !event.newValue) return;
+  let out; try { out = JSON.parse(event.newValue); } catch { return; }
+  if (!/^[\w-]{6,40}$/.test(String(out.session || '')) || Date.now() - Number(out.at) > 60000) return;
+  const id = encodeURIComponent(out.session);
+  if (out.cmd === 'sync') { syncGame(out.session); return; }
+  if (out.cmd === 'end') { companionFetch('DELETE', `/games/${id}`); return; }
+  const send = () => companionFetch('POST', `/games/${id}/send`, { kind: String(out.kind || '').slice(0, 24), payload: out.payload ?? null, ...(Array.isArray(out.to) ? { to: out.to.map(Number).filter(Number.isFinite) } : {}) });
+  send().then(result => { if (!result) setTimeout(() => send(), 1500); });
+});
 // Markdown-like formatting: ```code blocks```, `code`, **bold**, *italic* / _italic_, ~~strike~~,
 // clickable links and @mentions (yours highlighted). Everything is escaped first.
 const URL_PATTERN = /https?:\/\/[^\s<>"']+[^\s<>"'.,:;!?)\]]/g;
@@ -642,7 +789,7 @@ function websocketUrl() {
   const url = new URL(API);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.pathname = `${url.pathname.replace(/\/$/, '')}/ws`.replace(/^\/\//, '/');
-  url.search = ''; url.searchParams.set('token', token);
+  url.search = ''; url.searchParams.set('token', token); url.searchParams.set('c', clientId());
   return url.href;
 }
 // The server explains a rejected action in {type:'error', message}; repeats are shown once.
@@ -658,6 +805,12 @@ function socketMessage(payload) {
   if (type === 'status') {
     const user = users.find(item => item.id === (payload.user_id ?? payload.user?.id));
     if (user) { user.is_online = payload.is_online ?? payload.online ?? true; renderList(); }
+    return;
+  }
+  if (type === 'presence_update' && payload.user?.id != null) {
+    // Name, picture, status or colour of someone changed: show it without a reload.
+    const user = users.find(item => item.id === payload.user.id);
+    if (user) { Object.assign(user, payload.user); renderList(); }
     return;
   }
   if (type === 'error' && payload.message) { showServerError(String(payload.message)); return; }
@@ -690,7 +843,7 @@ function socketMessage(payload) {
     // A mention of you notifies even in a muted chat (Do not disturb still stays quiet).
     if ((!isMuted(key) || mentionsMe(message.content)) && !isDnd()) desktopControls?.notifyMessage?.({ sender: displayName(sender), content: String(message.content || ''), avatarUrl: sender.avatar ? `${API}/avatars/${encodeURIComponent(sender.avatar)}` : '' });
   }
-  if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playSound('notify'); return; }
+  if (!matchingRoom && !matchingDirect) { if (!mine && !isMuted(key) && !isDnd()) playChatSound(key); return; }
   const messageId = messageKey(message);
   if ([...document.querySelectorAll('#messages article')].some(node => node.dataset.key === messageId)) return;
   if (mine) {
@@ -931,7 +1084,7 @@ function isDuplicateCallEvent(payload) {
 }
 function eventStreamUrl() {
   const url = new URL(`${API.replace(/\/$/, '')}/stream`);
-  url.searchParams.set('token', token);
+  url.searchParams.set('token', token); url.searchParams.set('c', clientId());
   return url.href;
 }
 function eventStreamMessage(event, data) {
@@ -1571,7 +1724,10 @@ desktopControls?.onSystemAction?.(async action => {
   } catch (error) { showSystemDialog(error.message, 'error', t('roomJoin')); }
 });
 $('#profile-button').onclick = () => $('#profile-dialog').showModal(); document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => document.querySelector(`#${button.dataset.close}`).close());
-function leaveAccount(forgetSession) { hadConnection = false; closeCompanionEvents(); try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; companion.clients = {}; companion.legacyStatuses = false; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
+function leaveAccount(forgetSession) {
+  // Remember the unread messages of the account you leave: the Welcome screen shows them.
+  try { const total = [...unread.values()].reduce((sum, count) => sum + Number(count || 0), 0); const key = me?.id !== undefined ? `${API}|${me.id}` : ''; if (key) writeSavedSessions(savedSessions().map(item => item?.key === key ? { ...item, unreadTotal: total, lastUsed: Date.now() } : item)); } catch {}
+  hadConnection = false; closeCompanionEvents(); try { localStorage.removeItem('nk_reloaded_active'); } catch {} clearInterval(companion.timer); companion.status = 'online'; companion.statuses = {}; companion.clients = {}; companion.legacyStatuses = false; autoAway = false; document.querySelector('.online-dot')?.classList.remove('away', 'dnd', 'invisible'); if ($('#status-button')) { $('#status-button').hidden = true; $('#profile-status').hidden = false; } if (forgetSession && companion.token) { companionFetch('POST', '/logout'); try { localStorage.removeItem(companionTokenKey()); } catch {} } companion.token = ''; if (activeCall) endCall(); stopRingtone(); playSound('logoff'); desktopControls?.closeDetachedChats?.(); disconnectSocket(); disconnectEventStream(); if (forgetSession) writeSavedSessions(savedSessions().filter(item => item?.key !== `${API}|${me?.id}`)); token = null; me = null; localStorage.removeItem('nk_token'); $('#profile-dialog').close(); showAuthScreen(); }
 function expireSession() {
   if (!token || !me) return;
   const username = me.username || '';
@@ -1647,14 +1803,19 @@ $('#status-button').onclick = event => { event.stopPropagation(); $('#status-men
 $('#status-menu').onclick = event => { const item = event.target.closest('[data-status]'); if (item) chooseStatus(item.dataset.status); };
 document.addEventListener('click', event => { if (!event.target.closest('.status-picker')) $('#status-menu').hidden = true; });
 // The server admin panel button is off unless turned on in Display Properties → Settings.
-function refreshAdminButton() { let shown = false; try { shown = localStorage.getItem('nk_show_admin_button') === '1'; } catch {} $('#admin-panel-button').hidden = !desktopControls?.openAdminPanel || !shown; }
-refreshAdminButton();
+// The Admin Panel, the Theme Editor and Minesweeper are add-ons from the Catalog: their buttons
+// show only while they are installed.
+const hasAddon = id => Boolean(desktopControls?.openAddon && window.nkAddonInstalled?.(id));
+function refreshAdminButton() { let shown = false; try { shown = localStorage.getItem('nk_show_admin_button') === '1'; } catch {} $('#admin-panel-button').hidden = !desktopControls?.openAdminPanel || !shown || !hasAddon('admin'); }
+function refreshAddonButtons() { refreshAdminButton(); $('#theme-editor-profile').hidden = !desktopControls?.openThemeEditor || !hasAddon('theme-editor'); $('#games-profile').hidden = !desktopControls?.openGame || !hasAddon('minesweeper'); }
+window.addEventListener('nk-addons-ready', refreshAddonButtons);
+window.nkAddons?.().catch(() => {});
 window.addEventListener('storage', event => { if (event.key === 'nk_show_admin_button') refreshAdminButton(); });
 $('#admin-panel-button').onclick = () => { $('#profile-dialog').close(); desktopControls.openAdminPanel(API); };
-$('#theme-browser-profile').onclick = () => { $('#profile-dialog').close(); desktopControls?.openThemeBrowser(); };
 // The theme editor needs the desktop app (it writes theme folders).
-$('#theme-editor-profile').hidden = !desktopControls?.openThemeEditor;
 $('#theme-editor-profile').onclick = () => { $('#profile-dialog').close(); desktopControls.openThemeEditor(); };
+// Minesweeper on its own (a challenge is sent from a chat's right-click menu).
+$('#games-profile').onclick = () => { $('#profile-dialog').close(); desktopControls.openGame({ game: 'minesweeper' }); };
 $('#personalize').onclick = () => { $('#profile-dialog').close(); (desktopControls?.openControlPanel || desktopControls?.openThemeSettings)?.(); };
 document.querySelectorAll('[data-profile-task]').forEach(button => button.onclick = () => openProfileTask(button.dataset.profileTask));
 $('#profile-back').onclick = () => openProfileTask(); $('#profile-cancel').onclick = () => $('#profile-editor').close();
@@ -1716,8 +1877,8 @@ refreshStartPanelIcons();
 (async () => {
   if (!desktopControls?.listPacks) return;
   const chosen = key => { try { const value = localStorage.getItem(key) || ''; return value.startsWith('pack:') ? value.slice(5) : null; } catch { return null; } };
-  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper') };
-  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper) return;
+  const ids = { sound: chosen('nk_sound_scheme'), cursor: chosen('nk_cursor_scheme'), icon: chosen('nk_icon_scheme'), wallpaper: chosen('nk_chat_wallpaper'), assistant: chosen('nk_assistant') };
+  if (!ids.sound && !ids.cursor && !ids.icon && !ids.wallpaper && !ids.assistant) return;
   let packs = []; try { packs = await desktopControls.listPacks(); } catch { return; }
   const find = id => packs.find(pack => pack.id === id);
   try {
@@ -1725,6 +1886,7 @@ refreshStartPanelIcons();
     if (ids.cursor) localStorage.setItem('nk_cursor_pack', JSON.stringify(find(ids.cursor)?.cursors || {}));
     if (ids.icon) localStorage.setItem('nk_icon_pack', JSON.stringify(find(ids.icon)?.icons || {}));
     // pack:<id>/<name>; the choice is synced, so on another device the pack may be missing.
+    if (ids.assistant) { localStorage.setItem('nk_assistant_pack', JSON.stringify(find(ids.assistant)?.assistant || null)); window.nkAssistant?.change(); }
     if (ids.wallpaper) { const [id, ...name] = ids.wallpaper.split('/'); localStorage.setItem('nk_chat_wallpaper_pack', find(id)?.wallpapers?.[name.join('/')] || ''); }
   } catch {}
   window.nkPacks?.applyCursors(); window.nkPacks?.applyIcons(); applyWallpaper();

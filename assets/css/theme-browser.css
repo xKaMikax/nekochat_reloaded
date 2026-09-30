@@ -1,3 +1,116 @@
 html,body{width:100%;height:100%;margin:0;overflow:hidden;font:12px Tahoma,Arial,sans-serif}.theme-browser-window{min-width:0;min-height:0;background:var(--xp-theme-window,#ece9d8)}.theme-browser-window .xp-window-controls{width:var(--xp-control-width,21px)}.theme-browser-window #close{flex-basis:var(--xp-control-width,21px);background-image:var(--xp-close-normal)}.theme-browser-window #close::after{content:'';display:block;width:var(--xp-glyph-width,13px);height:var(--xp-glyph-height,13px);margin:var(--xp-glyph-margin,4px);background:var(--xp-close-glyph) center/var(--xp-glyph-width,13px) var(--xp-glyph-height,13px) no-repeat}.theme-browser{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;background:var(--xp-theme-window,#ece9d8)}.browser-tabs{display:flex;gap:3px;padding:7px 8px 0;background:var(--xp-theme-buttonface,#ece9d8)}.browser-tab,.theme-card button,.detail-back,.detail-install{height:27px;padding:0 12px;border:4px solid transparent;border-image:var(--xp-button-normal) 4 fill;background:transparent;color:var(--xp-theme-windowtext,#173d72);font:bold 12px Tahoma,Arial,sans-serif}.browser-tab:hover,.theme-card button:hover,.detail-back:hover,.detail-install:hover{border-image:var(--xp-button-hover,var(--xp-button-normal)) 4 fill}.browser-tab:active,.theme-card button:active,.detail-back:active,.detail-install:active{border-image:var(--xp-button-pressed,var(--xp-button-normal)) 4 fill}.browser-tab{min-width:96px;border-bottom:0}.browser-tab.active{position:relative;top:1px;background:var(--xp-theme-window,#fff);border:1px solid #7f9db9;color:var(--xp-theme-windowtext,#000)}.browser-panel{min-height:0;flex:1;overflow:auto;margin:0 8px 8px;padding:11px;border:1px solid #7f9db9;background:var(--xp-theme-window,#fff)}.browser-intro{margin:0 0 12px;color:var(--xp-theme-windowtext,#3b4f65)}.browser-status{margin:7px 0;color:#666}.browser-status.error{color:#9e1710}.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px}.theme-card{display:flex;min-width:0;min-height:112px;gap:9px;padding:8px;border:1px solid #9cb6d5;background:var(--xp-theme-buttonface,#f8fbff);cursor:pointer}.theme-card.active{border-color:#245edb;box-shadow:inset 0 0 0 1px #b9d6ff}.theme-preview{width:72px;height:54px;flex:none;object-fit:cover;border:1px solid #57779b;background:#d4d0c8}.theme-preview.placeholder{display:grid;place-items:center;color:#416892;font-weight:bold}.theme-info{min-width:0;flex:1}.theme-info h2{overflow:hidden;margin:0 0 4px;color:var(--xp-theme-highlight,#174a8d);font-size:14px;text-overflow:ellipsis;white-space:nowrap}.theme-info p{margin:2px 0;color:#526477;font-size:11px}.theme-card button{width:100%;margin-top:7px}.theme-card button:disabled{color:#777;filter:grayscale(1)}.theme-details{margin-top:12px;padding:12px;border:1px solid #7f9db9;background:var(--xp-theme-window,#fff)}.detail-content{display:grid;grid-template-columns:minmax(230px,42%) 1fr;gap:15px;margin-top:10px}.detail-content img{width:100%;max-height:240px;object-fit:contain;border:1px solid #57779b;background:#d4d0c8}.detail-content h2{margin:0 0 6px;color:var(--xp-theme-highlight,#174a8d)}.detail-meta{color:#526477}.detail-description{min-height:72px;white-space:pre-wrap}.detail-install{min-width:180px;margin-top:12px}.empty-list{margin:16px 0;color:#666}
 .browser-toolbar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:4px 0 6px}.browser-toolbar label{display:inline-flex;align-items:center;gap:5px}.browser-toolbar select{height:22px;border:1px solid #7f9db9;background:#fff;font:inherit}
 .theme-author{cursor:pointer;text-decoration:underline dotted}.theme-author:hover{color:var(--xp-theme-highlight,#174a8d)}
+/* The menu bar with Help, like Explorer's. */
+.cp-menu { display: flex; align-items: center; height: 20px; margin: 0 0 6px; padding: 0 2px; border-bottom: 1px solid #d6d2c2; background: var(--xp-theme-buttonface, #ece9d8); }
+.cp-menu button { height: 18px; padding: 0 7px; border: 0; background: none; color: #000; font: inherit; }
+.cp-menu button:hover, .cp-menu button.open { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.cp-menu-popup { position: fixed; z-index: 50; display: flex; flex-direction: column; min-width: 190px; padding: 2px; border: 1px solid #aca899; background: #fff; box-shadow: 2px 2px 3px rgba(0, 0, 0, .3); }
+.cp-menu-popup button { height: 20px; padding: 0 20px; border: 0; background: none; color: #000; font: 11px Tahoma, sans-serif; text-align: left; }
+.cp-menu-popup button:hover { background: var(--xp-theme-highlight, #316ac5); color: #fff; }
+.cp-menu-popup hr { margin: 3px 1px; border: 0; border-top: 1px solid #aca899; }
+
+/* The Catalog as Windows Update / Microsoft Update. */
+.wu .cp-menu { margin: 0; flex: none; }
+.wu-banner { position: relative; flex: none; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 18px; background: linear-gradient(90deg, #fff 0%, #fff 42%, #c9d3ee 100%); border-bottom: 1px solid #b9c3de; overflow: hidden; }
+.wu-globe { width: 48px; height: 48px; flex: none; object-fit: contain; }
+.wu-brand { font: 400 30px 'Trebuchet MS', Tahoma, sans-serif; color: #222; white-space: nowrap; }
+.wu-tag { flex: 1; max-width: 300px; margin-left: 18px; color: #4a5a86; font: 14px 'Trebuchet MS', Tahoma, sans-serif; line-height: 1.15; }
+.wu-body { display: flex; flex: 1 1 auto; min-height: 0; background: #fff; }
+.wu-side { flex: none; width: 196px; padding: 12px 12px 16px; overflow-y: auto; background: #fff; border-right: 1px solid #a9b3cf; font: 11px Tahoma, Arial, sans-serif; }
+.wu-side h4 { margin: 16px 0 6px; font: 700 11px Tahoma, Arial, sans-serif; color: #000; }
+.wu-link, .wu-side a { display: block; margin: 0 0 5px; padding: 2px 4px; color: #0a2fa8; text-decoration: none; }
+.wu-link:hover, .wu-side a:hover, .wu-content a:hover { text-decoration: underline; }
+.wu-link.on { border: 1px solid #222; padding: 3px 3px; color: #000; }
+.wu-install { display: flex !important; align-items: center; gap: 7px; margin: 12px 0 4px !important; font-weight: 700; color: #0a2fa8 !important; }
+.wu-install img, .wu-go img { width: 18px; height: 18px; flex: none; }
+.wu-sort { display: block; margin: 8px 4px 0; color: #000; }
+.wu-sort select { display: block; width: 100%; margin-top: 3px; height: 21px; border: 1px solid #7f9db9; background: #fff; font: 11px Tahoma, Arial, sans-serif; }
+.wu-main { flex: 1; min-width: 0; overflow-x: hidden; overflow-y: auto; background: #fff; padding-bottom: 22px; font: 12px Tahoma, Arial, sans-serif; color: #000; }
+.wu-strip { position: relative; height: 72px; overflow: hidden; background: url('../images/wu/welcomebanner-bg.jpg') no-repeat left top; }
+.wu-strip::after { content: ''; position: absolute; left: 318px; right: 0; top: 44px; height: 28px; background: linear-gradient(90deg, #dfdfdd 0%, #fff 100%); }
+.wu-strip-text { position: absolute; z-index: 1; left: 178px; top: 0; right: 0; color: #666; font-family: 'Trebuchet MS', Tahoma, sans-serif; line-height: 1; }
+.wu-strip-text b { display: block; margin-top: 2px; font-size: 36px; line-height: 40px; font-weight: 400; letter-spacing: -.5px; white-space: nowrap; }
+.wu-strip-text span { position: absolute; left: 4px; top: 45px; font-size: 17px; line-height: 22px; white-space: nowrap; }
+.wu-two { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 22px; padding: 0 18px 0 16px; }
+.wu-content { padding: 0 18px 0 16px; }
+.wu-content.full { padding-right: 20px; }
+.wu-h { margin: 22px 0 8px; font: 400 21px 'Trebuchet MS', Tahoma, sans-serif; color: #666; }
+.wu-content.full .wu-h { font-size: 17px; margin-top: 20px; }
+.wu-h3 { display: flex; align-items: center; gap: 10px; margin: 22px 0 6px; padding-top: 16px; border-top: 1px solid #ccc; font: 700 14px Tahoma, Arial, sans-serif; }
+.wu-h3 img { width: 28px; height: 28px; }
+.wu-content p { margin: 6px 0; line-height: 1.35; }
+.wu-choice { display: flex; align-items: center; gap: 14px; margin: 26px 0; }
+.wu-choice span { max-width: 340px; }
+.wu-btn { min-width: 76px; height: 24px; padding: 0 12px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: 11px Tahoma, Arial, sans-serif; cursor: default; }
+.wu-btn:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal, linear-gradient(#fff, #d4d0c8))); }
+.wu-btn:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal, linear-gradient(#fff, #d4d0c8))); }
+.wu-btn.small { min-width: 62px; height: 22px; }
+.wu-boxes { padding-top: 20px; }
+.wu-box { margin-bottom: 14px; border: 1px solid #5a83d4; border-radius: 5px; background: #fff; overflow: hidden; font-size: 11px; }
+.wu-box header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; color: #fff; background: linear-gradient(#2c62d0, #1b4bb8); }
+.wu-box.ok header { border-bottom: 4px solid #3f9a2c; }
+.wu-box header img { width: 22px; height: 22px; }
+.wu-box p { margin: 8px; }
+.wu-box.news { border-color: #a07f3d; }
+.wu-box.news header { color: #000; background: #fff; border-top: 5px solid #a07f3d; }
+.wu-box a, .wu-content a { color: #0a2fa8; text-decoration: none; }
+.wu-actionline { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; }
+.wu-go { display: inline-flex; align-items: center; gap: 7px; }
+.wu-group-box { padding: 6px 12px 12px; border: 1px solid #b4b4b0; background: #f4f4f2; }
+.wu-tools { margin: 8px 0 10px; }
+.wu-groupbar { margin: 8px 0 4px; padding: 3px 4px; background: #c6c6c6; font: 700 11px Tahoma, Arial, sans-serif; }
+.wu-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; }
+.wu-checkline { display: inline-flex; }
+.wu-check { appearance: none; -webkit-appearance: none; width: 13px; height: 13px; margin: 0; background: var(--xp-checkbox-unchecked, linear-gradient(#fff, #ddd)) center / 13px 13px no-repeat; }
+.wu-check:hover { background-image: var(--xp-checkbox-unchecked-hover, var(--xp-checkbox-unchecked)); }
+.wu-check:checked { background-image: var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8)); }
+.wu-check:checked:hover { background-image: var(--xp-checkbox-checked-hover, var(--xp-checkbox-checked)); }
+.wu-plus { width: 11px; height: 11px; padding: 0; border: 1px solid #7a7a7a; background: #fff; color: #000; font: 700 9px/9px Tahoma, sans-serif; text-align: center; cursor: default; }
+.wu-name { color: #0a2fa8; }
+.wu-by { color: #555; font-size: 11px; }
+.wu-detail { display: flex; flex: 1 0 100%; gap: 12px; margin: 4px 0 6px 44px; font-size: 11px; }
+.wu-detail[hidden] { display: none; }
+.wu-thumb { width: 132px; max-height: 100px; flex: none; object-fit: contain; border: 1px solid #999; background: #d4d0c8; }
+.wu-detail-text p { margin: 2px 0; }
+.wu-meta { color: #666; }
+.wu-plain { padding: 3px 4px; font-size: 11px; }
+.wu-empty { margin: 18px 0; color: #666; }
+.wu-notice { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid #e2d9a8; background: #fdf9e4; }
+.wu-summary { margin: 8px 0 14px 4px; border-collapse: collapse; }
+.wu-summary td { padding: 2px 30px 2px 0; }
+.wu-summary img { width: 16px; height: 16px; vertical-align: -3px; }
+.wu-detail-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.wu-content { min-width: 0; }
+@media (max-width: 620px) {
+  .wu-body { flex-direction: column; }
+  /* The sidebar becomes one scrolling row of links above the page. */
+  .wu-side { display: flex; flex: none; align-items: center; gap: 4px 10px; width: auto; max-height: none; padding: 6px 10px; overflow: auto hidden; border-right: 0; border-bottom: 1px solid #a9b3cf; white-space: nowrap; }
+  .wu-side h4 { display: none; }
+  .wu-link, .wu-side a, .wu-install { flex: none; margin: 0 !important; padding: 5px 8px; }
+  .wu-link.on { padding: 4px 7px; }
+  .wu-sort { display: flex; flex: none; align-items: center; gap: 6px; margin: 0; }
+  .wu-sort select { width: auto; margin: 0; height: 26px; }
+  .wu-two { grid-template-columns: 1fr; gap: 0; padding: 0 12px; }
+  .wu-content, .wu-content.full { padding: 0 12px; }
+  .wu-brand { font-size: 20px; }
+  .wu-banner { padding: 0 12px; }
+  .wu-tag { display: none; }
+  .wu-strip { height: 56px; background-size: auto 56px; }
+  .wu-strip::after { left: 120px; top: 34px; height: 22px; }
+  .wu-strip-text { left: 118px; }
+  .wu-strip-text b { overflow: hidden; margin-top: 2px; font-size: 20px; line-height: 28px; text-overflow: ellipsis; }
+  .wu-strip-text span { left: 2px; top: 32px; overflow: hidden; max-width: calc(100vw - 130px); font-size: 13px; line-height: 20px; text-overflow: ellipsis; }
+  .wu-h { font-size: 18px; }
+  .wu-choice { gap: 10px; }
+  .wu-choice span { max-width: none; }
+  .wu-btn { min-height: 32px; }
+  .wu-detail { margin-left: 0; flex-wrap: wrap; }
+  .wu-history { display: block; overflow-x: auto; }
+}
+.wu-history { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 11px; }
+.wu-history th { padding: 3px 8px; background: #c6c6c6; text-align: left; font-weight: 700; }
+.wu-history td { padding: 6px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+.wu-actions { text-align: right; white-space: nowrap; }
+.wu-actions .wu-btn { margin-left: 4px; }
+.wu-choice .wu-btn { min-width: 92px; }

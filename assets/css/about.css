@@ -1,0 +1,29 @@
+/* About box, like Windows XP's: a blue banner in the style of XP's (with Nekochat Reloaded's own
+   name and cat), the orange stripe from shell32.dll, then the program and the OK button. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px Tahoma, Arial, sans-serif; }
+.about-window { min-width: 0; min-height: 0; background: var(--xp-theme-window, #ece9d8); }
+.about-window .xp-window-controls { width: var(--xp-control-width, 21px); }
+.about-window #close { flex-basis: var(--xp-control-width, 21px); background-image: var(--xp-close-normal); }
+.about-window #close::after { content: ''; display: block; width: var(--xp-glyph-width, 13px); height: var(--xp-glyph-height, 13px); margin: var(--xp-glyph-margin, 4px); background: var(--xp-close-glyph) center / var(--xp-glyph-width, 13px) var(--xp-glyph-height, 13px) no-repeat; }
+.about { display: flex; flex: 1; min-width: 0; flex-direction: column; background: var(--xp-theme-window, #ece9d8); color: #000; }
+.about-banner { position: relative; height: 72px; overflow: hidden; background: radial-gradient(ellipse 60% 120% at 62% 30%, rgba(255, 255, 255, .28), transparent 70%), linear-gradient(180deg, #5b8ee8 0%, #2f64cf 55%, #1f4fb8 100%); color: #fff; }
+.about-banner::after { content: ''; position: absolute; left: -10%; right: -10%; top: 40px; height: 80px; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.about-copy { position: absolute; left: 8px; top: 30px; font-size: 9px; line-height: 1.2; }
+.about-logo { position: absolute; left: 118px; top: 6px; display: flex; align-items: center; gap: 6px; }
+.about-logo img { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, .4)); }
+.about-brand { font: bold 30px/1 'Franklin Gothic Medium', 'Trebuchet MS', Tahoma, sans-serif; letter-spacing: -.5px; text-shadow: 1px 1px 1px rgba(0, 0, 0, .35); }
+.about-brand sup { margin-left: 2px; color: #ff9933; font-size: 14px; font-style: italic; vertical-align: 14px; }
+.about-edition { position: absolute; left: 166px; top: 46px; font: 15px 'Franklin Gothic Medium', 'Trebuchet MS', Tahoma, sans-serif; color: #e3ecff; }
+.about-mark { position: absolute; right: 8px; bottom: 6px; font: italic bold 12px Tahoma, sans-serif; }
+.about-stripe { display: block; height: 5px; background: url('../images/about/stripe.png') 0 0 / 100% 100% no-repeat; }
+.about-body { display: flex; flex: 1; flex-direction: column; padding: 12px 16px 12px; }
+.about-product { display: flex; gap: 12px; }
+.about-product img { width: 32px; height: 32px; object-fit: contain; }
+.about-product p { margin: 0 0 2px; }
+.about-license { margin: 14px 0 4px 46px; }
+.about-user { margin: 0 0 0 58px; }
+.about-body hr { margin: 12px 0 8px 46px; border: 0; border-top: 1px solid #aca899; box-shadow: 0 1px #fff; }
+.about-server { margin: 0 0 0 46px; overflow-wrap: anywhere; }
+.about-buttons { display: flex; justify-content: flex-end; margin-top: auto; padding-top: 10px; }
+.about-buttons button { min-width: 75px; height: 23px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: inherit; }
+.about-buttons button:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }

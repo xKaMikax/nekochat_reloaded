@@ -110,3 +110,27 @@ html:not(.xp-checkboxes) .backup-parts input[type="checkbox"], html:not(.xp-chec
 .updates-option .updates-detail { grid-column: 2; display: flex; align-items: flex-start; gap: 8px; }
 .updates-option .updates-detail img, .updates-option .updates-detail i { flex: none; width: 32px; height: 32px; }
 .updates-page a { color: #0000ee; }
+/* Assistant applet. */
+.assistant-page .assistant-choice { display: flex; align-items: center; gap: 14px; margin: 10px 0; }
+.assistant-page canvas { flex: none; width: 80px; height: 80px; border: 1px solid #7f9db9; background: #fff; }
+.assistant-page .assistant-choice label { display: flex !important; flex: 1; flex-direction: column; gap: 4px; margin: 0 !important; }
+.assistant-page[hidden] { display: none; }
+.assistant-page .assistant-choice label { align-items: flex-start !important; text-align: left; }
+/* Effects… and Advanced… dialogs (XP sub-dialogs of the Appearance tab). */
+.xp-subdialog { min-width: 360px; max-width: calc(100vw - 30px); padding: 0; border: 1px solid var(--xp-theme-highlight, #0054e3); background: var(--xp-theme-window, #ece9d8); box-shadow: 3px 3px 6px rgba(0, 0, 0, .35); font: 11px Tahoma, Arial, sans-serif; }
+.xp-subdialog::backdrop { background: transparent; }
+.xp-subdialog-title { height: 22px; padding: 3px 8px; box-sizing: border-box; background: var(--xp-title-fill, #0054e3); background-size: auto 100%; color: #fff; font-weight: bold; }
+.xp-subdialog-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.xp-subdialog-body select { width: 150px; margin-left: 18px; }
+.xp-subdialog-buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.xp-subdialog button { min-width: 75px; height: 23px; border: 4px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: #000; font: inherit; }
+.advanced-preview { height: 120px; margin: 0; }
+.advanced-grid { display: grid; grid-template-columns: 1fr 70px 60px 60px 70px; gap: 6px; align-items: end; }
+.advanced-grid label { display: flex; flex-direction: column; gap: 2px; }
+.advanced-grid label.disabled { color: #aca899; }
+.advanced-grid select { width: 100%; margin: 0; }
+.advanced-grid input[type="number"] { width: 100%; box-sizing: border-box; }
+.advanced-grid input[type="color"] { width: 100%; height: 22px; padding: 0 2px; }
+.advanced-style { display: flex; gap: 6px; grid-column: 1 / -1; }
+#look-reset { align-self: flex-start; }
+.regional-page .xp-group { margin: 12px 0 0; padding: 8px 10px 12px; } .regional-page .xp-group p { margin: 4px 0 8px; } .regional-page .regional-note { color: var(--xp-theme-graytext, #6d6d6d); } .regional-page .xp-group p:not(.regional-note) { color: var(--xp-theme-windowtext, #000); } .regional-page label { display: flex; align-items: center; gap: 8px; } .regional-page select { min-width: 180px; }

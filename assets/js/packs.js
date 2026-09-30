@@ -68,7 +68,96 @@
   window.addEventListener('storage', event => { if (event.key === 'nk_cursor_pack' || event.key === 'nk_cursor_scheme') applyCursors(); if (event.key === 'nk_icon_pack') applyIcons(); });
   // The file a sound plays from: the chosen sound pack, or the built-in Windows XP sounds.
   window.nkSoundUrl = (name, file) => { const pack = read('nk_sound_pack'); return pack?.[name] || `assets/sounds/${file || `${name}.wav`}`; };
+  // Plays a Windows sound of the chosen scheme at the chosen volume, in any window.
+  const FILES = { navigation: 'navigation.wav', notify: 'notify.wav', default: 'default.wav', error: 'error.wav', exclamation: 'exclamation.wav', critical: 'critical-stop.wav', minimize: 'minimize.wav' };
+  window.nkPlaySound = name => {
+    let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {}
+    if (scheme === 'none' || !(volume > 0)) return null;
+    const audio = new Audio(window.nkSoundUrl(name, FILES[name])); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); return audio;
+  };
+  // The click sound of the tool windows (applets, Update, Help, About): buttons, links, ticks and
+  // list rows click; a chosen item of a drop-down list too. Chat windows have their own sounds.
+  window.nkClickSounds = () => {
+    document.addEventListener('click', event => { if (event.target.closest?.('button, a[href], input[type="checkbox"], input[type="radio"], .pointer-row, .wu-check')) window.nkPlaySound('navigation'); });
+    document.addEventListener('change', event => { if (event.target.matches?.('select')) window.nkPlaySound('navigation'); });
+  };
+  // The official server asks every client to say who it is (X-Neko-Client: name/version (os; app),
+  // and ?c= on sockets). The app part is "PC" on the desktop, then Android, iPhone or Web.
+  window.nkClientHeader = () => {
+    const has = name => Boolean(document.querySelector(`script[src$="${name}"]`));
+    const platform = `${navigator.platform || ''} ${navigator.userAgent || ''}`;
+    const desktop = /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'macos' : /Linux|X11/i.test(platform) ? 'linux' : 'pc';
+    const app = has('android-bridge.js') ? 'Android' : has('ios-bridge.js') ? 'iPhone' : has('web-bridge.js') ? 'Web' : 'PC';
+    const os = app === 'Android' ? 'android' : app === 'iPhone' ? 'ios' : desktop;
+    const version = String(window.NEKOCHAT_RELOADED_VERSION || '0').replace(/[^0-9A-Za-z.+-]/g, '') || '0';
+    return `nekochat-reloaded/${version} (${os}; ${app})`;
+  };
+  // An error shown in a window (role="alert" or an .error line) sounds like a Windows XP error.
+  const errorTexts = new WeakMap();
+  const watchErrors = () => new MutationObserver(records => {
+    for (const record of records) {
+      const node = (record.target.nodeType === 1 ? record.target : record.target.parentElement)?.closest?.('[role="alert"], .error, .ua-error, .editor-status.error');
+      if (!node) continue;
+      const text = node.textContent.trim(); if (text && text !== errorTexts.get(node) && (node.getAttribute('role') === 'alert' ? /error|ошибк|failed|не удалось|unable|invalid|too large/i.test(text) : true)) window.nkPlaySound('error');
+      errorTexts.set(node, text);
+    }
+  }).observe(document.body, { childList: true, characterData: true, subtree: true });
+  if (document.body) watchErrors(); else document.addEventListener('DOMContentLoaded', watchErrors, { once: true });
   // The pointers a scheme shows (Mouse Properties → Pointers): 'xp', 'system' or a pack's cursors.
   const schemeCursors = (scheme, pack) => scheme === 'xp' ? Object.fromEntries(Object.entries(XP_CURSORS).map(([kind, [file, x, y]]) => [kind, { url: new URL(`assets/cursors/${file}`, document.baseURI).href, x, y }])) : scheme === 'system' ? {} : pack || {};
-  window.nkPacks = { applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
+  // Display → Appearance: font size, Effects… and Advanced… (nk_font_size, nk_effects,
+  // nk_appearance), applied in every window.
+  function applyLook() {
+    const scale = { large: 1.15, xlarge: 1.3 }[(() => { try { return localStorage.getItem('nk_font_size'); } catch { return ''; } })()] || 1;
+    const fx = read('nk_effects') || {}; const look = read('nk_appearance') || {};
+    const css = [];
+    if (scale !== 1) css.push(`.xp-body-frame, .chat-app { zoom: ${scale}; }`);
+    const menus = '.message-menu, .assistant-balloon, #mention-box, .pins-popover, .cp-menu-popup, dialog[open], .status-menu, .quick-switch';
+    if (fx.transition === 'fade') css.push(`@keyframes nk-fade { from { opacity: 0; } } ${menus} { animation: nk-fade .18s ease-out; }`);
+    if (fx.transition === 'scroll') css.push(`@keyframes nk-scroll { from { clip-path: inset(0 0 100% 0); } } ${menus} { animation: nk-scroll .2s ease-out; }`);
+    if (fx.shadows === false) css.push(`${menus} { box-shadow: none !important; }`);
+    if (fx.largeIcons) css.push('.chat-item .avatar { width: 40px !important; height: 40px !important; flex-basis: 40px !important; } .message .avatar { width: 44px !important; height: 44px !important; }');
+    if (fx.smoothing === 'none') css.push('html, body, button, input, textarea, select { -webkit-font-smoothing: none !important; font-smooth: never; }');
+    if (fx.smoothing === 'cleartype') css.push('html, body, button, input, textarea, select { -webkit-font-smoothing: subpixel-antialiased !important; }');
+    const vars = [];
+    const colour = value => /^#[0-9a-f]{6}$/i.test(value || '') ? value : '';
+    if (look.title) { const [a, b] = [colour(look.title.color1), colour(look.title.color2)]; if (a) vars.push(`--xp-title-fill: linear-gradient(270deg, ${b || a} 0%, ${a} 100%)`); if (colour(look.title.text)) css.push(`.xp-title, .dialog-title { color: ${look.title.text} !important; }`); }
+    if (look.inactive) { const [a, b] = [colour(look.inactive.color1), colour(look.inactive.color2)]; if (a) vars.push(`--xp-title-fill-inactive: linear-gradient(270deg, ${b || a} 0%, ${a} 100%)`); }
+    if (look.window) { if (colour(look.window.color1)) vars.push(`--xp-theme-window: ${look.window.color1}`); if (colour(look.window.text)) vars.push(`--xp-theme-windowtext: ${look.window.text}`); }
+    if (look.selected) { if (colour(look.selected.color1)) vars.push(`--xp-theme-highlight: ${look.selected.color1}`); if (colour(look.selected.text)) vars.push(`--xp-theme-highlighttext: ${look.selected.text}`); }
+    if (look.face && colour(look.face.color1)) vars.push(`--xp-theme-buttonface: ${look.face.color1}`, `--classic-face: ${look.face.color1}`);
+    if (look.message) { const size = Number(look.message.size); css.push(`.message-body { ${size >= 8 && size <= 28 ? `font-size: ${size}px !important;` : ''}${look.message.bold ? 'font-weight: bold;' : ''}${look.message.italic ? 'font-style: italic;' : ''}${colour(look.message.text) ? `color: ${look.message.text};` : ''} }`); }
+    if (look.tooltip) { if (colour(look.tooltip.color1)) css.push(`.assistant-balloon { background: ${look.tooltip.color1} !important; } .assistant-balloon::before { border-top-color: ${look.tooltip.color1} !important; }`); if (colour(look.tooltip.text)) css.push(`.assistant-balloon { color: ${look.tooltip.text} !important; }`); }
+    if (vars.length) css.push(`:root { ${vars.join('; ')}; }`);
+    style('nk-look').textContent = css.join('\n');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyLook, { once: true }); else applyLook();
+  window.addEventListener('storage', event => { if (['nk_font_size', 'nk_effects', 'nk_appearance'].includes(event.key)) applyLook(); });
+  // Add-ons from the Catalog (games, the Theme Editor, the Admin Panel): installed packs with
+  // addon/addon.json. Each is { packId, id, name, icon, help, files } — the same on every platform.
+  let addonCache = null, assistantCount = 0;
+  window.nkAddons = async (fresh = false) => {
+    if (addonCache && !fresh) return addonCache;
+    const packs = (await (window.windowControls || window.parent?.windowControls)?.listPacks?.().catch(() => [])) || [];
+    const list = [];
+    assistantCount = packs.filter(pack => pack.assistant).length;
+    for (const pack of packs) {
+      const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
+      try {
+        const info = await (await fetch(manifest)).json();
+        list.push({ packId: pack.id, id: String(info.id || pack.id), name: info.name || { en: pack.name }, version: info.version || '', author: pack.author || info.author || '', icon: pack.files[`addon/${info.icon || 'icon.png'}`] || '', icon32: pack.files[`addon/${info.icon32 || info.icon || 'icon.png'}`] || '', help: pack.files['addon/help.json'] || '', about: info.about || null, multiplayer: info.multiplayer || null, challenge: info.challenge || null });
+      } catch {}
+    }
+    addonCache = list; window.dispatchEvent(new Event('nk-addons-ready'));
+    return list;
+  };
+  // Synchronous check for menus drawn on the spot (after the first nkAddons()).
+  window.nkAddonList = () => addonCache || [];
+  // How many assistants are installed: without one, the assistant settings are hidden.
+  window.nkHasAssistants = () => assistantCount > 0;
+  window.nkAddonInstalled = id => Boolean(addonCache?.some(addon => addon.id === id));
+  window.nkHasAddon = async id => Boolean((await window.nkAddons()).find(addon => addon.id === id));
+  // The Catalog says when packs change, so buttons of add-ons appear and disappear at once.
+  window.addEventListener('storage', event => { if (event.key === 'nk_packs_changed') { addonCache = null; window.dispatchEvent(new Event('nk-addons-changed')); window.nkAddons(true).catch(() => {}); } });
+  window.nkPacks = { applyLook, applyCursors, applyIcons, schemeCursors, CURSORS: Object.keys(CURSORS), ICONS: Object.keys(ICONS) };
 })();

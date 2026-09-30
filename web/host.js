@@ -79,6 +79,7 @@
   function focus(win) {
     if (!win || win.destroyed) return;
     win.element.classList.remove('hidden');
+    if (win.minimized) { win.minimized = false; win.element.style.display = ''; renderTray(); }
     win.element.style.zIndex = String(++zIndex);
     focusedWindow = win;
     markFocus();
@@ -88,6 +89,31 @@
     windows.forEach(item => { try { item.frame.contentDocument?.documentElement.classList.toggle('xp-inactive', item !== focusedWindow); } catch {} });
   }
   function show(win) { focus(win); }
+  // Minimise hides only that window (the others stay); a chip at the bottom brings it back. The main
+  // window still sends the app to the background.
+  const trayStyle = document.createElement('style');
+  trayStyle.textContent = '.nk-tray{position:absolute;left:0;right:0;bottom:0;z-index:99999;display:flex;gap:4px;padding:3px;overflow-x:auto;background:#ece9d8;border-top:1px solid #808080}.nk-tray-chip{flex:none;max-width:48%;padding:5px 10px;overflow:hidden;border:1px solid #003c74;border-radius:3px;background:linear-gradient(#fff,#ece9d8);color:#000;font:12px Tahoma,Arial,sans-serif;text-overflow:ellipsis;white-space:nowrap}';
+  document.head.append(trayStyle);
+  function renderTray() {
+    const hidden = [...windows].filter(item => item.minimized && !item.destroyed);
+    let tray = document.querySelector('.nk-tray');
+    if (!hidden.length) { tray?.remove(); return; }
+    if (!tray) { tray = document.createElement('div'); tray.className = 'nk-tray'; desktop.append(tray); }
+    tray.innerHTML = '';
+    for (const item of hidden) {
+      const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'nk-tray-chip';
+      let title = ''; try { title = item.frame.contentDocument?.title || ''; } catch {}
+      chip.textContent = title || 'Window'; chip.onclick = () => focus(item); tray.append(chip);
+    }
+  }
+  function minimizeWindow(win) {
+    if (isDestroyed(win)) return;
+    if (win === mainWindow) { native.moveToBack(); return; }
+    win.minimized = true; win.element.style.display = 'none';
+    const next = [...windows].reverse().find(item => !item.minimized && !item.destroyed);
+    if (next) focus(next);
+    renderTray();
+  }
   function isDestroyed(win) { return !win || win.destroyed; }
 
   function send(win, channel, data) {
@@ -110,6 +136,7 @@
     // Electron closes child windows together with their parent.
     allWindows().filter(child => child.parent === win).forEach(child => { child.closingSilently = true; close(child); });
     win.onClosed?.();
+    renderTray();
     win.element.remove();
   }
 
@@ -121,15 +148,90 @@
     settingsWindow = createWindow({ url: `assets/html/theme_settings_frame.html${page ? `?tab=${page}` : ''}`, width: 520, height: 560, minWidth: 460, minHeight: 400, parent: owner });
     settingsWindow.onClosed = () => { settingsWindow = null; };
   }
+  // The "Installing Update" window (Update window and client updates): a window of its own that gets its
+  // items from openInstallWindow and answers with what was done (see main.js).
+  const installJobs = new Map(); let installWindow;
+  function cleanInstallItems(items) {
+    return (Array.isArray(items) ? items : []).slice(0, 200).map(item => ({ id: String(item?.id || '').slice(0, 120), kind: ['pack', 'theme', 'client'].includes(item?.kind) ? item.kind : 'pack', name: String(item?.name || item?.id || '').slice(0, 200),
+      ...(item?.kind === 'client' && item.release && typeof item.release === 'object' ? { release: JSON.parse(JSON.stringify(item.release)) } : {}) })).filter(item => item.id);
+  }
+  function openInstallWindow(owner, items) {
+    return new Promise(resolve => {
+      if (!isDestroyed(installWindow)) { resolve({ ok: [], failed: [], busy: true }); return; }
+      const job = { items: cleanInstallItems(items), resolve, done: false };
+      installWindow = createWindow({ url: '/assets/html/install_update.html', width: 520, height: 420, parent: owner });
+      const opened = installWindow; installJobs.set(opened, job);
+      opened.onClosed = () => { if (!job.done) resolve({ ok: [], failed: [], closed: true }); installJobs.delete(opened); if (installWindow === opened) installWindow = null; };
+    });
+  }
   function openThemeBrowser(owner) {
     if (!isDestroyed(themeBrowserWindow)) { focus(themeBrowserWindow); return; }
-    themeBrowserWindow = createWindow({ url: 'assets/html/theme_browser.html', width: 720, height: 540, minWidth: 520, minHeight: 360, parent: owner });
+    themeBrowserWindow = createWindow({ url: 'assets/html/theme_browser.html', width: 940, height: 660, minWidth: 640, minHeight: 420, parent: owner });
     themeBrowserWindow.onClosed = () => { themeBrowserWindow = null; };
   }
   function openControlPanel(owner) {
     if (!isDestroyed(controlPanelWindow)) { focus(controlPanelWindow); return; }
     controlPanelWindow = createWindow({ url: 'assets/html/control_panel.html', width: 680, height: 480, minWidth: 420, minHeight: 320, parent: owner });
     controlPanelWindow.onClosed = () => { controlPanelWindow = null; };
+  }
+  // Add-ons from the Catalog (games, the Theme Editor…): a pack with addon/addon.json and its files.
+  // Its pages say {{APP}} for the app, {{ADDON}}file for their own files and {{BRIDGE}} for this
+  // platform's bridge; they are filled in and opened from blob: URLs, like main.js does on the PC.
+  const APP_ROOT = new URL('./', location.href).href;
+  const BRIDGE = '<script src="assets/js/web-bridge.js"></script><link rel="stylesheet" href="assets/css/web.css">';
+  const addonWindows = new Map();
+  async function openAddon(owner, id, query = {}) {
+    let found = null;
+    for (const pack of await invoke('pack:list').catch(() => [])) {
+      const manifest = pack.files?.['addon/addon.json']; if (!manifest) continue;
+      try { const info = await (await fetch(manifest)).json(); if (String(info.id || pack.id) === id || pack.id === id) { found = { info, files: pack.files }; break; } } catch {}
+    }
+    if (!found) return false;
+    const { info, files } = found; const key = String(info.id || id);
+    const existing = addonWindows.get(key);
+    if (!isDestroyed(existing)) { if (!Object.keys(query).length) { focus(existing); return true; } close(existing); }
+    const own = Object.fromEntries(Object.entries(files).filter(([name]) => name.startsWith('addon/')).map(([name, url]) => [name.slice(6), url]));
+    const processed = {};
+    const fill = text => text.replace(/\{\{APP\}\}/g, APP_ROOT).replace(/\{\{BRIDGE\}\}/g, BRIDGE).replace(/\{\{ADDON\}\}([\w.-]+)/g, (_, name) => processed[name] || own[name] || '');
+    for (const name of Object.keys(own).filter(item => /\.css$/i.test(item))) processed[name] = URL.createObjectURL(new Blob([fill(await (await fetch(own[name])).text())], { type: 'text/css' }));
+    const urls = { ...own, ...processed };
+    const entryName = String(info.entry || 'index.html');
+    const html = fill(await (await fetch(own[entryName])).text()).replace(/<head>/i, `<head><script>window.NK_ADDON = ${JSON.stringify({ id: key, files: urls }).replace(/</g, '\\u003c')};</script>`);
+    const search = new URLSearchParams(Object.entries(query || {}).filter(([name, value]) => /^\w+$/.test(name) && typeof value === 'string' && value.length < 300)).toString();
+    const size = info.window || {};
+    const win = createWindow({ url: `${URL.createObjectURL(new Blob([html], { type: 'text/html' }))}${search ? `#${search}` : ''}`, width: size.width || 640, height: size.height || 480, minWidth: size.minWidth || 200, minHeight: size.minHeight || 150, parent: owner });
+    addonWindows.set(key, win);
+    win.onClosed = () => { if (addonWindows.get(key) === win) addonWindows.delete(key); };
+    return true;
+  }
+  // Games (Minesweeper, an add-on): a challenge from a chat passes the level, seed and chat.
+  function openGame(owner, options = {}) {
+    const level = ['beginner', 'intermediate', 'expert'].includes(options.level) ? options.level : '';
+    return openAddon(owner, 'minesweeper', { ...(level ? { level } : {}), ...(/^\d{1,10}$/.test(String(options.seed || '')) ? { seed: String(options.seed) } : {}), ...(/^(room|dm):\d+$/.test(options.chat || '') ? { chat: options.chat } : {}) });
+  }
+  // The HTML Help viewer of XP: spec is 'catalog' or 'addon:<id>' (the Help an add-on brings).
+  let helpViewerWindow;
+  function openHelpViewer(owner, spec) {
+    const query = /^addon:[\w.-]+$/.test(spec || '') ? `?addon=${spec.slice(6)}` : /^[a-z-]+$/.test(spec || '') ? `?book=${spec}` : '';
+    if (!isDestroyed(helpViewerWindow)) close(helpViewerWindow);
+    helpViewerWindow = createWindow({ url: `assets/html/help_viewer.html${query}`, width: 620, height: 460, minWidth: 380, minHeight: 300, parent: owner });
+    helpViewerWindow.onClosed = () => { helpViewerWindow = null; };
+  }
+  // About box (XP's ShellAbout look): 'nekochat', 'catalog' or 'addon:<id>'.
+  let aboutWindow;
+  function openAbout(owner, appName) {
+    const name = /^(nekochat|catalog|addon:[\w.-]+)$/.test(appName || '') ? appName : 'nekochat';
+    if (!isDestroyed(aboutWindow)) close(aboutWindow);
+    aboutWindow = createWindow({ url: `assets/html/about.html?app=${encodeURIComponent(name)}`, width: 420, height: 380, minWidth: 380, minHeight: 340, parent: owner });
+    aboutWindow.onClosed = () => { aboutWindow = null; };
+  }
+  // Help and Support Center.
+  let helpWindow;
+  function openHelp(owner, topic) {
+    const page = typeof topic === 'string' && /^[a-z-]+$/.test(topic) ? topic : '';
+    if (!isDestroyed(helpWindow)) { focus(helpWindow); if (page) send(helpWindow, 'help:topic', page); return; }
+    helpWindow = createWindow({ url: `assets/html/help_center.html${page ? `?topic=${page}` : ''}`, width: 820, height: 580, minWidth: 460, minHeight: 360, parent: owner });
+    helpWindow.onClosed = () => { helpWindow = null; };
   }
   // Control Panel applets (Display, Sounds, Mouse…): Display Properties showing only their pages.
   const appletWindows = new Map();
@@ -138,7 +240,7 @@
     const page = typeof tab === 'string' && /^[a-z]+$/.test(tab) ? tab : '';
     const existing = appletWindows.get(name);
     if (!isDestroyed(existing)) { focus(existing); if (page) send(existing, 'settings:show-tab', page); return; }
-    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520] }[name] || [440, 420];
+    const [width, height] = { display: [520, 560], backups: [520, 560], mouse: [410, 480], updates: [410, 520], assistant: [420, 360] }[name] || [440, 420];
     const win = createWindow({ url: `assets/html/theme_settings_frame.html?applet=${name}${page ? `&tab=${page}` : ''}`, width, height, minWidth: 380, minHeight: 320, parent: owner });
     appletWindows.set(name, win);
     win.onClosed = () => { if (appletWindows.get(name) === win) appletWindows.delete(name); };
@@ -245,14 +347,22 @@
     return {
       // There is no taskbar to restore a window from: minimising the main window does nothing,
       // other windows are closed like on a phone.
-      minimize: () => { if (win === mainWindow) native.moveToBack(); else close(win); },
+      minimize: () => minimizeWindow(win),
       maximize: () => { win.element.classList.remove('auto-maximized'); win.element.classList.toggle('maximized'); fitToScreen(win); },
       close: () => close(win),
       setWindowMeta: () => {},
       openThemeSettings: tab => openThemeSettings(windowOwner(win), tab),
       openControlPanel: () => openControlPanel(win),
       openApplet: (applet, tab) => openApplet(windowOwner(win), applet, tab),
+      openHelp: topic => openHelp(windowOwner(win), topic),
+      openAbout: appName => openAbout(windowOwner(win), appName),
+      openHelpViewer: spec => openHelpViewer(windowOwner(win), typeof spec === 'string' ? spec : ''),
+      openAddon: (id, query) => openAddon(windowOwner(win), String(id || ''), query && typeof query === 'object' ? clone(query) : {}),
+      openGame: options => openGame(windowOwner(win), clone(options) || {}),
       openThemeBrowser: () => openThemeBrowser(windowOwner(win)),
+      openInstallWindow: items => openInstallWindow(windowOwner(win), items),
+      getInstallJob: () => Promise.resolve(installJobs.get(win)?.items || []),
+      finishInstall: summary => { const job = installJobs.get(win); if (!job) return; job.done = true; job.resolve(summary && typeof summary === 'object' ? clone(summary) : { ok: [], failed: [] }); close(win); },
       openEmojiBrowser: () => openEmojiBrowser(win),
       openProfileSettings: () => openProfileSettings(),
       openRoomCreate: () => openRoomCreate(win),
@@ -298,6 +408,7 @@
       applyDisplaySettings: async settings => { activeDisplay = await invoke('display:apply', settings || {}); notifyDisplayChanged(activeDisplay); return clone(activeDisplay); },
       onThemeChanged: on('theme:changed'),
       onSettingsTab: on('settings:show-tab'),
+      onHelpTopic: on('help:topic'),
       onDisplayChanged: on('display:changed'),
       onProfileChanged: on('profile:changed'),
       onRoomCreated: on('room:created'),
