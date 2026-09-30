@@ -467,6 +467,7 @@ function fitXpLogonBackground() {
 }
 
 function setLoggedIn(user, announceLogin = false) {
+  window.nkCheckVersion?.(user);
   me = user; rememberSession(user); loadMutedAndMore(); $('#welcome-screen').hidden = true; $('#auth-screen').hidden = true; $('#chat-app').hidden = false;
   setProfileAvatarFrame(me);
   $('#me-avatar').innerHTML = avatar(me); $('#me-name').textContent = me.display_name; $('#me-handle').textContent = `@${me.username}`;
