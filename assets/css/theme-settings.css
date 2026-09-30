@@ -133,3 +133,4 @@ html:not(.xp-checkboxes) .backup-parts input[type="checkbox"], html:not(.xp-chec
 .advanced-grid input[type="color"] { width: 100%; height: 22px; padding: 0 2px; }
 .advanced-style { display: flex; gap: 6px; grid-column: 1 / -1; }
 #look-reset { align-self: flex-start; }
+.regional-page .xp-group { margin: 12px 0 0; padding: 8px 10px 12px; } .regional-page .xp-group p { margin: 4px 0 8px; } .regional-page .regional-note { color: var(--xp-theme-graytext, #6d6d6d); } .regional-page .xp-group p:not(.regional-note) { color: var(--xp-theme-windowtext, #000); } .regional-page label { display: flex; align-items: center; gap: 8px; } .regional-page select { min-width: 180px; }

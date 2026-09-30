@@ -116,13 +116,19 @@ const APPLETS = {
   display: { title: 'Display Properties', icon: 'display', pages: [{ page: 'themes' }, { page: 'desktop' }, { page: 'appearance' }, { page: 'display', label: 'Settings', hide: ['#display-language', '#cursor-scheme'] }] },
   sounds: { title: 'Sounds and Audio Devices Properties', icon: 'sounds', pages: [{ page: 'sounds' }, { id: 'audio', label: 'Audio', rows: ['#mic-device', '#noise-suppression'] }] },
   mouse: { title: 'Mouse Properties', icon: 'mouse', pages: [{ id: 'pointers', label: 'Pointers', build: buildPointersPage }] },
-  regional: { title: 'Regional and Language Options', icon: 'regional', pages: [{ id: 'languages', label: 'Languages', rows: ['#display-language'] }] },
+  regional: { title: 'Regional and Language Options', icon: 'regional', pages: [{ id: 'languages', label: 'Regional Options', build: buildRegionalPage }] },
   network: { title: 'Network Connections', icon: 'network-connections', pages: [{ id: 'server', label: 'Nekochat Reloaded', rows: ['#reloaded-enabled', '#reloaded-server', '#media-socket', '#screen-codec', '#dns-provider', '#dns-custom'] }] },
   updates: { title: 'Automatic Updates', icon: 'updates', pages: [{ id: 'updates', label: 'Automatic Updates', build: buildUpdatesPage }] },
   backups: { title: 'Backup', icon: 'backups', pages: [{ page: 'backups' }] },
   privacy: { title: 'User Accounts', icon: 'users', pages: [{ id: 'privacy', label: 'Privacy', rows: ['#show-last-seen', '#auto-away', '#show-admin-button'] }] },
   assistant: { title: 'Assistant', icon: 'assistant', pages: [{ id: 'assistant', label: 'Assistant', build: buildAssistantPage }] },
 };
+// Regional and Language Options, like XP's Regional Options tab: a group box with the choice.
+function buildRegionalPage(section) {
+  section.classList.add('regional-page');
+  section.innerHTML = '<fieldset class="xp-group"><legend>Standards and formats</legend><p>This option affects the language of the menus, windows and help of Nekochat Reloaded.</p><p class="regional-slot"></p><p class="regional-note">Changes are saved when you click Apply.</p></fieldset>';
+  section.querySelector('.regional-slot').append($('#display-language').closest('label'));
+}
 // Mouse Properties → Pointers, like XP's: the scheme, a preview and every pointer of the scheme.
 const POINTER_NAMES = [['default', 'Normal Select'], ['help', 'Help Select'], ['progress', 'Working In Background'], ['wait', 'Busy'], ['crosshair', 'Precision Select'], ['text', 'Text Select'],
   ['not-allowed', 'Unavailable'], ['ns-resize', 'Vertical Resize'], ['ew-resize', 'Horizontal Resize'], ['nwse-resize', 'Diagonal Resize 1'], ['nesw-resize', 'Diagonal Resize 2'], ['move', 'Move'], ['pointer', 'Link Select']];
@@ -180,7 +186,9 @@ function buildUpdatesPage(section) {
     + UPDATE_CHOICES.map(([value, title, text, icon]) => `<label class="updates-option"><input type="radio" name="update-mode" value="${value}"><span class="updates-title">${title}</span>${text ? `<span class="updates-detail">${icon ? `<img src="assets/images/control-panel/${icon}.png" alt="">` : '<i></i>'}<span>${text}</span></span>` : ''}</label>`).join('')
     + '<div class="updates-extra"></div>';
   const extra = section.querySelector('.updates-extra');
-  extra.append($('#update-beta').closest('label'), $('#update-check').closest('label'));
+  // Only the beta box stays; Check now is in Windows Update.
+  const checkNow = $('#update-check').closest('label'); checkNow.hidden = true; checkNow.style.setProperty('display', 'none', 'important');
+  extra.append($('#update-beta').closest('label'), checkNow);
   $('#update-auto').closest('label').hidden = true; section.append($('#update-auto').closest('label'));
   const stored = localStorage.getItem('nk_update_mode') || (localStorage.getItem('nk_update_auto') === '0' ? 'off' : 'notify');
   section.querySelectorAll('[name="update-mode"]').forEach(radio => { radio.checked = radio.value === stored; radio.addEventListener('change', () => { $('#update-auto').checked = radio.value !== 'off'; }); });
