@@ -373,28 +373,34 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 
 .game-invite-dialog { position: fixed; inset: auto 16px 60px auto; margin: 0; z-index: 9000; }
 
-/* Files: the paperclip, the attachments waiting for Send, the drop target, the transfer tray and file cards. */
+/* Files: the paperclip, the attachments waiting for Send, the drop target, the transfer tray and file cards,
+   in the theme's own colours, buttons and progress bar. */
 .attach-button { flex: none; min-width: 30px; padding: 0 6px; }
-.attach-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; background: var(--xp-theme-buttonface, #ece9d8); border-top: 1px solid #aca899; }
+.attach-button img { display: block; width: 16px; height: 16px; margin: 0 auto; }
+.attach-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; background: var(--xp-theme-buttonface, #ece9d8); border-top: 1px solid var(--xp-theme-buttonshadow, #aca899); color: var(--xp-theme-windowtext, #000); font-size: 11px; }
 .attach-bar[hidden] { display: none; }
-.attach-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 1px 4px 1px 6px; border: 1px solid #7f9db9; background: #fff; }
+.attach-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 1px 3px 1px 5px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); }
+.attach-chip img { width: 16px; height: 16px; image-rendering: auto; }
 .attach-chip b { overflow: hidden; max-width: 220px; text-overflow: ellipsis; white-space: nowrap; font-weight: normal; }
-.attach-chip small { color: #666; }
-.attach-remove { min-width: 18px; height: 18px; padding: 0; border: 0; background: none; color: #555; font-size: 14px; line-height: 1; cursor: pointer; }
+.attach-chip small { color: var(--xp-theme-graytext, #6d6d6d); }
+.attach-remove { min-width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--xp-theme-windowtext, #000); font-size: 13px; line-height: 1; cursor: pointer; }
+.attach-remove:hover { color: var(--xp-theme-highlight, #316ac5); }
 .attach-infinity { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; cursor: pointer; }
 .conversation.drop-target { outline: 2px dashed var(--xp-theme-highlight, #316ac5); outline-offset: -4px; }
-.transfer-tray { position: absolute; right: 12px; bottom: 56px; z-index: 20; display: flex; flex-direction: column; gap: 6px; width: min(320px, calc(100% - 24px)); max-height: 50%; overflow: auto; padding: 6px 8px; border: 1px solid #7f9db9; background: var(--xp-theme-window, #fff); box-shadow: 2px 2px 6px rgba(0, 0, 0, .3); font-size: 11px; color: var(--xp-theme-windowtext, #000); }
-.transfer-tray header { padding-bottom: 2px; border-bottom: 1px solid #ccc; }
-.transfer-row { position: relative; display: flex; flex-direction: column; gap: 2px; padding-right: 22px; }
-.transfer-row.error small:last-of-type { color: #b00020; }
-.transfer-bar { height: 8px; border: 1px solid #7f9db9; background: #fff; }
-.transfer-bar i { display: block; height: 100%; background: var(--xp-theme-highlight, #316ac5); }
-.transfer-close { position: absolute; top: 0; right: 0; min-width: 18px; height: 18px; padding: 0; border: 0; background: none; cursor: pointer; }
-.transfer-save { align-self: flex-start; margin-top: 2px; }
 .conversation { position: relative; }
-.file-card { display: flex; align-items: center; gap: 8px; max-width: 360px; margin-top: 4px; padding: 6px 8px; border: 1px solid #7f9db9; background: var(--xp-theme-buttonface, #f8fbff); }
-.file-card-icon { font-size: 24px; }
+.transfer-tray { position: absolute; right: 12px; bottom: 56px; z-index: 20; display: flex; flex-direction: column; gap: 6px; width: min(320px, calc(100% - 24px)); max-height: 50%; overflow: auto; padding: 0 0 6px; border: 1px solid var(--xp-theme-highlight, #0054e3); background: var(--xp-theme-window, #ece9d8); box-shadow: 2px 2px 4px rgba(0, 0, 0, .35); font: 11px Tahoma, Arial, sans-serif; color: var(--xp-theme-windowtext, #000); }
+.transfer-tray header { padding: 3px 8px; background: var(--xp-theme-highlight, #0054e3); color: var(--xp-theme-highlighttext, #fff); font-weight: bold; }
+.transfer-row { position: relative; display: flex; flex-direction: column; gap: 3px; margin: 0 8px; padding-right: 20px; }
+.transfer-row.error small:last-of-type { color: #b00020; }
+.transfer-bar { height: 17px; box-sizing: border-box; overflow: hidden; border: 3px solid transparent; border-image: var(--xp-progress-track, linear-gradient(#fff, #fff)) 3 fill; }
+.transfer-bar i { display: block; height: 11px; background: var(--xp-progress-chunk, repeating-linear-gradient(90deg, #3ec23e 0 8px, transparent 8px 10px)) repeat-x; background-size: 10px 11px; }
+.transfer-close { position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--xp-theme-windowtext, #000); cursor: pointer; }
+.transfer-save, .file-card-download { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 24px; padding: 0 12px; color: var(--xp-theme-windowtext, #000); font-size: 11px; text-decoration: none; box-sizing: border-box; }
+.file-card { display: flex; align-items: center; gap: 8px; max-width: 360px; margin-top: 4px; padding: 6px 8px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); color: var(--xp-theme-windowtext, #000); }
+.file-card-icon { width: 32px; height: 32px; }
 .file-card-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .file-card-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-card-text small { color: #666; }
-.file-card-download { flex: none; padding: 3px 8px; border: 1px solid #003c74; background: var(--xp-theme-buttonface, #ece9d8); color: #000; text-decoration: none; }
+.file-card-text small { color: var(--xp-theme-graytext, #6d6d6d); }
+.file-card { flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; }
+.file-card .file-card-download { flex: none !important; width: auto !important; align-self: center !important; margin: 0 !important; }
+.file-card-text { min-width: 0; }
