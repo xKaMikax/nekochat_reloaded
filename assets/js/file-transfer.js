@@ -37,7 +37,7 @@
     const bar = $$('#attach-bar'); if (!bar) return;
     bar.hidden = !pending.length;
     if (!pending.length) { bar.innerHTML = ''; return; }
-    bar.innerHTML = pending.map((item, index) => `<span class="attach-chip" title="${esc(item.file.name)}"><b>📎 ${esc(item.file.name)}</b><small>${esc(size(item.file.size))}</small><button type="button" class="attach-remove" data-index="${index}" aria-label="${esc(tr('remove'))}">×</button></span>`).join('')
+    bar.innerHTML = pending.map((item, index) => `<span class="attach-chip" title="${esc(item.file.name)}"><img src="assets/images/file.png" alt=""><b>${esc(item.file.name)}</b><small>${esc(size(item.file.size))}</small><button type="button" class="attach-remove" data-index="${index}" aria-label="${esc(tr('remove'))}">×</button></span>`).join('')
       + `<label class="attach-infinity" title="${esc(tr('infinityHint', { max: size(MAX_INFINITY) }))}"><input type="checkbox" id="attach-infinity"${infinity ? ' checked' : ''}> ${esc(tr('infinity'))}</label>`;
   }
   function addFiles(files) {
@@ -111,7 +111,7 @@
       const state = item.error ? item.error : item.state === 'done' ? (item.dir === 'in' ? tr('received') : item.unconfirmed ? tr('notConfirmed') : tr('sent')) : (item.dir === 'in' ? tr('receiving') : tr('sending'));
       return `<div class="transfer-row ${item.error ? 'error' : ''}" data-key="${esc(key)}"><div><b>${esc(item.name)}</b> <small>${esc(size(item.size))} · ${esc(item.dir === 'in' ? tr('from', { name: item.peer }) : tr('to', { name: item.peer }))}</small></div>`
         + `<div class="transfer-bar"><i style="width:${item.state === 'done' && !item.error ? 100 : percent}%"></i></div><small>${esc(state)}</small>`
-        + `${item.url ? `<button type="button" class="transfer-save" data-key="${esc(key)}">${esc(tr('save'))}</button>` : ''}<button type="button" class="transfer-close" data-key="${esc(key)}" aria-label="${esc(tr('close'))}">×</button></div>`;
+        + `${item.url ? `<button type="button" class="transfer-save xp-button" data-key="${esc(key)}">${esc(tr('save'))}</button>` : ''}<button type="button" class="transfer-close" data-key="${esc(key)}" aria-label="${esc(tr('close'))}">×</button></div>`;
     }).join('');
   }
   document.addEventListener('click', event => {
@@ -242,7 +242,7 @@
     const match = INFINITY.exec(String(content || '')); if (!match) return null;
     return { name: match[1], size: match[2], url: match[3], rest: String(content).replace(match[0], '').trim() };
   };
-  window.nkFileCardHtml = card => `<div class="file-card"><span class="file-card-icon">📎</span><div class="file-card-text"><b>${esc(card.name)}</b><small>${esc(card.size)} · ∞ ${esc(tr('infinityCard'))}</small></div><a class="file-card-download" href="${esc(card.url)}" target="_blank" rel="noopener">${esc(tr('download'))}</a></div>`;
+  window.nkFileCardHtml = card => `<div class="file-card"><img class="file-card-icon" src="assets/images/file.png" alt=""><div class="file-card-text"><b>${esc(card.name)}</b><small>${esc(card.size)} · ∞ ${esc(tr('infinityCard'))}</small></div><a class="file-card-download xp-button" href="${esc(card.url)}" target="_blank" rel="noopener">${esc(tr('download'))}</a></div>`;
   const relabel = () => { const button = $$('#attach-button'); if (button) { button.title = tr('attach'); button.setAttribute('aria-label', tr('attach')); } };
   relabel(); setInterval(relabel, 3000);
 })();
