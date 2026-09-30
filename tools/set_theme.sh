@@ -6,4 +6,5 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-python3 electron/tools/import_msstyles.py "$1" electron/themes/Current
+root="$(cd "$(dirname "$0")/.." && pwd)"
+python3 "$root/tools/import_msstyles.py" "$1" "$root/themes/Current"
