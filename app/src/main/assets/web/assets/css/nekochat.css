@@ -422,3 +422,25 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 /* Icon buttons stay small even in Classic, whose theme makes every composer button 76 px wide. */
 .chat-app .composer .emoji-control button.emoji-button { width: 30px !important; min-width: 30px !important; max-width: 30px !important; padding: 0 !important; }
 .chat-app .composer .emoji-control button.attach-button:disabled img { opacity: .5; }
+/* Previews of pictures, My files, and the Decline button. */
+.attach-chip .attach-thumb { width: 24px; height: 24px; object-fit: cover; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); }
+.attach-link { padding: 0 4px; border: 0; background: none; color: var(--xp-theme-highlight, #0a2fa8); font: inherit; text-decoration: underline; cursor: pointer; }
+.transfer-icon.transfer-thumb { width: 32px; height: 32px; object-fit: cover; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); }
+.transfer-save, .transfer-decline { align-self: center; }
+.file-card-box { display: flex; flex-direction: column; gap: 4px; max-width: 360px; }
+.file-card-box .file-card { margin-top: 4px; }
+.file-card-preview { display: block; max-width: 100%; max-height: 240px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); cursor: pointer; object-fit: contain; }
+.my-files-dialog { width: min(560px, calc(100% - 24px)); padding: 0 0 10px; }
+.my-files-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 0; }
+.my-files-list { max-height: 300px; min-height: 90px; overflow: auto; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); color: var(--xp-theme-windowtext, #000); font: 11px Tahoma, Arial, sans-serif; }
+.my-files-empty { margin: 14px 10px; color: var(--xp-theme-graytext, #6d6d6d); }
+.my-files-table { width: 100%; border-collapse: collapse; }
+.my-files-table th { position: sticky; top: 0; padding: 3px 6px; background: var(--xp-theme-buttonface, #ece9d8); border-bottom: 1px solid var(--xp-theme-buttonshadow, #aca899); text-align: left; font-weight: normal; }
+.my-files-table td { padding: 4px 6px; border-bottom: 1px solid rgba(0, 0, 0, .08); white-space: nowrap; }
+.my-files-table td:first-child { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.my-files-table img { width: 16px; height: 16px; vertical-align: -4px; }
+.my-files-used { margin: 0; color: var(--xp-theme-graytext, #6d6d6d); font-size: 11px; }
+.my-files-buttons { display: flex; justify-content: flex-end; padding: 8px 12px 0; }
+.my-files-buttons .xp-button, .my-files-delete { min-width: 72px; height: 24px; padding: 0 10px; font-size: 11px; }
+.my-files-dialog .dialog-title { padding-left: 14px; margin: 0; }
+.my-files-buttons .xp-button, .my-files-delete { width: auto !important; flex: none; }
