@@ -375,8 +375,7 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 
 /* Files: the paperclip, the attachments waiting for Send, the drop target, the transfer tray and file cards,
    in the theme's own colours, buttons and progress bar. */
-.attach-button { flex: none; min-width: 30px; padding: 0 6px; }
-.attach-button img { display: block; width: 16px; height: 16px; margin: 0 auto; }
+.attach-button img { display: block; width: 18px; height: 18px; margin: 0 auto; }
 .attach-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; background: var(--xp-theme-buttonface, #ece9d8); border-top: 1px solid var(--xp-theme-buttonshadow, #aca899); color: var(--xp-theme-windowtext, #000); font-size: 11px; }
 .attach-bar[hidden] { display: none; }
 .attach-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 1px 3px 1px 5px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); }
@@ -388,13 +387,22 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .attach-infinity { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; cursor: pointer; }
 .conversation.drop-target { outline: 2px dashed var(--xp-theme-highlight, #316ac5); outline-offset: -4px; }
 .conversation { position: relative; }
-.transfer-tray { position: absolute; right: 12px; bottom: 56px; z-index: 20; display: flex; flex-direction: column; gap: 6px; width: min(320px, calc(100% - 24px)); max-height: 50%; overflow: auto; padding: 0 0 6px; border: 1px solid var(--xp-theme-highlight, #0054e3); background: var(--xp-theme-window, #ece9d8); box-shadow: 2px 2px 4px rgba(0, 0, 0, .35); font: 11px Tahoma, Arial, sans-serif; color: var(--xp-theme-windowtext, #000); }
-.transfer-tray header { padding: 3px 8px; background: var(--xp-theme-highlight, #0054e3); color: var(--xp-theme-highlighttext, #fff); font-weight: bold; }
-.transfer-row { position: relative; display: flex; flex-direction: column; gap: 3px; margin: 0 8px; padding-right: 20px; }
-.transfer-row.error small:last-of-type { color: #b00020; }
-.transfer-bar { height: 17px; box-sizing: border-box; overflow: hidden; border: 3px solid transparent; border-image: var(--xp-progress-track, linear-gradient(#fff, #fff)) 3 fill; }
-.transfer-bar i { display: block; height: 11px; background: var(--xp-progress-chunk, repeating-linear-gradient(90deg, #3ec23e 0 8px, transparent 8px 10px)) repeat-x; background-size: 10px 11px; }
-.transfer-close { position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--xp-theme-windowtext, #000); cursor: pointer; }
+.transfer-tray { display: flex; flex-direction: column; max-height: 138px; overflow: auto; border-top: 1px solid var(--xp-theme-buttonshadow, #aca899); background: var(--xp-theme-buttonface, #ece9d8); font: 11px Tahoma, Arial, sans-serif; color: var(--xp-theme-windowtext, #000); }
+.transfer-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; }
+.transfer-row + .transfer-row { border-top: 1px solid rgba(0, 0, 0, .12); }
+.transfer-row.error .transfer-state { color: #b00020; }
+.transfer-icon { flex: none; width: 24px; height: 24px; }
+.transfer-main { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.transfer-line { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.transfer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transfer-line small { flex: none; color: var(--xp-theme-graytext, #6d6d6d); }
+.transfer-progress { display: flex; align-items: center; gap: 8px; }
+.transfer-bar { flex: 1; min-width: 40px; height: 15px; box-sizing: border-box; overflow: hidden; border: 3px solid transparent; border-image: var(--xp-progress-track, linear-gradient(#fff, #fff)) 3 fill; }
+.transfer-bar i { display: block; height: 9px; background: var(--xp-progress-chunk, repeating-linear-gradient(90deg, #3ec23e 0 8px, transparent 8px 10px)) repeat-x; background-size: 10px 9px; }
+.transfer-state { flex: none; min-width: 64px; color: var(--xp-theme-windowtext, #000); }
+.transfer-actions { display: flex; flex: none; align-items: center; gap: 4px; }
+.transfer-close { min-width: 18px; height: 18px; padding: 0; border: 0; background: none; color: var(--xp-theme-windowtext, #000); font-size: 15px; line-height: 1; cursor: pointer; }
+.transfer-close:hover { color: var(--xp-theme-highlight, #316ac5); }
 .transfer-save, .file-card-download { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 24px; padding: 0 12px; color: var(--xp-theme-windowtext, #000); font-size: 11px; text-decoration: none; box-sizing: border-box; }
 .file-card { display: flex; align-items: center; gap: 8px; max-width: 360px; margin-top: 4px; padding: 6px 8px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); background: var(--xp-theme-window, #fff); color: var(--xp-theme-windowtext, #000); }
 .file-card-icon { width: 32px; height: 32px; }
@@ -404,3 +412,4 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .file-card { flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; }
 .file-card .file-card-download { flex: none !important; width: auto !important; align-self: center !important; margin: 0 !important; }
 .file-card-text { min-width: 0; }
+.attach-control .attach-button { width: 30px !important; min-width: 30px !important; max-width: 30px; padding: 0 !important; }
