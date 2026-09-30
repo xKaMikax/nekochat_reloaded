@@ -419,3 +419,6 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .attach-infinity:hover input { background-image: var(--xp-checkbox-unchecked-hover, var(--xp-checkbox-unchecked, linear-gradient(#fff, #ddd))); }
 .attach-infinity input:checked { background-image: var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8)); }
 .attach-infinity:hover input:checked { background-image: var(--xp-checkbox-checked-hover, var(--xp-checkbox-checked, linear-gradient(#fff, #d7f2c8))); }
+/* Icon buttons stay small even in Classic, whose theme makes every composer button 76 px wide. */
+.chat-app .composer .emoji-control button.emoji-button { width: 30px !important; min-width: 30px !important; max-width: 30px !important; padding: 0 !important; }
+.chat-app .composer .emoji-control button.attach-button:disabled img { opacity: .5; }
