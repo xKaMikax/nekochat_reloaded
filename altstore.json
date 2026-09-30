@@ -19,6 +19,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "1.4.3",
+          "buildVersion": "15",
+          "date": "2026-09-30",
+          "localizedDescription": "Games from Windows XP (Solitaire, Spider, FreeCell, Hearts, Spades, Reversi, Checkers, Backgammon, 3D Pinball), files in chats with Infinity Memory, and the Windows Update style Update window.",
+          "downloadURL": "https://github.com/xKaMikax/nekochat_reloaded/releases/download/build_v1.4.3/Nekochat-Reloaded-1.4.3.ipa",
+          "size": 5117774,
+          "minOSVersion": "16.4"
+        },
+        {
           "version": "1.4.2",
           "buildVersion": "12",
           "date": "2026-09-28",
