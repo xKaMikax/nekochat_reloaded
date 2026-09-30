@@ -48,3 +48,4 @@ controls.onThemeChanged(theme => { if (theme?.cssUrl) $('#frame-theme').href = t
 Promise.resolve(controls.getUpdateInfo?.()).then(info => { platform = PLATFORMS[info?.platform] || (info?.mode === 'reload' ? 'Web' : 'Desktop'); render(); }).catch(() => {});
 controls.getDisplaySettings().then(display => { language = display?.language === 'en' ? 'en' : 'ru'; render(); });
 render();
+window.nkClickSounds?.();

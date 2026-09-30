@@ -179,4 +179,4 @@ $('#close').onclick = () => controls.close();
   handle.onpointerdown = event => { let x = event.screenX, y = event.screenY; handle.setPointerCapture(event.pointerId); handle.onpointermove = move => { controls.resize(direction, move.screenX - x, move.screenY - y); x = move.screenX; y = move.screenY; }; handle.onpointerup = () => { handle.onpointermove = null; }; };
   document.body.append(handle);
 });
-document.addEventListener('click', event => { if (!event.target.closest?.('button')) return; let scheme = 'xp', volume = 72; try { scheme = localStorage.getItem('nk_sound_scheme') || 'xp'; volume = Number(localStorage.getItem('nk_sound_volume') ?? 72); } catch {} if (scheme === 'none' || !(volume > 0)) return; const audio = new Audio(window.nkSoundUrl ? window.nkSoundUrl('navigation') : 'assets/sounds/navigation.wav'); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); });
+window.nkClickSounds?.();

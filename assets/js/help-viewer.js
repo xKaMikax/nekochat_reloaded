@@ -111,3 +111,4 @@ async function loadAddonHelp(id) {
 }
 controls.getDisplaySettings().then(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
 if (params.get('addon')) loadAddonHelp(params.get('addon')).catch(() => {}); else applyText();
+window.nkClickSounds?.();

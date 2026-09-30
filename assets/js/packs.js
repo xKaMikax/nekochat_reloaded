@@ -75,6 +75,12 @@
     if (scheme === 'none' || !(volume > 0)) return null;
     const audio = new Audio(window.nkSoundUrl(name, FILES[name])); audio.volume = Math.min(1, volume / 100); audio.play().catch(() => {}); return audio;
   };
+  // The click sound of the tool windows (applets, Update, Help, About): buttons, links, ticks and
+  // list rows click; a chosen item of a drop-down list too. Chat windows have their own sounds.
+  window.nkClickSounds = () => {
+    document.addEventListener('click', event => { if (event.target.closest?.('button, a[href], input[type="checkbox"], input[type="radio"], .pointer-row, .wu-check')) window.nkPlaySound('navigation'); });
+    document.addEventListener('change', event => { if (event.target.matches?.('select')) window.nkPlaySound('navigation'); });
+  };
   // An error shown in a window (role="alert" or an .error line) sounds like a Windows XP error.
   const errorTexts = new WeakMap();
   const watchErrors = () => new MutationObserver(records => {
