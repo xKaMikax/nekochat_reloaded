@@ -170,7 +170,7 @@ html[data-login-ui="classic"] .xp-logon-accounts { box-sizing: border-box; width
 /* Profile buttons: a wide "Edit profile", then Personalization | Theme catalog, then the optional
    theme editor; the bottom row is sign out, "Change user" and the admin panel (when turned on), sharing the width. */
 .profile-actions #edit-profile { grid-column: 1 / -1; order: 1; }
-.profile-actions #personalize { order: 2; }
+.profile-actions #personalize { grid-column: 1 / -1; order: 2; }
 .profile-actions #theme-browser-profile { order: 3; }
 .profile-actions #theme-editor-profile { grid-column: 1 / -1; order: 4; }
 .profile-actions .profile-bottom-row { grid-column: 1 / -1; order: 6; display: flex; align-items: center; gap: 6px; }
