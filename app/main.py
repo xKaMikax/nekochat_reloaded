@@ -29,7 +29,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.9.0"
+VERSION = "0.10.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -54,6 +54,7 @@ TAGS = [
     {"name": "sync", "description": "Settings and read state shared between devices"},
     {"name": "status", "description": "Online, away, do-not-disturb and invisible statuses"},
     {"name": "chats", "description": "Reactions, pinned messages, typing and read receipts of rooms and direct chats"},
+    {"name": "scores", "description": "The high scores of games with a single high score table (3D Pinball): one best score per user, per Nekochat server"},
     {"name": "games", "description": "Games between users (Reversi, Checkers, Backgammon, Hearts, Spades...): sessions with an ordered log of moves"},
     {"name": "backups", "description": "Settings backups: zip archives with the client's settings, themes and pictures"},
     {"name": "server", "description": "Server information"},
@@ -147,6 +148,14 @@ def migrate() -> None:
                 updated_at INTEGER NOT NULL,
                 PRIMARY KEY (account_id, chat)
             );
+            CREATE TABLE IF NOT EXISTS game_scores (
+                game TEXT NOT NULL,              -- the add-on's id, e.g. "pinball"
+                server TEXT NOT NULL,            -- Nekochat server base URL
+                nekochat_id INTEGER NOT NULL,    -- the player's user id on that server
+                score INTEGER NOT NULL,          -- the best score of that player
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (game, server, nekochat_id)
+            );
             CREATE TABLE IF NOT EXISTS read_state (
                 account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 chat TEXT NOT NULL,              -- "room:<id>" or "dm:<user id>"
@@ -235,7 +244,7 @@ def health():
 
 @app.get("/api/info", tags=["server"])
 def info():
-    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status", "games"]}
+    return {"name": "Nekochat Reloaded companion", "version": VERSION, "servers": NEKOCHAT_SERVERS, "features": ["settings", "read_state", "status", "games", "scores"]}
 
 
 @app.post("/link", tags=["account"])
@@ -815,6 +824,66 @@ def end_game(game_id: str, account: sqlite3.Row = Depends(current_account)):
         game["touched"] = time.time()
         publish(game["server"], {"type": "game_end", "session": game_id, "_to": sorted(game["audience"])})
     return {"ok": True}
+
+
+# ---- high scores ------------------------------------------------------------------------------
+# One best score per user and game, shared by everyone on the same Nekochat server. A row belongs to
+# the user id, and the name shown is the user's display name (from the profile the server holds).
+SCORE_GAMES = {"pinball"}
+MAX_SCORE = 2_000_000_000
+
+
+class ScoreIn(BaseModel):
+    score: int = Field(ge=0, le=MAX_SCORE, description="The score of the game just played")
+
+
+def score_game(game: str) -> str:
+    if game not in SCORE_GAMES:
+        raise HTTPException(404, "This game has no high scores")
+    return game
+
+
+def score_table(game: str, account: sqlite3.Row, limit: int) -> dict[str, Any]:
+    me_id = int(account["nekochat_id"])
+    with database() as db:
+        rows = db.execute(
+            "SELECT s.nekochat_id, s.score, s.updated_at, a.profile FROM game_scores s "
+            "LEFT JOIN accounts a ON a.server = s.server AND a.nekochat_id = s.nekochat_id "
+            "WHERE s.game = ? AND s.server = ? ORDER BY s.score DESC, s.updated_at ASC",
+            (game, account["server"]),
+        ).fetchall()
+    entries = []
+    for rank, row in enumerate(rows, 1):
+        try:
+            profile = json.loads(row["profile"] or "{}")
+        except ValueError:
+            profile = {}
+        entries.append({"rank": rank, "user_id": row["nekochat_id"], "name": str(profile.get("display_name") or profile.get("username") or row["nekochat_id"])[:60], "score": row["score"], "updated_at": row["updated_at"], "me": row["nekochat_id"] == me_id})
+    mine = next((entry for entry in entries if entry["me"]), None)
+    return {"game": game, "scores": entries[:limit], "me": mine, "players": len(entries)}
+
+
+@app.get("/scores/{game}", tags=["scores"])
+def get_scores(game: str, limit: int = 10, account: sqlite3.Row = Depends(current_account)):
+    """The best scores (best first) of everyone on the user's Nekochat server, and the user's own place."""
+    return score_table(score_game(game), account, max(1, min(limit, 100)))
+
+
+@app.post("/scores/{game}", tags=["scores"])
+def post_score(game: str, payload: ScoreIn, account: sqlite3.Row = Depends(current_account)):
+    """Sends the score of a finished game. Only the user's best is kept; the answer is the table and whether it is a new best."""
+    score_game(game)
+    me_id = int(account["nekochat_id"])
+    with database() as db:
+        row = db.execute("SELECT score FROM game_scores WHERE game = ? AND server = ? AND nekochat_id = ?", (game, account["server"], me_id)).fetchone()
+        new_best = payload.score > 0 and (row is None or payload.score > row["score"])
+        if new_best:
+            db.execute(
+                "INSERT INTO game_scores (game, server, nekochat_id, score, updated_at) VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT(game, server, nekochat_id) DO UPDATE SET score = excluded.score, updated_at = excluded.updated_at",
+                (game, account["server"], me_id, payload.score, now()),
+            )
+    return {"new_best": new_best, **score_table(game, account, 10)}
 
 
 # ---- backups ---------------------------------------------------------------------------------

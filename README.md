@@ -28,6 +28,8 @@ Interactive docs (Swagger UI): `/api/docs` (alias `/docs`); OpenAPI spec: `/api/
 | GET | `/games/{id}` | the game and its log (only the entries meant for you), for someone joining late |
 | POST | `/games/{id}/send` | `{kind, payload, to?}` → adds an entry to the ordered log and passes it on live as a `game` event (`join` makes you a player; `to` addresses it to some players only, e.g. hidden cards) |
 | DELETE | `/games/{id}` | ends the game (`game_end` event) |
+| GET | `/scores/{game}?limit=10` | the high scores of a game (`pinball`): the best first, one row per user id of your Nekochat server, `{rank, user_id, name, score, me}`, plus your own place |
+| POST | `/scores/{game}` | `{score}` → sends the score of a game just played; only your best is kept; answers `{new_best, scores, me, players}` |
 | POST | `/logout` | ends this session |
 | DELETE | `/me` | forgets the account and everything stored for it |
 
