@@ -315,6 +315,10 @@ setInterval(() => {
 // Live status changes from the companion (server 0.6+): others see a new status at once instead
 // of on the next 30-second poll, which stays as the fallback.
 function closeCompanionEvents() { companion.events?.close(); companion.events = null; }
+setInterval(() => {
+  if (!companion.events || !companion.pingSeen || !companion.lastEvent || Date.now() - companion.lastEvent < 50000) return;
+  companion.lastEvent = Date.now(); companion.pingSeen = false; openCompanionEvents(); activeGames().forEach(id => syncGame(id));
+}, 10000);
 function openCompanionEvents() {
   closeCompanionEvents();
   if (!companion.url || !companion.token || !window.EventSource) return;
@@ -333,7 +337,10 @@ function openCompanionEvents() {
   source.addEventListener('game', event => { try { gameEntryArrived(JSON.parse(event.data)); } catch {} });
   source.addEventListener('game_end', event => { try { gameEnded(JSON.parse(event.data).session); } catch {} });
   // After a dropped connection the entries sent meanwhile are fetched again.
-  source.onopen = () => activeGames().forEach(id => syncGame(id));
+  source.onopen = () => { companion.lastEvent = Date.now(); activeGames().forEach(id => syncGame(id)); };
+  // The server sends a "ping" event every 15 s. A stream that stays silent for 50 s died without telling
+  // (sleep, a changed network): open it again, and fetch what was missed.
+  source.addEventListener('ping', () => { companion.lastEvent = Date.now(); companion.pingSeen = true; });
   // A server without /events answers 404: EventSource gives up (CLOSED) and polling carries on.
   source.onerror = () => { if (source.readyState === EventSource.CLOSED && companion.events === source) companion.events = null; };
 }
