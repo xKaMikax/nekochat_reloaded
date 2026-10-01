@@ -15,16 +15,17 @@ const groupIcons = { 'Smileys & Emotion':'☺', 'People & Body':'☝', 'Animals 
 const emojiItems = Array.isArray(window.NekoChatEmoji) ? window.NekoChatEmoji : [];
 let language = 'ru'; let selectedGroup = 'all'; let selectedSkinTone = '';
 const t = key => words[language][key];
+const nameOf = item => (language === 'ru' && window.NekoChatEmojiRu?.[item.e]) || item.n;
 const groupLabel = group => groupNames[group]?.[language === 'en' ? 1 : 0] || group;
 function applyFrame(theme) { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }
 function render() {
   const query = $('#emoji-search').value.trim().toLocaleLowerCase();
   const groups = [...new Set(emojiItems.map(item => item.g).filter(group => groupNames[group]))];
-  const items = emojiItems.filter(item => (selectedGroup === 'all' || item.g === selectedGroup) && !/skin tone/.test(item.n) && (!query || item.n.toLocaleLowerCase().includes(query)));
-  const currentName = selectedGroup === 'all' ? t('all') : groupLabel(selectedGroup); $('#emoji-group-title').textContent = `${currentName} emoji`;
+  const items = emojiItems.filter(item => (selectedGroup === 'all' || item.g === selectedGroup) && !/skin tone/.test(item.n) && (!query || item.n.toLocaleLowerCase().includes(query) || nameOf(item).toLocaleLowerCase().includes(query)));
+  const currentName = selectedGroup === 'all' ? t('all') : groupLabel(selectedGroup); $('#emoji-group-title').textContent = language === 'ru' ? currentName : `${currentName} emoji`;
   $('#emoji-groups').innerHTML = `<button type="button" class="${selectedGroup === 'all' ? 'active' : ''}" data-group="all" title="${esc(t('all'))}" aria-label="${esc(t('all'))}"><b>☺</b></button>${groups.map(group => `<button type="button" class="${selectedGroup === group ? 'active' : ''}" data-group="${esc(group)}" title="${esc(groupLabel(group))}" aria-label="${esc(groupLabel(group))}"><b>${groupIcons[group]}</b></button>`).join('')}`;
   $('#emoji-count').textContent = `${t('found')}: ${items.length}`;
-  $('#emoji-grid').innerHTML = items.map(item => `<button type="button" data-emoji="${esc(item.e)}" title="${esc(item.n)}" aria-label="${esc(item.n)}">${esc(item.e)}</button>`).join('');
+  $('#emoji-grid').innerHTML = items.map(item => `<button type="button" data-emoji="${esc(item.e)}" title="${esc(nameOf(item))}" aria-label="${esc(nameOf(item))}">${esc(item.e)}</button>`).join('');
 }
 function applyText() { document.documentElement.lang = language; document.title = t('title'); $('.xp-title').textContent = t('title'); $('#emoji-search').placeholder = t('search'); $('#emoji-groups').setAttribute('aria-label', t('groups')); $('#skin-tone-label').textContent = t('skinTone'); document.querySelectorAll('[data-skin-tone]').forEach(button => { const name = t('tones')[button.dataset.skinTone]; if (name) { button.title = name; button.setAttribute('aria-label', name); } }); render(); }
 $('#close').onclick = () => controls.close();
