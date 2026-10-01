@@ -619,6 +619,8 @@ function gameLogWrite(id, log) {
   } catch {}
 }
 function gameEntryArrived(entry) {
+  // A live entry (a ball's position) is not part of the log: the game window reads the latest one.
+  if (entry.kind === 'live') { try { localStorage.setItem(`nk_game_live:${entry.session}`, JSON.stringify({ from: entry.from, name: entry.name, payload: entry.payload, t: Date.now(), r: Math.random() })); } catch {} return; }
   const log = gameLogRead(entry.session) || { entries: [], ended: false };
   if (log.entries.some(item => item.seq === entry.seq)) return;
   const { session, ...item } = entry; log.entries.push(item); log.entries.sort((a, b) => a.seq - b.seq);
@@ -671,7 +673,7 @@ window.addEventListener('storage', event => {
   if (out.cmd === 'sync') { syncGame(out.session); return; }
   if (out.cmd === 'end') { companionFetch('DELETE', `/games/${id}`); return; }
   const send = () => companionFetch('POST', `/games/${id}/send`, { kind: String(out.kind || '').slice(0, 24), payload: out.payload ?? null, ...(Array.isArray(out.to) ? { to: out.to.map(Number).filter(Number.isFinite) } : {}) });
-  send().then(result => { if (!result) setTimeout(() => send(), 1500); });
+  send().then(result => { if (!result && out.kind !== 'live') setTimeout(() => send(), 1500); });
 });
 // Markdown-like formatting: ```code blocks```, `code`, **bold**, *italic* / _italic_, ~~strike~~,
 // clickable links and @mentions (yours highlighted). Everything is escaped first.
