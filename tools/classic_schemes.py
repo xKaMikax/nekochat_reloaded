@@ -21,12 +21,30 @@ def scheme_id(name: str) -> str:
     return 'classic' if name == 'Windows Classic' else re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
 
 
+def bevel(face: str, outer_tl: str, outer_br: str, inner_tl: str, inner_br: str) -> str:
+    """A 12x12 picture of a Classic button for border-image (slice 4): the 3D edges in the scheme's colours."""
+    def colour(value: str) -> str:
+        return value.replace('#', '%23')
+    parts = (
+        f"<rect width='12' height='12' fill='{colour(face)}'/>"
+        f"<rect width='12' height='1' fill='{colour(outer_tl)}'/><rect width='1' height='12' fill='{colour(outer_tl)}'/>"
+        f"<rect y='11' width='12' height='1' fill='{colour(outer_br)}'/><rect x='11' width='1' height='12' fill='{colour(outer_br)}'/>"
+        f"<rect x='1' y='1' width='10' height='1' fill='{colour(inner_tl)}'/><rect x='1' y='1' width='1' height='10' fill='{colour(inner_tl)}'/>"
+        f"<rect x='1' y='10' width='10' height='1' fill='{colour(inner_br)}'/><rect x='10' y='1' width='1' height='10' fill='{colour(inner_br)}'/>"
+    )
+    return f'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' shape-rendering=\'crispEdges\'%3E{parts.replace("<", "%3C").replace(">", "%3E")}%3C/svg%3E")'
+
+
 def render(css: str, c: dict[str, str]) -> str:
     title = f'linear-gradient(270deg, {c["gradientactive"]} 0%, {c["activecaption"]} 100%)'
     lines = {
         '--xp-theme-window': c['window'], '--xp-theme-buttonface': c['btnface'], '--xp-theme-windowtext': c['windowtext'],
         '--xp-theme-highlight': c['highlight'], '--xp-theme-highlighttext': c['highlighttext'], '--xp-theme-graytext': c['graytext'],
         '--xp-title-fill': title,
+        # Buttons that are drawn with the theme's button pictures (border-image) get Classic's raised and pressed edges.
+        '--xp-button-normal': bevel(c['btnface'], c['btnhighlight'], c['3ddkshadow'], c['3dlight'], c['btnshadow']),
+        '--xp-button-hover': bevel(c['btnface'], c['btnhighlight'], c['3ddkshadow'], c['3dlight'], c['btnshadow']),
+        '--xp-button-pressed': bevel(c['btnface'], c['3ddkshadow'], c['btnhighlight'], c['btnshadow'], c['3dlight']),
     }
     for name, value in lines.items():
         css = re.sub(rf'({re.escape(name)}:\s*)[^;]+;', lambda match: f'{match.group(1)}{value};', css, count=1)

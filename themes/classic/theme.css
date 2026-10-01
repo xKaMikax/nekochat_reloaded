@@ -196,3 +196,24 @@ fieldset legend { color: #000 !important; background: #bfbfbf; }
 /* The generic Classic field frame must not wrap the slider. */
 .chat-app input[type="range"], .settings-window input[type="range"], .profile-window input[type="range"] { background: transparent !important; box-shadow: none !important; }
 .settings-window input[type="checkbox"], .chat-app input[type="checkbox"] { background-color: #fff !important; }
+
+/* ---- Classic: what the app draws in XP blue and green otherwise -------------------------------- */
+/* The chat's blues (borders, links, selections, tints) come from these variables; Luna keeps its own. */
+:root { --nk-border: #808080; --nk-accent: #00007b; --nk-muted: #808080; --nk-tint: #dfdfdf; --xp-theme-buttonshadow: #808080; }
+/* Messages: sunken Classic boxes, white for others and grey for yours. */
+.chat-app .message { border: 0 !important; border-radius: 0 !important; background: #fff !important; box-shadow: var(--classic-sunken) !important; }
+.chat-app .message.mine { background: #dfdfdf !important; }
+.chat-app .message-actions { border: 0 !important; border-radius: 0 !important; background: #bfbfbf !important; color: #000 !important; box-shadow: var(--classic-raised) !important; }
+/* Narrow window: the search button of the chat header is a raised square like its neighbours, not a green ball. */
+@media (max-width: 900px) {
+  .chat-app .header-search:not(.open):not(.active) { border: 0 !important; border-radius: 0 !important; background: #bfbfbf !important; box-shadow: var(--classic-raised) !important; }
+  .chat-app .header-search:not(.open):not(.active):active { box-shadow: var(--classic-pressed) !important; }
+  .chat-app .header-search:not(.open):not(.active) svg { fill: #000 !important; }
+}
+:root { --nk-quote-bg: #dfdfdf; }
+/* Update window and Automatic Updates banner: grey Classic boxes with the scheme's title colours, not XP blue. */
+.wu-banner { background: #bfbfbf !important; border-bottom: 1px solid #808080 !important; }
+.wu-box { border: 0 !important; border-radius: 0 !important; background: #fff !important; box-shadow: var(--classic-raised) !important; }
+.wu-box header, .updates-banner { background: var(--xp-title-fill) !important; border-bottom: 0 !important; }
+.wu-link, .wu-box a, .wu-content a, .wu-side a { color: #00007b !important; }
+.cp-address-drop { background: #bfbfbf !important; box-shadow: var(--classic-raised) !important; }

@@ -14,7 +14,7 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .help-band { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 6px 14px; background: linear-gradient(#003399, #0a3aa0); color: #fff; }
 .help-search { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 4px; }
 .help-search label { display: flex; align-items: center; gap: 8px; font: bold 16px 'Trebuchet MS', Tahoma, sans-serif; }
-.help-search input { width: 170px; height: 20px; box-sizing: border-box; padding: 1px 3px; border: 1px solid #7f9db9; font: 11px Tahoma, sans-serif; }
+.help-search input { width: 170px; height: 20px; box-sizing: border-box; padding: 1px 3px; border: 1px solid var(--nk-border, #7f9db9); font: 11px Tahoma, sans-serif; }
 .help-search button { width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
 .help-search button img { width: 22px; height: 22px; }
 .help-search small { grid-column: 1; padding-left: 64px; color: #dfe8ff; }
@@ -85,7 +85,7 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .help-results-group li { margin: 2px 0; }
 .help-results-group a { color: #215dc6; }
 .help-check { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
-.help-index-filter { width: 220px; height: 20px; margin-bottom: 8px; border: 1px solid #7f9db9; }
+.help-index-filter { width: 220px; height: 20px; margin-bottom: 8px; border: 1px solid var(--nk-border, #7f9db9); }
 .help-index { columns: 2; }
 .help-index small { color: #dfe8ff; }
 .help-remove { margin-left: 6px; padding: 0 6px; border: 1px solid #fff; border-radius: 2px; background: none; color: #fff; font: 10px Tahoma, sans-serif; cursor: pointer; }

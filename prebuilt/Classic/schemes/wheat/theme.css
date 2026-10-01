@@ -31,9 +31,9 @@
   --xp-close-normal: #dedea0;
   --xp-close-hover: #dedea0;
   --xp-close-pressed: #dedea0;
-  --xp-button-normal: none;
-  --xp-button-hover: none;
-  --xp-button-pressed: none;
+  --xp-button-normal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect width='12' height='12' fill='%23dedea0'/%3E%3Crect width='12' height='1' fill='%23eeeed0'/%3E%3Crect width='1' height='12' fill='%23eeeed0'/%3E%3Crect y='11' width='12' height='1' fill='%23000000'/%3E%3Crect x='11' width='1' height='12' fill='%23000000'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%23dedea0'/%3E%3Crect x='1' y='1' width='1' height='10' fill='%23dedea0'/%3E%3Crect x='1' y='10' width='10' height='1' fill='%23bcbc41'/%3E%3Crect x='10' y='1' width='1' height='10' fill='%23bcbc41'/%3E%3C/svg%3E");
+  --xp-button-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect width='12' height='12' fill='%23dedea0'/%3E%3Crect width='12' height='1' fill='%23eeeed0'/%3E%3Crect width='1' height='12' fill='%23eeeed0'/%3E%3Crect y='11' width='12' height='1' fill='%23000000'/%3E%3Crect x='11' width='1' height='12' fill='%23000000'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%23dedea0'/%3E%3Crect x='1' y='1' width='1' height='10' fill='%23dedea0'/%3E%3Crect x='1' y='10' width='10' height='1' fill='%23bcbc41'/%3E%3Crect x='10' y='1' width='1' height='10' fill='%23bcbc41'/%3E%3C/svg%3E");
+  --xp-button-pressed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect width='12' height='12' fill='%23dedea0'/%3E%3Crect width='12' height='1' fill='%23000000'/%3E%3Crect width='1' height='12' fill='%23000000'/%3E%3Crect y='11' width='12' height='1' fill='%23eeeed0'/%3E%3Crect x='11' width='1' height='12' fill='%23eeeed0'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%23bcbc41'/%3E%3Crect x='1' y='1' width='1' height='10' fill='%23bcbc41'/%3E%3Crect x='1' y='10' width='10' height='1' fill='%23dedea0'/%3E%3Crect x='10' y='1' width='1' height='10' fill='%23dedea0'/%3E%3C/svg%3E");
   --xp-button-border: 0;
   --xp-button-frame: none;
   --xp-button-frame-hover: none;
@@ -196,5 +196,26 @@ fieldset legend { color: #000000 !important; background: #dedea0; }
 /* The generic Classic field frame must not wrap the slider. */
 .chat-app input[type="range"], .settings-window input[type="range"], .profile-window input[type="range"] { background: transparent !important; box-shadow: none !important; }
 .settings-window input[type="checkbox"], .chat-app input[type="checkbox"] { background-color: #ffffff !important; }
+
+/* ---- Classic: what the app draws in XP blue and green otherwise -------------------------------- */
+/* The chat's blues (borders, links, selections, tints) come from these variables; Luna keeps its own. */
+:root { --nk-border: #bcbc41; --nk-accent: #808000; --nk-muted: #bcbc41; --nk-tint: #dedea0; --xp-theme-buttonshadow: #bcbc41; }
+/* Messages: sunken Classic boxes, white for others and grey for yours. */
+.chat-app .message { border: 0 !important; border-radius: 0 !important; background: #ffffff !important; box-shadow: var(--classic-sunken) !important; }
+.chat-app .message.mine { background: #dedea0 !important; }
+.chat-app .message-actions { border: 0 !important; border-radius: 0 !important; background: #dedea0 !important; color: #000000 !important; box-shadow: var(--classic-raised) !important; }
+/* Narrow window: the search button of the chat header is a raised square like its neighbours, not a green ball. */
+@media (max-width: 900px) {
+  .chat-app .header-search:not(.open):not(.active) { border: 0 !important; border-radius: 0 !important; background: #dedea0 !important; box-shadow: var(--classic-raised) !important; }
+  .chat-app .header-search:not(.open):not(.active):active { box-shadow: var(--classic-pressed) !important; }
+  .chat-app .header-search:not(.open):not(.active) svg { fill: #000000 !important; }
+}
+:root { --nk-quote-bg: #dedea0; }
+/* Update window and Automatic Updates banner: grey Classic boxes with the scheme's title colours, not XP blue. */
+.wu-banner { background: #dedea0 !important; border-bottom: 1px solid #bcbc41 !important; }
+.wu-box { border: 0 !important; border-radius: 0 !important; background: #ffffff !important; box-shadow: var(--classic-raised) !important; }
+.wu-box header, .updates-banner { background: var(--xp-title-fill) !important; border-bottom: 0 !important; }
+.wu-link, .wu-box a, .wu-content a, .wu-side a { color: #808000 !important; }
+.cp-address-drop { background: #dedea0 !important; box-shadow: var(--classic-raised) !important; }
 
 :root { --classic-face: #dedea0; --classic-shadow: #bcbc41; --classic-light: #dedea0; --classic-hilight: #eeeed0; --classic-dark: #000000; --classic-text: #000000; --classic-desktop: #00401d; --xp-title-fill-inactive: linear-gradient(270deg, #b8b880 0%, #bcbc41 100%); --xp-title-text: #ffffff; --xp-title-text-inactive: #ffffff; }
