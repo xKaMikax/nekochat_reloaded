@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.12.0"
+VERSION = "0.12.1"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -460,7 +460,9 @@ async def events(request: Request, token: str = ""):
                     kind = event.pop("type", "status")
                     yield f"event: {kind}\ndata: {json.dumps(event)}\n\n"
                 except asyncio.TimeoutError:
-                    yield ": ping\n\n"  # keeps proxies and the tunnel from closing the stream
+                    # keeps proxies and the tunnel from closing the stream; a real event, so that clients (EventSource
+                    # shows no comments) can tell a live stream from one that silently died
+                    yield ": ping\n\nevent: ping\ndata: {}\n\n"
         finally:
             _listeners.get(server, set()).discard(listener)
             with database() as db:
