@@ -26,9 +26,9 @@ Interactive docs (Swagger UI): `/api/docs` (alias `/docs`); OpenAPI spec: `/api/
 | GET | `/statuses?ids=1,2,3` | statuses of those Nekochat users on your server (only non-`online` ones; invisible users show as `offline`) |
 | POST | `/games` | `{game, chat}` (`"dm:<user id>"` or `"room:<id>"`) → starts a game between users and sends a `game_invite` event to the chat; answers the session `{id, game, host, log, ...}` |
 | GET | `/games/{id}` | the game and its log (only the entries meant for you), for someone joining late |
-| POST | `/games/{id}/send` | `{kind, payload, to?}` → adds an entry to the ordered log and passes it on live as a `game` event (`join` makes you a player; `to` addresses it to some players only, e.g. hidden cards) |
+| POST | `/games/{id}/send` | `{kind, payload, to?}` → adds an entry to the ordered log and passes it on live as a `game` event (`join` makes you a player; `to` addresses it to some players only, e.g. hidden cards; `live` entries, like the position of a ball, are passed on at once and never kept in the log) |
 | DELETE | `/games/{id}` | ends the game (`game_end` event) |
-| GET | `/scores/{game}?limit=10` | the high scores of a game (`pinball`): the best first, one row per user id of your Nekochat server, `{rank, user_id, name, score, me}`, plus your own place |
+| GET | `/scores/{game}?limit=10&users=1,2,3` | the high scores of a game (`pinball`), `users` keeps only those user ids (e.g. a room's members): the best first, one row per user id of your Nekochat server, `{rank, user_id, name, score, me}`, plus your own place |
 | POST | `/scores/{game}` | `{score}` → sends the score of a game just played; only your best is kept; answers `{new_best, scores, me, players}` |
 | POST | `/files?name=&mime=` | the body is a file (up to 50 MB, 500 MB in all per user) → stored for good ("Infinity Memory"); answers `{id, name, size, path: "/f/<id>/<secret>"}` |
 | GET | `/files` | your stored files and how much room is left |

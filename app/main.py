@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.11.0"
+VERSION = "0.12.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -802,11 +802,13 @@ def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Dep
     me_id = int(account["nekochat_id"])
     if game["closed"]:
         raise HTTPException(409, "This game has ended")
+    live = entry.kind == "live"
+    # A "live" entry (the position of a ball, a cursor) is passed on at once and never kept in the log.
     stamps = [stamp for stamp in _game_rate.get(me_id, []) if stamp > time.time() - 2]
-    if len(stamps) >= 40:
+    if len(stamps) >= (60 if live else 40):
         raise HTTPException(429, "Too many moves at once")
     _game_rate[me_id] = stamps + [time.time()]
-    if len(json.dumps(entry.payload)) > MAX_GAME_PAYLOAD:
+    if len(json.dumps(entry.payload)) > (800 if live else MAX_GAME_PAYLOAD):
         raise HTTPException(413, "Entry too large")
     if entry.kind == "join":
         if me_id not in game["audience"] and len(game["audience"]) >= MAX_GAME_PLAYERS:
@@ -814,6 +816,11 @@ def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Dep
         game["audience"].add(me_id)
     elif me_id not in game["audience"]:
         raise HTTPException(403, "Join the game first")
+    if live:
+        game["touched"] = time.time()
+        item = {"seq": 0, "from": me_id, "name": player_name(account), "kind": "live", "payload": entry.payload, "at": now()}
+        publish(game["server"], {"type": "game", "session": game_id, **item, "_to": sorted(user for user in game["audience"] if user != me_id)})
+        return {"seq": 0}
     if len(game["log"]) >= MAX_GAME_ENTRIES:
         raise HTTPException(409, "This game is too long")
     game["seq"] += 1
@@ -859,7 +866,7 @@ def score_game(game: str) -> str:
     return game
 
 
-def score_table(game: str, account: sqlite3.Row, limit: int) -> dict[str, Any]:
+def score_table(game: str, account: sqlite3.Row, limit: int, only: set[int] | None = None) -> dict[str, Any]:
     me_id = int(account["nekochat_id"])
     with database() as db:
         rows = db.execute(
@@ -869,6 +876,8 @@ def score_table(game: str, account: sqlite3.Row, limit: int) -> dict[str, Any]:
             (game, account["server"]),
         ).fetchall()
     entries = []
+    if only is not None:
+        rows = [row for row in rows if row["nekochat_id"] in only]
     for rank, row in enumerate(rows, 1):
         try:
             profile = json.loads(row["profile"] or "{}")
@@ -880,9 +889,11 @@ def score_table(game: str, account: sqlite3.Row, limit: int) -> dict[str, Any]:
 
 
 @app.get("/scores/{game}", tags=["scores"])
-def get_scores(game: str, limit: int = 10, account: sqlite3.Row = Depends(current_account)):
-    """The best scores (best first) of everyone on the user's Nekochat server, and the user's own place."""
-    return score_table(score_game(game), account, max(1, min(limit, 100)))
+def get_scores(game: str, limit: int = 10, users: str = "", account: sqlite3.Row = Depends(current_account)):
+    """The best scores (best first) of everyone on the user's Nekochat server, and the user's own place.
+    `users` (comma-separated user ids, e.g. the members of a room) keeps only those players and ranks them among themselves."""
+    only = {int(item) for item in users.split(",")[:500] if item.strip().isdigit()} if users.strip() else None
+    return score_table(score_game(game), account, max(1, min(limit, 100)), only)
 
 
 @app.post("/scores/{game}", tags=["scores"])
