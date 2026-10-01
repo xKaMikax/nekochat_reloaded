@@ -51,7 +51,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "Nekochat-Reloaded-Setup-${version}.${ext}"
+      "artifactName": "Nekochat-Reloaded-Setup-${version}.${ext}",
+      "include": "build/installer.nsh"
     },
     "deb": {
       "artifactName": "nekochat-reloaded_${version}_${arch}.${ext}"

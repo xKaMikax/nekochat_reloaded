@@ -1296,6 +1296,11 @@ app.whenReady().then(async () => {
   });
   createTray();
   createWindow();
+  // Started by the installer after an update (Windows Update in the app, or the installer run with "Update"):
+  // the Windows Update window is shown again where the user left it.
+  if (process.argv.some(arg => arg === '--updated' || arg === '--open-update') && mainWindow) {
+    mainWindow.webContents.once('did-finish-load', () => setTimeout(() => { if (mainWindow && !mainWindow.isDestroyed()) openThemeBrowser(mainWindow); }, 1500));
+  }
 });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => { if (!tray && process.platform !== 'darwin') app.quit(); });
