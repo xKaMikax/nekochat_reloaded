@@ -20,8 +20,8 @@ android {
         applicationId = "dev.kamika.nekochat_reloaded"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.4.3"
+        versionCode = 17
+        versionName = "1.4.4-beta-1"
     }
 
     signingConfigs {
