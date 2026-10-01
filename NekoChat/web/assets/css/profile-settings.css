@@ -28,7 +28,7 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .ua-tile b { font-size: 12px; }
 .ua-tile:not(:disabled):hover b { text-decoration: underline; }
 .ua-field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
-.ua-field input, .ua-field textarea { box-sizing: border-box; width: 100%; max-width: 420px; padding: 2px 4px; border: 1px solid #7f9db9; background: #fff; font: inherit; }
+.ua-field input, .ua-field textarea { box-sizing: border-box; width: 100%; max-width: 420px; padding: 2px 4px; border: 1px solid var(--nk-border, #7f9db9); background: #fff; font: inherit; }
 .ua-field textarea { height: 70px; resize: vertical; }
 .ua-colour input { width: 60px; height: 24px; padding: 0 2px; }
 .ua-rule { margin: 18px 0 10px; border: 0; border-top: 1px solid #7294df; }
@@ -37,14 +37,14 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .ua-button:hover { border-image-source: var(--xp-button-hover, var(--xp-button-normal)); }
 .ua-button:active { border-image-source: var(--xp-button-pressed, var(--xp-button-normal)); }
 .ua-button:disabled { color: #a0a0a0; }
-.ua-pictures { display: grid; grid-template-columns: repeat(auto-fill, 60px); gap: 8px; max-height: 140px; overflow-y: auto; padding: 8px; border: 1px solid #7f9db9; background: #fff; }
+.ua-pictures { display: grid; grid-template-columns: repeat(auto-fill, 60px); gap: 8px; max-height: 140px; overflow-y: auto; padding: 8px; border: 1px solid var(--nk-border, #7f9db9); background: #fff; }
 .ua-picture { width: 56px; height: 56px; padding: 2px; border: 2px solid transparent; background: none; }
 .ua-picture img { display: block; width: 48px; height: 48px; }
 .ua-picture:hover { border-color: #c6d3f7; }
 .ua-picture.selected { border-color: var(--xp-theme-highlight, #316ac5); }
 .ua-browse { margin-top: 10px; }
 .ua-current { width: 48px; height: 48px; object-fit: cover; }
-.ua-banner { height: 70px; max-width: 420px; border: 1px solid #7f9db9; background: var(--xp-title-fill, #316ac5) center / cover no-repeat; }
+.ua-banner { height: 70px; max-width: 420px; border: 1px solid var(--nk-border, #7f9db9); background: var(--xp-title-fill, #316ac5) center / cover no-repeat; }
 .ua-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; margin: 10px 0; }
 .ua-error { min-height: 1.2em; color: #b0281a; }
 .cp-classic-look .ua-heading { color: var(--xp-theme-highlight, #000080); }
