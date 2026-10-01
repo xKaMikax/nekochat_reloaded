@@ -26,7 +26,7 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; font: 11px 
 .cp-tool-separator { width: 1px; height: 28px; margin: 0 3px; background: #c5c2b2; box-shadow: 1px 0 #fff; }
 .cp-address { display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 4px; border-bottom: 1px solid #d6d2c2; background: var(--xp-theme-buttonface, #ece9d8); }
 .cp-address-label { color: #7b7b7b; }
-.cp-address-box { display: flex; flex: 1; min-width: 0; align-items: center; gap: 4px; height: 20px; padding: 0 0 0 3px; border: 1px solid #7f9db9; background: #fff; overflow: hidden; white-space: nowrap; }
+.cp-address-box { display: flex; flex: 1; min-width: 0; align-items: center; gap: 4px; height: 20px; padding: 0 0 0 3px; border: 1px solid var(--nk-border, #7f9db9); background: #fff; overflow: hidden; white-space: nowrap; }
 .cp-address-box img { width: 16px; height: 16px; }
 .cp-address-box span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cp-address-drop { flex: none; align-self: stretch; width: 17px; background: var(--xp-scroll-down, linear-gradient(#e0e8fe, #b4c8f6)) center / 100% 100% no-repeat; }
