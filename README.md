@@ -18,7 +18,7 @@ Nekochat Reloaded is an unofficial iPhone client for Nekochat. It brings the sam
 
 ## Download
 
-Every push to this branch builds an unsigned `.ipa` with GitHub Actions. Open the latest **Build IPA** run in the **Actions** tab and download the `Nekochat-Reloaded-1.4.3-ipa` artifact.
+Every push to this branch builds an unsigned `.ipa` with GitHub Actions. Open the latest **Build IPA** run in the **Actions** tab and download the `Nekochat-Reloaded-1.4.4-beta-1-ipa` artifact.
 
 ## Install on an iPhone
 
