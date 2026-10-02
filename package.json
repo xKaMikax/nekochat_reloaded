@@ -8,6 +8,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test:xp-window": "electron . --xp-test-window",
     "build": "electron-builder",
     "build:linux": "electron-builder --linux AppImage deb",
     "build:windows": "electron-builder --win nsis portable"

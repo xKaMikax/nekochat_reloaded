@@ -1,0 +1,20 @@
+(() => {
+  const words = {
+    ru: { title: 'Проверка интерфейса XP', subtitle: 'Элементы используют активную тему клиента', controls: 'Элементы', list: 'Список', dialog: 'Диалог', inputs: 'Поля ввода', name: 'Имя', choice: 'Схема', checkbox: 'Включить звук', radio: 'Обычный', radio2: 'Другой', buttons: 'Кнопки', action: 'Проверить', disabled: 'Недоступно', reset: 'Сбросить', progress: 'Выполнение', add: 'Добавить', items: '3 элемента', listFirst: 'Основное приложение', listSecond: 'Темы', listSecondInfo: 'Luna и Classic', listThird: 'Дополнения', listThirdInfo: 'Установленные компоненты', dialogTitle: 'Системное сообщение', dialogText: 'Так выглядит базовый диалог активной темы.', cancel: 'Отмена', ready: 'Готово', checked: 'Элементы проверены', resetDone: 'Состояние сброшено', added: 'Добавлен элемент {count}' },
+    en: { title: 'XP UI Test', subtitle: 'Controls use the active client theme', controls: 'Controls', list: 'List', dialog: 'Dialog', inputs: 'Input fields', name: 'Name', choice: 'Scheme', checkbox: 'Enable sound', radio: 'Normal', radio2: 'Other', buttons: 'Buttons', action: 'Check', disabled: 'Disabled', reset: 'Reset', progress: 'Progress', add: 'Add', items: '3 items', listFirst: 'Main application', listSecond: 'Themes', listSecondInfo: 'Luna and Classic', listThird: 'Add-ons', listThirdInfo: 'Installed components', dialogTitle: 'System message', dialogText: 'This is how a basic dialog looks in the active theme.', cancel: 'Cancel', ready: 'Ready', checked: 'Controls checked', resetDone: 'State reset', added: 'Added item {count}' }
+  };
+  let language = 'ru'; let count = 3;
+  const text = (key, values = {}) => String(words[language][key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
+  const translate = () => document.querySelectorAll('[data-i18n]').forEach(node => { node.textContent = text(node.dataset.i18n); });
+  const setStatus = key => { document.querySelector('#status-text').textContent = text(key, { count }); };
+  const applyTheme = theme => { if (theme?.cssUrl) document.querySelector('#xp-test-theme').href = theme.cssUrl; };
+  const applyDisplay = settings => { language = settings?.language === 'en' ? 'en' : 'ru'; document.documentElement.lang = language; translate(); };
+  window.addEventListener('message', event => { if (event.data?.type === 'xp-theme-refresh') applyTheme(event.data); if (event.data?.type === 'xp-display-settings') applyDisplay(event.data.settings); });
+  document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-page]').forEach(item => item.classList.toggle('active', item === button)); document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== button.dataset.page; }); }));
+  document.querySelector('#show-message').onclick = () => { document.querySelector('#progress-value').style.width = '78%'; setStatus('checked'); };
+  document.querySelector('#reset-test').onclick = () => { document.querySelector('#progress-value').style.width = '35%'; setStatus('resetDone'); };
+  document.querySelector('#dialog-ok').onclick = () => setStatus('checked');
+  document.querySelector('#test-list').onclick = event => { const item = event.target.closest('button'); if (!item) return; document.querySelectorAll('#test-list button').forEach(node => node.classList.toggle('selected', node === item)); };
+  document.querySelector('#add-item').onclick = () => { count += 1; const item = document.createElement('button'); item.type = 'button'; item.setAttribute('role', 'option'); item.innerHTML = `<i class="list-folder"></i><span><b>Test ${count}</b><small>${text('added', { count })}</small></span>`; document.querySelector('#test-list').append(item); document.querySelector('#list-status').textContent = `${count} ${language === 'en' ? 'items' : 'элемента'}`; setStatus('added'); };
+  window.parent?.postMessage({ type: 'xp-window-meta', title: 'XP UI Test', icon: 'assets/images/nekochat_icon.png' }, '*');
+})();

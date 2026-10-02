@@ -1033,6 +1033,24 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'assets', 'html', 'index.html'));
 }
 
+// Development preview for checking the shared XP frame and controls in every theme.
+function openXpTestWindow() {
+  const win = new BrowserWindow({
+    title: 'XP UI Test',
+    icon: path.join(__dirname, 'assets', 'images', 'nekochat_icon.png'),
+    width: 640,
+    height: 470,
+    minWidth: 420,
+    minHeight: 320,
+    frame: false,
+    resizable: true,
+    backgroundColor: '#ece9d8',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  win.loadFile(path.join(__dirname, 'assets', 'html', 'index.html'), { query: { app: 'xp-test' } });
+  return win;
+}
+
 // ---- Updates: the chat window finds a newer GitHub release (nekochat.js) and asks here to
 // install it. The Windows installer and the AppImage update themselves with electron-updater
 // from that release's latest*.yml; the portable exe and the .deb package open the download.
@@ -1296,6 +1314,7 @@ app.whenReady().then(async () => {
   });
   createTray();
   createWindow();
+  if (process.argv.includes('--xp-test-window')) openXpTestWindow();
   // Started by the installer after an update (Windows Update in the app, or the installer run with "Update"):
   // the Windows Update window is shown again where the user left it.
   if (process.argv.some(arg => arg === '--updated' || arg === '--open-update') && mainWindow) {

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../../">
+  <title>XP UI Test</title>
+  <link rel="icon" href="assets/images/nekochat_icon.png">
+  <link rel="stylesheet" href="assets/css/xp-test.css">
+  <link id="xp-test-theme" rel="stylesheet" href="data:text/css,">
+  <link rel="stylesheet" href="assets/css/theme-controls.css">
+</head>
+<body>
+  <main class="xp-test" aria-label="XP UI Test">
+    <header class="test-heading"><span class="test-icon"><img src="assets/images/nekochat_icon.png" alt=""></span><span><b data-i18n="title">Проверка интерфейса XP</b><small data-i18n="subtitle">Элементы используют активную тему клиента</small></span></header>
+    <nav class="test-tabs" aria-label="Test pages"><button class="active" type="button" data-page="controls" data-i18n="controls">Элементы</button><button type="button" data-page="list" data-i18n="list">Список</button><button type="button" data-page="dialog" data-i18n="dialog">Диалог</button></nav>
+    <section class="test-page" data-panel="controls">
+      <fieldset><legend data-i18n="inputs">Поля ввода</legend><label><span data-i18n="name">Имя</span><input value="Nekochat Reloaded"></label><label><span data-i18n="choice">Схема</span><select><option>Luna</option><option>Classic</option></select></label><span class="choice-row"><label><input type="checkbox" checked> <span data-i18n="checkbox">Включить звук</span></label><label><input name="test-radio" type="radio" checked> <span data-i18n="radio">Обычный</span></label><label><input name="test-radio" type="radio"> <span data-i18n="radio2">Другой</span></label></span></fieldset>
+      <fieldset><legend data-i18n="buttons">Кнопки</legend><div class="button-row"><button class="xp-button" type="button" id="show-message" data-i18n="action">Проверить</button><button class="xp-button" type="button" disabled data-i18n="disabled">Недоступно</button><button class="xp-button danger-button" type="button" id="reset-test" data-i18n="reset">Сбросить</button></div><label class="progress-label"><span data-i18n="progress">Выполнение</span><span class="xp-progress"><i id="progress-value"></i></span></label></fieldset>
+    </section>
+    <section class="test-page" data-panel="list" hidden><div class="list-toolbar"><button class="xp-button" id="add-item" type="button" data-i18n="add">Добавить</button><span id="list-status" data-i18n="items">3 элемента</span></div><div class="test-list" id="test-list" role="listbox"><button type="button" class="selected" role="option"><img src="assets/images/nekochat_icon.png" alt=""><span><b>Nekochat Reloaded</b><small data-i18n="listFirst">Основное приложение</small></span></button><button type="button" role="option"><i class="list-folder"></i><span><b data-i18n="listSecond">Темы</b><small data-i18n="listSecondInfo">Luna и Classic</small></span></button><button type="button" role="option"><i class="list-folder"></i><span><b data-i18n="listThird">Дополнения</b><small data-i18n="listThirdInfo">Установленные компоненты</small></span></button></div></section>
+    <section class="test-page" data-panel="dialog" hidden><article class="sample-dialog"><header><i class="dialog-info">i</i><span><b data-i18n="dialogTitle">Системное сообщение</b><small data-i18n="dialogText">Так выглядит базовый диалог активной темы.</small></span></header><footer><button class="xp-button" id="dialog-ok" type="button">OK</button><button class="xp-button" type="button" data-i18n="cancel">Отмена</button></footer></article></section>
+    <footer class="test-status"><span id="status-text" data-i18n="ready">Готово</span><span>XP UI Test</span></footer>
+  </main>
+  <script src="assets/js/packs.js"></script><script src="assets/js/xp-test.js"></script>
+</body>
+</html>
