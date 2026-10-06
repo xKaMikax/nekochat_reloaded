@@ -92,6 +92,10 @@ def host_log(host, guest, view):
 
 
 m.migrate()
+demo("demo-session-7", "pinball", (1, "KaMika"), (2, "Komdu"), simple_log((1, "KaMika"), (2, "Komdu"), []))
+m._games["demo-session-7"]["watch"] = "demo-solo"
+m._games["demo-session-7"]["audience"] = {1}
+m._games["demo-session-7"]["live"] = {1: {"name": "KaMika", "payload": {"x": 0.55, "y": 0.62, "d": 0.03, "s": 36250}, "at": time.time() + 3600}}
 demo("demo-session-6", "pinball", (1, "KaMika"), (2, "Komdu"), simple_log((1, "KaMika"), (2, "Komdu"), [(1, "start", {"players": [1, 2]})]))
 m._games["demo-session-6"]["live"] = {1: {"name": "KaMika", "payload": {"x": 0.62, "y": 0.41, "d": 0.03, "s": 184500}, "at": time.time() + 3600},
                                       2: {"name": "Komdu", "payload": {"x": 0.30, "y": 0.77, "d": 0.03, "s": 96200}, "at": time.time() + 3600}}
