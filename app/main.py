@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.12.1"
+VERSION = "0.13.0"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -1080,3 +1080,8 @@ def delete_me(account: sqlite3.Row = Depends(current_account)):
     for file_id in stored:
         file_path(file_id).unlink(missing_ok=True)
     return {"ok": True}
+
+
+# ---- the website (site/, served at /) -----------------------------------------------------------------
+from .site import install as install_site  # noqa: E402  (last: its static files must not cover any API path)
+install_site(app)

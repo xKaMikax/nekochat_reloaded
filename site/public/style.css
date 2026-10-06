@@ -1,0 +1,33 @@
+/* the look of a home page from 2002: tables, Verdana 11px, bevelled buttons, blue links that turn purple */
+body { margin: 8px; font-family: Verdana, Tahoma, Arial, sans-serif; font-size: 11px; color: #000000; background-color: #e2eaf7; }
+td, p, li, th { font-family: Verdana, Tahoma, Arial, sans-serif; font-size: 11px; line-height: 1.45em; }
+a:link { color: #0000cc; }
+a:visited { color: #660099; }
+a:hover { color: #ff0000; }
+a:active { color: #ff6600; }
+img { border: 0; }
+h1 { font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #000080; margin: 0 0 8px 0; padding-bottom: 3px; border-bottom: 2px solid #ff9a28; }
+h2 { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #000080; margin: 18px 0 4px 0; }
+.outer { background-color: #ffffff; border: 1px solid #000080; }
+.nav { background-color: #d6dff7; border-right: 1px solid #000080; padding: 8px; }
+.nav a { display: block; margin-bottom: 4px; padding: 3px 6px; background-color: #ece9d8; border: 2px outset #ffffff; color: #000080; font-weight: bold; text-decoration: none; }
+.nav a:hover { background-color: #fff5c8; color: #cc0000; }
+.nav a.here { border-style: inset; background-color: #ffffff; color: #cc0000; }
+.nav .head { margin: 12px 0 4px 0; padding: 2px 4px; background-color: #000080; color: #ffffff; font-weight: bold; }
+.nav .small { font-size: 10px; line-height: 1.3em; }
+.main { padding: 12px 16px; }
+.foot { background-color: #000080; color: #ffffff; text-align: center; padding: 8px; font-size: 10px; }
+.foot a:link, .foot a:visited { color: #ffee78; }
+.box { border: 1px solid #000080; margin: 10px 0; }
+.box .title { background-color: #000080; color: #ffffff; font-weight: bold; padding: 2px 6px; }
+.box .body { background-color: #fffff0; padding: 6px 8px; }
+.news { border: 2px inset #ffffff; background-color: #000000; color: #33ff33; font-family: "Courier New", monospace; font-size: 12px; padding: 3px; }
+.red { color: #cc0000; font-weight: bold; }
+.small { font-size: 10px; }
+table.data { border-collapse: collapse; width: 100%; margin: 6px 0; }
+table.data th { background-color: #000080; color: #ffffff; text-align: left; padding: 3px 6px; border: 1px solid #000080; }
+table.data td { border: 1px solid #8090c0; padding: 3px 6px; background-color: #ffffff; }
+table.data tr.alt td { background-color: #eef2ff; }
+ul.arrows { list-style-image: url(/img/bullet-blue.gif); margin-top: 4px; }
+.shot { border: 3px ridge #8090c0; }
+.counter { vertical-align: middle; }

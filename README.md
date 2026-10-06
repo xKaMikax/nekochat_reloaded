@@ -49,3 +49,10 @@ NEKOCHAT_SERVERS=https://nekochat.komdu.is-cool.dev,http://127.0.0.1:8001 ./star
 ```
 
 Data lives in `reloaded.db` (SQLite, set `RELOADED_DB` to move it).
+
+## Website
+
+The server also serves the project's home page (Windows XP era style, English and Russian) at `/` and `/ru/`. The page sources are in `site/`:
+`site/build.py` writes the pages from the texts in it, `site/tools/make_art.py` draws the pictures, `site/public/` is what is served.
+`/counter.svg` is the visitor counter (one more per visitor every 30 minutes); the home page, the download page and the status page are filled in when served
+(the latest GitHub release, the version, the uptime, how many accounts, scores and files). No API path is covered by the site.
