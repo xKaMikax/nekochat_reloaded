@@ -31,6 +31,9 @@ bd.text((120, 64), "the Windows XP style client for Nekochat - chat, call, play"
 bd.text((119, 63), "the Windows XP style client for Nekochat - chat, call, play", font=sub, fill=(255, 238, 120))
 bd.rectangle([0, H - 3, W, H], fill=(255, 150, 40))
 banner.save(f"{OUT}/banner.png")
+# the strip that continues the banner to the right edge of any screen (the last column of the banner, repeated)
+strip = banner.crop((W - 1, 0, W, H)).resize((8, H))
+strip.save(f"{OUT}/banner-fill.png")
 
 # --- the page background: a small pale tile -----------------------------------------------------------------
 tile = Image.new("RGB", (8, 8), (226, 234, 247))
@@ -100,7 +103,7 @@ button88("btn-res", (120, 120, 120), (30, 30, 30), ["Best at", "1024 x 768"])
 
 # --- the screenshot and the icon ---------------------------------------------------------------------------------------
 shot = Image.open("tools/screenshot-pc.png").convert("RGB")
-shot.resize((400, int(shot.height * 400 / shot.width)), Image.LANCZOS).save(f"{OUT}/screenshot.png")
+shot.resize((560, int(shot.height * 560 / shot.width)), Image.LANCZOS).save(f"{OUT}/screenshot.png")
 icon = Image.open("tools/cat28.png").convert("RGBA")
 sq = Image.new("RGBA", (32, 32), (0, 0, 0, 0)); sq.paste(icon.resize((28, 26), Image.NEAREST), (2, 3))
 sq.save("public/favicon.ico", sizes=[(16, 16), (32, 32)])

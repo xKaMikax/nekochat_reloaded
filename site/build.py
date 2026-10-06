@@ -18,7 +18,7 @@ T = {
         "lang": "en", "other": "ru", "other_name": "Русский", "dir": "",
         "nav": {"index": "Home", "features": "Features", "download": "Download", "addons": "Add-ons &amp; Themes", "catalog": "Catalog",
                 "server": "The Server", "status": "Server Status", "about": "About"},
-        "menu": "Menu", "language": "Language", "links": "Links",
+        "menu": "Menu", "language": "Language", "search": "Find in the catalog", "go": "Go", "links": "Links",
         "guestbook": "Guestbook", "code": "Source code", "webclient": "Web version",
         "titles": {"index": "Welcome!", "features": "Features", "download": "Download", "addons": "Add-ons and Themes", "catalog": "Catalog",
                    "server": "The Nekochat Reloaded Server", "status": "Server Status", "about": "About this site"},
@@ -30,7 +30,7 @@ T = {
         "lang": "ru", "other": "en", "other_name": "English", "dir": "ru/",
         "nav": {"index": "Главная", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
                 "server": "Сервер", "status": "Состояние сервера", "about": "О сайте"},
-        "menu": "Меню", "language": "Язык", "links": "Ссылки",
+        "menu": "Меню", "language": "Язык", "search": "Поиск в каталоге", "go": "Найти", "links": "Ссылки",
         "guestbook": "Гостевая книга", "code": "Исходный код", "webclient": "Веб-версия",
         "titles": {"index": "Добро пожаловать!", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
                    "server": "Сервер Nekochat Reloaded", "status": "Состояние сервера", "about": "О сайте"},
@@ -45,7 +45,14 @@ T["en"]["pages"]["index"] = f"""
 <table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Welcome to Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
 <div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Games from Windows XP: Solitaire, Hearts, Reversi, 3D Pinball with shared high scores *** Send files in chats, up to 50 MB kept for good *** Nekochat Reloaded Update: themes, sounds, assistants and add-ons *** </marquee></div>
 <p>&nbsp;</p>
-<table class="cols" width="100%" cellspacing="0" cellpadding="0"><tr>
+<table class="tiles" cellspacing="0" cellpadding="0"><tr>
+<td><a class="tile" href="download.html">Download<span>Windows, Linux, Android, iPhone</span></a></td>
+<td><a class="tile" href="{WEB}">Web version<span>open it right here, no installation</span></a></td>
+<td><a class="tile" href="catalog.html">Catalog<span>themes, sounds, cursors, add-ons</span></a></td>
+<td><a class="tile" href="features.html">Features<span>chats, calls, games, files</span></a></td>
+</tr></table>
+<p>&nbsp;</p>
+<table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
 <p><b>Nekochat Reloaded</b> is a chat program that looks and sounds like <b>Windows XP</b>. It is a custom client for the
 <a href="{OFFICIAL}">Nekochat</a> server: you sign in with your Nekochat account and talk in rooms and direct messages, call your friends,
@@ -55,7 +62,7 @@ share your screen, send files and play the old games of Windows XP together.</p>
 <p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Or <a href="{WEB}"><b>try the web version</b></a> right here, nothing to install.</p>
 </td>
 <td width="14">&nbsp;</td>
-<td valign="top" width="410"><img class="shot" src="/img/screenshot.png" width="400" alt="The Nekochat Reloaded window"><br><span class="small">The PC client with the Windows XP (Luna) theme.</span></td>
+<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="The Nekochat Reloaded window"><br><span class="small">The PC client with the Windows XP (Luna) theme.</span></td>
 </tr></table>
 <h2>What can it do?</h2>
 <ul class="arrows">
@@ -134,7 +141,6 @@ T["en"]["pages"]["addons"] = f"""
 
 T["en"]["pages"]["catalog"] = f"""
 <h1>Catalog</h1>
-<p>Everything in <b>Nekochat Reloaded Update</b>, live from the public catalog: themes, cursors, sounds, wallpapers, assistants, add-ons and combos. To install something, open <b>Windows Update</b> in the Control Panel of the client (<a href="{WEB}">the web version</a> has it too).</p>
 {{{{CATALOG}}}}
 <p class="small">The catalog lives in <a href="{THEMES}">{THEMES}</a>; this list is refreshed every ten minutes.</p>
 """
@@ -189,7 +195,14 @@ T["ru"]["pages"]["index"] = f"""
 <table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Добро пожаловать в Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
 <div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Игры из Windows XP: Косынка, Червы, Реверси, 3D Pinball с общими рекордами *** Файлы в чатах, до 50 МБ хранятся навсегда *** Nekochat Reloaded Update: темы, звуки, помощники и дополнения *** </marquee></div>
 <p>&nbsp;</p>
-<table class="cols" width="100%" cellspacing="0" cellpadding="0"><tr>
+<table class="tiles" cellspacing="0" cellpadding="0"><tr>
+<td><a class="tile" href="download.html">Скачать<span>Windows, Linux, Android, iPhone</span></a></td>
+<td><a class="tile" href="{WEB}">Веб-версия<span>откройте прямо здесь, без установки</span></a></td>
+<td><a class="tile" href="catalog.html">Каталог<span>темы, звуки, курсоры, дополнения</span></a></td>
+<td><a class="tile" href="features.html">Возможности<span>чаты, звонки, игры, файлы</span></a></td>
+</tr></table>
+<p>&nbsp;</p>
+<table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
 <p><b>Nekochat Reloaded</b> — программа для общения, которая выглядит и звучит как <b>Windows XP</b>. Это свой клиент для сервера
 <a href="{OFFICIAL}">Nekochat</a>: вы входите со своей учётной записью Nekochat, общаетесь в комнатах и личных сообщениях, звоните друзьям,
@@ -199,7 +212,7 @@ T["ru"]["pages"]["index"] = f"""
 <p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Или <a href="{WEB}"><b>попробуйте веб-версию</b></a> прямо здесь, ничего ставить не нужно.</p>
 </td>
 <td width="14">&nbsp;</td>
-<td valign="top" width="410"><img class="shot" src="/img/screenshot.png" width="400" alt="Окно Nekochat Reloaded"><br><span class="small">Клиент для ПК с темой Windows XP (Luna).</span></td>
+<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="Окно Nekochat Reloaded"><br><span class="small">Клиент для ПК с темой Windows XP (Luna).</span></td>
 </tr></table>
 <h2>Что он умеет?</h2>
 <ul class="arrows">
@@ -278,7 +291,6 @@ T["ru"]["pages"]["addons"] = f"""
 
 T["ru"]["pages"]["catalog"] = f"""
 <h1>Каталог</h1>
-<p>Всё, что есть в <b>Nekochat Reloaded Update</b>, прямо из открытого каталога: темы, курсоры, звуки, обои, помощники, дополнения и наборы. Чтобы что-то установить, откройте <b>Windows Update</b> в Панели управления клиента (в <a href="{WEB}">веб-версии</a> он тоже есть).</p>
 {{{{CATALOG}}}}
 <p class="small">Каталог лежит в <a href="{THEMES}">{THEMES}</a>; список обновляется каждые десять минут.</p>
 """
@@ -349,12 +361,14 @@ def page(lang, name):
 <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body background="/img/bg.gif" bgcolor="#e2eaf7">
-<table class="outer" width="760" align="center" cellspacing="0" cellpadding="0" border="0">
-<tr><td colspan="2"><a href="/{here}"><img class="banner" src="/img/banner.png" width="760" height="100" alt="Nekochat Reloaded"></a></td></tr>
+<table class="outer" cellspacing="0" cellpadding="0" border="0">
+<tr><td colspan="2" class="top"><a href="/{here}"><img class="banner" src="/img/banner.png" width="760" height="100" alt="Nekochat Reloaded"></a></td></tr>
 <tr>
-<td class="nav" width="160" valign="top">
+<td class="nav" valign="top">
 <div class="head">{t['menu']}</div>
 {nav}
+<div class="head">{t['search']}</div>
+<form action="/{here}catalog.html" method="get"><input type="text" name="q" size="12"> <input type="submit" value="{t['go']}"></form>
 <div class="head">{t['language']}</div>
 <a href="{other_url}">{t['other_name']}</a>
 <div class="head">{t['links']}</div>

@@ -19,7 +19,7 @@ RELEASES = "https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases/lat
 WEBAPP = SITE.parent.parent / "webapp"   # the web version of the client (deployed next to the server, not kept in git)
 CATALOG_RAW = "https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded_themes/main"
 CATALOG_TREE = "https://github.com/xKaMikax/nekochat_reloaded_themes/tree/main"
-PAGE_SIZE = 24
+PAGE_SIZE = 40
 router = APIRouter()
 _started = time.time()
 _latest: dict = {"at": 0.0, "data": None}
@@ -112,69 +112,149 @@ async def catalog_items() -> list[dict]:
     return _catalog["items"]
 
 
-def catalog_html(items: list[dict], query: dict, ru: bool) -> str:
-    names = TYPE_NAMES["ru" if ru else "en"]
+L = {
+    "en": {"all": "All", "found": "Found", "page": "Page", "none": "Nothing found.", "down": "The catalog is not available right now, please try again later.",
+           "sort": "Sort", "new": "Newest first", "old": "Oldest first", "az": "A - Z", "find": "Find", "search": "Search",
+           "author": "Author", "version": "Version", "added": "Added", "type": "Type", "id": "Identifier", "back": "&laquo; Back to the catalog",
+           "files": "Files in this pack", "gh": "Open the folder on GitHub", "inc": "This combo contains", "plat": "Platforms",
+           "how": "How to install", "steps": "Open <b>Windows Update</b> in the Control Panel of the client (the web version has it too), find this item in the list, tick it and press <b>Review and Install Items</b>.",
+           "desc": "Description", "prev": "Previous", "next": "Next", "nop": "no picture", "unknown": "This item is not in the catalog.",
+           "intro": "Everything in <b>Nekochat Reloaded Update</b>, live from the public catalog: themes, cursors, sounds, wallpapers, assistants, add-ons and combos. Click an item to see it big, with its files. To install something, open <b>Windows Update</b> in the Control Panel of the client (<a href=\"/app/\">the web version</a> has it too)."},
+    "ru": {"all": "Все", "found": "Найдено", "page": "Страница", "none": "Ничего не найдено.", "down": "Каталог сейчас недоступен, попробуйте позже.",
+           "sort": "Порядок", "new": "Сначала новые", "old": "Сначала старые", "az": "А - Я", "find": "Найти", "search": "Поиск",
+           "author": "Автор", "version": "Версия", "added": "Добавлено", "type": "Вид", "id": "Идентификатор", "back": "&laquo; Назад в каталог",
+           "files": "Файлы набора", "gh": "Открыть папку на GitHub", "inc": "В набор входят", "plat": "Платформы",
+           "how": "Как установить", "steps": "Откройте <b>Windows Update</b> в Панели управления клиента (в веб-версии он тоже есть), найдите этот пункт в списке, отметьте его и нажмите <b>Review and Install Items</b>.",
+           "desc": "Описание", "prev": "Назад", "next": "Дальше", "nop": "нет картинки", "unknown": "Такого пункта нет в каталоге.",
+           "intro": "Всё, что есть в <b>Nekochat Reloaded Update</b>, прямо из открытого каталога: темы, курсоры, звуки, обои, помощники, дополнения и наборы. Нажмите на пункт, чтобы увидеть его крупно и список файлов. Чтобы что-то установить, откройте <b>Windows Update</b> в Панели управления клиента (в <a href=\"/app/\">веб-версии</a> он тоже есть)."},
+}
+
+
+def preview_url(item: dict) -> str | None:
+    has = item["files"] is None or "Preview.png" in (item["files"] or [])
+    if item["dir"] and has and item["type"] != "sounds":
+        return f'{CATALOG_RAW}/{quote(item["dir"])}/Preview.png'
+    return None
+
+
+def catalog_detail(item: dict, items: list[dict], ru: bool, description: str) -> str:
+    t, names = L["ru" if ru else "en"], TYPE_NAMES["ru" if ru else "en"]
     base = "/ru/catalog.html" if ru else "/catalog.html"
+    d = item["details"]
+    url = preview_url(item)
+    pic = (f'<div class="bigpic"><img src="{html.escape(url)}" alt="" onerror="this.parentNode.innerHTML=\'{t["nop"]}\'"></div>' if url
+           else f'<div class="bigpic small">{t["nop"]}</div>')
+    rows = [(t["type"], html.escape(names.get(item["type"], item["type"]))), (t["id"], html.escape(item["id"])),
+            (t["author"], html.escape(str(d.get("Author", "")))), (t["version"], html.escape(str(d.get("Version", "")))),
+            (t["added"], html.escape(str(d.get("Added", ""))))]
+    if item["platforms"]:
+        rows.append((t["plat"], html.escape(", ".join(item["platforms"]))))
+    table = '<table class="data">' + "".join(f'<tr{" class=alt" if n % 2 else ""}><th width="140">{k}</th><td>{v}</td></tr>' for n, (k, v) in enumerate(rows)) + '</table>'
+    extra = ""
+    if item["includes"]:
+        known = {i["id"]: i for i in items}
+        parts = []
+        for kind, pack_id in item["includes"].items():
+            link = f'<a href="{base}?id={quote(pack_id)}">{html.escape(pack_id)}</a>' if pack_id in known else html.escape(pack_id)
+            parts.append(f"<li>{html.escape(names.get(kind, kind))}: {link}</li>")
+        extra += f'<h2>{t["inc"]}</h2><ul class="arrows">{"".join(parts)}</ul>'
+    if item["files"]:
+        links = "".join(f'<a href="{CATALOG_RAW}/{quote(item["dir"])}/{quote(name)}">{html.escape(name)}</a><br>' for name in item["files"])
+        extra += f'<h2>{t["files"]}</h2><div class="files">{links}</div>'
+    if description:
+        extra += f'<h2>{t["desc"]}</h2><pre class="desc">{html.escape(description[:4000])}</pre>'
+    gh = f'<p><a href="{CATALOG_TREE}/{quote(item["dir"])}">{t["gh"]} &raquo;</a></p>' if item["dir"] else ""
+    return (f'<p><a href="{base}">{t["back"]}</a></p><h2 style="margin-top:4px">{html.escape(item["name"])}</h2>'
+            f'<table class="detail" cellspacing="0" cellpadding="0"><tr><td width="340">{pic}</td><td style="padding-left:18px">{table}'
+            f'<div class="box"><div class="title">{t["how"]}</div><div class="body">{t["steps"]}</div></div>{gh}</td></tr></table>{extra}')
+
+
+_texts: dict[str, tuple[float, str]] = {}
+
+
+async def catalog_text(url: str) -> str:
+    """A small text file of the catalog (a theme's Description.md), kept for ten minutes."""
+    cached = _texts.get(url)
+    if cached and time.time() - cached[0] < 600:
+        return cached[1]
+    text = ""
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            answer = await client.get(url)
+        if answer.status_code == 200:
+            text = answer.text
+    except httpx.HTTPError:
+        pass
+    _texts[url] = (time.time(), text)
+    return text
+
+
+def catalog_html(items: list[dict], query: dict, ru: bool, description: str = "") -> str:
+    t, names = L["ru" if ru else "en"], TYPE_NAMES["ru" if ru else "en"]
+    base = "/ru/catalog.html" if ru else "/catalog.html"
+    if not items:
+        return f'<p class="red">{t["down"]}</p>'
+    wanted = query.get("id", "")
+    if wanted:
+        item = next((i for i in items if i["id"] == wanted), None)
+        if item:
+            return catalog_detail(item, items, ru, description)
+        return f'<p><a href="{base}">{t["back"]}</a></p><p class="red">{t["unknown"]}</p>'
     kind = query.get("type", "")
     text = query.get("q", "").strip()[:60]
+    sort = query.get("sort", "new")
     try:
         page = max(1, int(query.get("page", "1")))
     except ValueError:
         page = 1
     counts = {k: sum(1 for i in items if i["type"] == k) for k in names}
-    out = []
-    # the type bar and the search box
-    bar = [f'<a href="{base}"><b>{"Все" if ru else "All"}</b></a> ({len(items)})' if not kind else f'<a href="{base}">{"Все" if ru else "All"}</a> ({len(items)})']
+    keep = {k: v for k, v in (("q", text), ("sort", sort if sort != "new" else "")) if v}
+
+    def link(**extra) -> str:
+        params = {**keep, **{k: v for k, v in extra.items() if v}}
+        return base + ("?" + urlencode(params) if params else "")
+    tabs = [f'<b>{t["all"]} ({len(items)})</b>' if not kind else f'<a href="{link()}">{t["all"]} ({len(items)})</a>']
     for key, label in names.items():
         if counts.get(key):
-            bar.append(f'<b>{label}</b> ({counts[key]})' if key == kind else f'<a href="{base}?type={key}">{label}</a> ({counts[key]})')
-    out.append('<p>' + ' | '.join(bar) + '</p>')
+            tabs.append(f'<b>{label} ({counts[key]})</b>' if key == kind else f'<a href="{link(type=key)}">{label} ({counts[key]})</a>')
+    out = [f'<p>{t["intro"]}</p>', '<div class="tabs">' + "".join(tabs) + '</div>']
     hidden = f'<input type="hidden" name="type" value="{html.escape(kind)}">' if kind else ""
-    out.append(f'<form method="get" action="{base}">{hidden}<input type="text" name="q" value="{html.escape(text)}" size="24"> '
-               f'<input type="submit" value="{"Найти" if ru else "Search"}"></form>')
+    options = "".join(f'<option value="{v}"{" selected" if v == sort else ""}>{t[k]}</option>' for v, k in (("new", "new"), ("old", "old"), ("az", "az")))
+    out.append(f'<form class="finder" method="get" action="{base}">{hidden}{t["search"]}: <input type="text" name="q" value="{html.escape(text)}" size="26"> '
+               f'{t["sort"]}: <select name="sort">{options}</select> <input type="submit" value="{t["find"]}"></form>')
     shown = [i for i in items if (not kind or i["type"] == kind) and (not text or text.lower() in (i["name"] + " " + i["id"] + " " + str(i["details"].get("Author", ""))).lower())]
-    shown.sort(key=lambda i: str(i["details"].get("Added", "")), reverse=True)
+    if sort == "az":
+        shown.sort(key=lambda i: i["name"].lower())
+    else:
+        shown.sort(key=lambda i: (str(i["details"].get("Added", "")), i["name"].lower()), reverse=(sort != "old"))
     total = len(shown)
     pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
     page = min(page, pages)
-    chunk = shown[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
-    out.append(f'<p class="small">{"Найдено" if ru else "Found"}: <b>{total}</b>. {"Страница" if ru else "Page"} {page} / {pages}.</p>')
-    if not items:
-        out.append(f'<p class="red">{"Каталог сейчас недоступен, попробуйте позже." if ru else "The catalog is not available right now, please try again later."}</p>')
-    rows = []
-    for n, item in enumerate(chunk):
+    out.append(f'<p class="small">{t["found"]}: <b>{total}</b>. {t["page"]} {page} / {pages}.</p>')
+    cards = []
+    for item in shown[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]:
         d = item["details"]
-        directory = item["dir"]
-        preview = ""
-        has_preview = item["files"] is None or "Preview.png" in (item["files"] or [])
-        if directory and has_preview and item["type"] != "sounds":
-            url = f'{CATALOG_RAW}/{quote(directory)}/Preview.png'
-            preview = f'<img src="{html.escape(url)}" width="96" alt="" class="shot" onerror="this.style.display=\'none\'">'
-        extra = ""
-        if item["includes"]:
-            extra += "<br><span class='small'>" + ("Состав: " if ru else "Includes: ") + ", ".join(f"{html.escape(names.get(k, k))}: {html.escape(v)}" for k, v in item["includes"].items()) + "</span>"
-        if item["platforms"]:
-            extra += "<br><span class='small'>" + ("Платформы: " if ru else "Platforms: ") + html.escape(", ".join(item["platforms"])) + "</span>"
-        link = f'<a href="{CATALOG_TREE}/{quote(directory)}">{"Файлы" if ru else "Files"}</a>' if directory else ""
-        rows.append(
-            f'<tr{" class=alt" if n % 2 else ""}><td width="104" align="center">{preview}</td>'
-            f'<td><b>{html.escape(item["name"])}</b><br><span class="small">{html.escape(item["id"])} - {html.escape(names.get(item["type"], item["type"]))}</span>{extra}</td>'
-            f'<td class="small">{html.escape(str(d.get("Author", "")))}<br>v{html.escape(str(d.get("Version", "")))}<br>{html.escape(str(d.get("Added", "")))}</td>'
-            f'<td class="small">{link}</td></tr>')
-    if rows:
-        head = ("Предпросмотр", "Название", "Автор / версия / добавлено", "") if ru else ("Preview", "Name", "Author / version / added", "")
-        out.append('<table class="data"><tr>' + "".join(f"<th>{h}</th>" for h in head) + '</tr>' + "".join(rows) + '</table>')
-    elif items:
-        out.append(f'<p>{"Ничего не найдено." if ru else "Nothing found."}</p>')
-    # page links
-    nav = []
-    params = {k: v for k, v in (("type", kind), ("q", text)) if v}
-    if page > 1:
-        nav.append(f'<a href="{base}?{urlencode({**params, "page": page - 1})}">&laquo; {"Назад" if ru else "Previous"}</a>')
-    if page < pages:
-        nav.append(f'<a href="{base}?{urlencode({**params, "page": page + 1})}">{"Дальше" if ru else "Next"} &raquo;</a>')
-    if nav:
-        out.append('<p>' + ' | '.join(nav) + '</p>')
+        url = preview_url(item)
+        pic = f'<img src="{html.escape(url)}" alt="" onerror="this.style.display=\'none\'">' if url else f'<span class="small">{t["nop"]}</span>'
+        cards.append(f'<a class="card" href="{base}?id={quote(item["id"])}"><span class="pic" style="display:block">{pic}</span>'
+                     f'<span class="name">{html.escape(item["name"])}</span>'
+                     f'<span class="badge">{html.escape(names.get(item["type"], item["type"]))}</span>'
+                     f'<span class="meta">{html.escape(str(d.get("Author", "")))} - v{html.escape(str(d.get("Version", "")))}</span></a>')
+    out.append('<div class="cards">' + "".join(cards) + '</div>' if cards else f'<p>{t["none"]}</p>')
+    if pages > 1:
+        bits = []
+        if page > 1:
+            bits.append(f'<a href="{link(type=kind, page=page - 1)}">&laquo; {t["prev"]}</a>')
+        window = sorted({1, pages, *range(max(1, page - 3), min(pages, page + 3) + 1)})
+        last = 0
+        for n in window:
+            if n - last > 1:
+                bits.append("...")
+            bits.append(f"<b>{n}</b>" if n == page else f'<a href="{link(type=kind, page=n)}">{n}</a>')
+            last = n
+        if page < pages:
+            bits.append(f'<a href="{link(type=kind, page=page + 1)}">{t["next"]} &raquo;</a>')
+        out.append('<div class="pager">' + " ".join(bits) + '</div>')
     return "\n".join(out)
 
 
@@ -186,7 +266,12 @@ async def dynamic(name: str, ru: bool, query: dict | None = None) -> Response:
     for key, value in (await tokens(name, ru)).items():
         text = text.replace("{{" + key + "}}", value)
     if name == "catalog":
-        text = text.replace("{{CATALOG}}", catalog_html(await catalog_items(), query or {}, ru))
+        items = await catalog_items()
+        description = ""
+        wanted = next((i for i in items if i["id"] == (query or {}).get("id")), None)
+        if wanted and wanted["type"] == "themes":
+            description = await catalog_text(f'{CATALOG_RAW}/{quote(wanted["dir"])}/Description.md')
+        text = text.replace("{{CATALOG}}", catalog_html(items, query or {}, ru, description))
     return HTMLResponse(text, headers={"Cache-Control": "no-cache"})
 
 
