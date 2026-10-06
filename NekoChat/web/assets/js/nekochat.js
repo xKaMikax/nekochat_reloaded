@@ -703,7 +703,6 @@ async function watchGames() {
   if (!companion.url || !companion.token) { showSystemDialog(t('gameNoServer'), 'warning', t('games')); return; }
   let list = [];
   try { const response = await fetch(`${companion.url}/live?server=${encodeURIComponent(API)}`); if (response.ok) list = (await response.json()).games || []; } catch {}
-  list = list.filter(item => item.game !== 'pinball');   // Pinball has no table to show: the website shows its scores
   let dialog = $('#watch-games-dialog');
   if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'watch-games-dialog'; dialog.className = 'xp-dialog chat-sound-dialog game-invite-dialog'; document.body.append(dialog); }
   const rows = list.map(item => `<button type="button" class="xp-button watch-row" data-watch="${esc(item.watch)}" data-game="${esc(item.game)}">${esc(t('watchRow', { game: gameName(item.game), n: item.players, m: Math.max(0, Math.floor((Date.now() / 1000 - Number(item.created)) / 60)) }))}</button>`).join('');
@@ -721,6 +720,7 @@ window.addEventListener('storage', event => {
   if (event.key !== 'nk_game_out' || !event.newValue) return;
   let out; try { out = JSON.parse(event.newValue); } catch { return; }
   if (!/^[\w-]{6,40}$/.test(String(out.session || '')) || Date.now() - Number(out.at) > 60000) return;
+  if (watchers.has(out.session)) return;   // a spectator's window sends nothing
   const id = encodeURIComponent(out.session);
   if (out.cmd === 'sync') { syncGame(out.session); return; }
   if (out.cmd === 'end') { companionFetch('DELETE', `/games/${id}`); return; }
