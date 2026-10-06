@@ -48,6 +48,9 @@
   Function NkWelcomeCreate
     IfSilent 0 +2
     Abort
+    ; the Luna skin (tools/installer_skin): no system frame, Luna title bar, borders, buttons, check boxes, progress bar
+    File "/oname=$PLUGINSDIR\lunaskin.dll" "${BUILD_RESOURCES_DIR}\lunaskin.dll"
+    System::Call '$PLUGINSDIR\lunaskin.dll::LunaSkinApply(i $HWNDPARENT) i .r0'
     ; remember the wizard's size and the page area, then make the window the size of the picture without the wizard's chrome
     System::Alloc 16
     Pop $R9
@@ -67,13 +70,13 @@
     !insertmacro NkChrome ${SW_HIDE}
     System::Call 'user32::GetSystemMetrics(i 0) i .R0'
     System::Call 'user32::GetSystemMetrics(i 1) i .R1'
-    IntOp $R0 $R0 - 806
+    IntOp $R0 $R0 - 810
     IntOp $R0 $R0 / 2
-    IntOp $R1 $R1 - 505
+    IntOp $R1 $R1 - 494
     IntOp $R1 $R1 / 2
-    System::Call 'user32::SetWindowPos(i $HWNDPARENT, i 0, i $R0, i $R1, i 806, i 505, i 0x14)'
+    System::Call 'user32::SetWindowPos(i $HWNDPARENT, i 0, i $R0, i $R1, i 810, i 494, i 0x14)'
     GetDlgItem $R8 $HWNDPARENT 1018
-    System::Call 'user32::SetWindowPos(i $R8, i 0, i 0, i 0, i 800, i 460, i 0x14)'
+    System::Call 'user32::SetWindowPos(i $R8, i 0, i 5, i 29, i 800, i 460, i 0x14)'
     nsDialogs::Create 1018
     Pop $0
     ${If} $0 == error
@@ -133,12 +136,13 @@
     System::Call 'user32::GetClientRect(i $HWNDPARENT, i $R9)'
     System::Call '*$R9(i .R0, i .R1, i .R2, i .R3)'
     System::Free $R9
+    IntOp $R2 $R2 - 10
     GetDlgItem $R8 $HWNDPARENT 1046
     ; clip the picture by the controls above it, or it is painted over the title
     System::Call 'user32::GetWindowLong(i $R8, i -16) i .R0'
     IntOp $R0 $R0 | 0x04000000
     System::Call 'user32::SetWindowLong(i $R8, i -16, i $R0)'
-    System::Call 'user32::SetWindowPos(i $R8, i 1, i 0, i 0, i $R2, i 58, i 0x10)'
+    System::Call 'user32::SetWindowPos(i $R8, i 1, i 5, i 29, i $R2, i 58, i 0x10)'
     System::Call 'user32::LoadImage(i 0, t "$PLUGINSDIR\nk-header.bmp", i 0, i $R2, i 58, i 0x10) i .R0'
     SendMessage $R8 0x172 0 $R0
     GetDlgItem $R8 $HWNDPARENT 1034

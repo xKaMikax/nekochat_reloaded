@@ -57,16 +57,17 @@ print("build/installer-welcome.bmp", img.size)
 # --- the other wizard pages: a wide header (nsh stretches it over the window), and the side picture of the last page ---
 BLUE = art(113).getpixel((0, 90))
 def blend(a, b, t): return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
-header = Image.new("RGB", (900, 58), BLUE)
+HW = 497   # the width of the wizard page area; nsh stretches the picture if the window differs a little
+header = Image.new("RGB", (HW, 58), BLUE)
 # only the last 140 px carry the glow and the flag: the title text boxes (solid BLUE, nsh) end before them
-slice_ = art(113).crop((257, 30, 397, 88))
+slice_ = art(113).crop((257, 21, 397, 79))
 for x in range(140):
     for y in range(58):
         t = min(1, x / 40)
         slice_.putpixel((x, y), blend(BLUE, slice_.getpixel((x, y)), t))
-header.paste(slice_, (900 - 140, 0))
+header.paste(slice_, (HW - 140, 0))
 hd = ImageDraw.Draw(header)
-hd.line([(0, 55), (900, 55)], fill=(255, 255, 255)); hd.line([(0, 56), (900, 56)], fill=(255, 154, 44)); hd.line([(0, 57), (900, 57)], fill=(255, 154, 44))
+hd.line([(0, 55), (HW, 55)], fill=(255, 255, 255)); hd.line([(0, 56), (HW, 56)], fill=(255, 154, 44)); hd.line([(0, 57), (HW, 57)], fill=(255, 154, 44))
 header.save("build/installer-header.bmp", "BMP")
 header.crop((0, 0, 150, 57)).save("build/installerHeader.bmp", "BMP")  # the NSIS header picture (the wide one replaces it when the wizard starts)
 side = Image.new("RGB", (164, 314), BLUE)
