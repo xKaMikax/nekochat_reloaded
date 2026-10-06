@@ -144,7 +144,16 @@ def counter(request: Request) -> Response:
     return Response(svg, media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
 
 
+class SiteFiles(StaticFiles):
+    """Static files that a browser (and the CDN in front of the server) asks about again every time, except the pictures."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=3600" if path.startswith("img/") else "no-cache"
+        return response
+
+
 def install(app: FastAPI) -> None:
     """Adds the site's routes; the static files go last, so no API path is covered."""
     app.include_router(router)
-    app.mount("/", StaticFiles(directory=SITE, html=True), name="site")
+    app.mount("/", SiteFiles(directory=SITE, html=True), name="site")
