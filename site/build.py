@@ -4,6 +4,8 @@ Run from site/: python3 build.py   (the pictures: python3 tools/make_art.py)
 Tokens like {{VERSION}} in status.html and download.html are filled by the server (app/site.py) when the page is served."""
 import datetime
 import os
+import time
+BUILD = int(time.time())   # the style sheet gets this in its address, so a phone never keeps an old one
 
 REPO = "https://github.com/xKaMikax/nekochat_reloaded"
 THEMES = "https://github.com/xKaMikax/nekochat_reloaded_themes"
@@ -327,7 +329,7 @@ def page(lang, name):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nekochat Reloaded - {t['titles'][name]}</title>
 <meta name="description" content="Nekochat Reloaded - the Windows XP style client for Nekochat">
-<link rel="stylesheet" href="/style.css" type="text/css">
+<link rel="stylesheet" href="/style.css?v={BUILD}" type="text/css">
 <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body background="/img/bg.gif" bgcolor="#e2eaf7">
