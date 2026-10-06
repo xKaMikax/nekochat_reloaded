@@ -3,10 +3,10 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nekochat Reloaded - Игры и рекорды</title>
+<title>Nekochat Reloaded - Просмотр игры</title>
 <meta name="description" content="Nekochat Reloaded - a chat program that looks and sounds like Windows XP">
 <link rel="stylesheet" href="/style.css?v=1791288681" type="text/css">
-<meta http-equiv="refresh" content="30">
+
 <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body background="/img/bg.gif" bgcolor="#e2eaf7">
@@ -15,22 +15,21 @@
 <tr>
 <td class="nav" valign="top">
 <div class="head">Меню</div>
-<a href="/ru/">Главная</a><a href="/ru/features.html">Что умеет</a><a href="/ru/download.html">Скачать</a><a href="/ru/catalog.html">Темы и игры</a><a href="/ru/games.html" class="here">Игры и рекорды</a><a href="/ru/help.html">Помощь</a><a href="/ru/about.html">О проекте</a>
+<a href="/ru/">Главная</a><a href="/ru/features.html">Что умеет</a><a href="/ru/download.html">Скачать</a><a href="/ru/catalog.html">Темы и игры</a><a href="/ru/games.html">Игры и рекорды</a><a href="/ru/help.html">Помощь</a><a href="/ru/about.html">О проекте</a>
 <a href="/app/" class="special">Попробовать онлайн</a>
 <div class="head">Найти тему или игру</div>
 <form action="/ru/catalog.html" method="get"><input type="text" name="q" size="12"> <input type="submit" value="Найти"></form>
 <div class="head">Язык</div>
-<a href="/games.html">English</a>
+<a href="/watch.html">English</a>
 </td>
 <td class="main" valign="top">
 
-<h1>Игры и рекорды</h1>
-<p>Друзья вместе играют в старые игры Windows. Здесь видно, сколько игр идёт прямо сейчас, и лучшие результаты. Страница обновляется сама каждые 30 секунд.</p>
-<h2>Играют сейчас: {{GAMES_COUNT}}</h2>
-{{GAMES_LIVE}}
-<h2>Рекорды</h2>
-{{SCORES_TABLES}}
-<p class="small">Результаты хранятся отдельно для каждого чат-сервера. У каждого игрока один лучший результат, он показан под именем, которое игрок использует в чате. Сыграйте в 3D Pinball в Nekochat Reloaded, чтобы попасть в список!</p>
+<h1>Смотрим: <span id="watch-title">игру</span></h1>
+<p><a href="games.html">&laquo; К странице «Игры и рекорды»</a></p>
+<p><b id="watch-status">Загрузка игры...</b> &nbsp; Игроки: <b id="watch-players">-</b> &nbsp; Смотрят: <b id="watch-count">-</b></p>
+<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="Игра" allow="autoplay"></iframe></div>
+<p class="small">Вы зритель: видите игру так, как её видят игроки, но ходить нельзя. Карты на руках у игроков скрыты.</p>
+<script src="/watch.js?v=1791288681"></script>
 
 <p align="center"><img src="/img/rainbow.gif" width="520" height="4" alt=""></p>
 <p align="center" class="small">Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768. (Подойдёт и любой другой браузер.)</p>

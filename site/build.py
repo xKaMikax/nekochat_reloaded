@@ -12,6 +12,7 @@ OFFICIAL = "https://github.com/komdu/nekochat"
 NEKOCHAT_SERVER = "https://nekochat.komdu.is-cool.dev"
 WEB = "/app/"   # the web version of the client, served by this server
 ORDER = ["index", "features", "download", "catalog", "games", "help", "about"]
+EXTRA = ["watch"]   # pages that are not in the menu
 
 T = {
     "en": {
@@ -19,7 +20,7 @@ T = {
         "nav": {"index": "Home", "features": "What it can do", "download": "Download", "catalog": "Themes &amp; Games", "games": "Games &amp; Scores",
                 "help": "Help", "about": "About"},
         "titles": {"index": "Chat like it is 2001", "features": "What it can do", "download": "Download", "catalog": "Themes and Games", "games": "Games and Scores",
-                   "help": "Help", "about": "About"},
+                   "help": "Help", "about": "About", "watch": "Watching a game"},
         "menu": "Menu", "language": "Language", "search": "Find a theme or game", "go": "Go", "webclient": "Try it online",
         "visitor": "You are visitor number", "updated": "Last updated",
         "best": "This page is best viewed with Internet Explorer 6.0 at 1024 x 768. (Any other browser will do too.)",
@@ -31,7 +32,7 @@ T = {
         "nav": {"index": "Главная", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
                 "help": "Помощь", "about": "О проекте"},
         "titles": {"index": "Общайтесь, как в 2001-м", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
-                   "help": "Помощь", "about": "О проекте"},
+                   "help": "Помощь", "about": "О проекте", "watch": "Просмотр игры"},
         "menu": "Меню", "language": "Язык", "search": "Найти тему или игру", "go": "Найти", "webclient": "Попробовать онлайн",
         "visitor": "Вы посетитель номер", "updated": "Обновлено",
         "best": "Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768. (Подойдёт и любой другой браузер.)",
@@ -303,6 +304,24 @@ T["ru"]["pages"]["about"] = f"""
 """
 
 
+T["en"]["pages"]["watch"] = f"""
+<h1>Watching: <span id="watch-title">a game</span></h1>
+<p><a href="games.html">&laquo; Back to Games &amp; Scores</a></p>
+<p><b id="watch-status">Loading the game...</b> &nbsp; Players: <b id="watch-players">-</b> &nbsp; Watching: <b id="watch-count">-</b></p>
+<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="The game" allow="autoplay"></iframe></div>
+<p class="small">You are a spectator: you see the game as the players play it, you cannot move. Cards that players hold in their hands stay hidden.</p>
+<script src="/watch.js?v={BUILD}"></script>
+"""
+
+T["ru"]["pages"]["watch"] = f"""
+<h1>Смотрим: <span id="watch-title">игру</span></h1>
+<p><a href="games.html">&laquo; К странице «Игры и рекорды»</a></p>
+<p><b id="watch-status">Загрузка игры...</b> &nbsp; Игроки: <b id="watch-players">-</b> &nbsp; Смотрят: <b id="watch-count">-</b></p>
+<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="Игра" allow="autoplay"></iframe></div>
+<p class="small">Вы зритель: видите игру так, как её видят игроки, но ходить нельзя. Карты на руках у игроков скрыты.</p>
+<script src="/watch.js?v={BUILD}"></script>
+"""
+
 def page(lang, name):
     t = T[lang]
     here = t["dir"]
@@ -310,7 +329,7 @@ def page(lang, name):
         (f'<a href="/{here}{p}.html"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>' if p != "index" else
          f'<a href="/{here}"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>')
         for p in ORDER)
-    other_url = ("/" if lang == "ru" else "/ru/") + ("" if name == "index" else f"{name}.html")
+    other_url = ("/" if lang == "ru" else "/ru/") + ("" if name == "index" else f"{name}.html") + (" " if False else "")
     now = datetime.date.today().strftime("%d %B %Y") if lang == "en" else datetime.date.today().strftime("%d.%m.%Y")
     refresh = '<meta http-equiv="refresh" content="30">' if name == "games" else ""
     return f"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -363,7 +382,7 @@ for lang in ("en", "ru"):
         path = os.path.join(out, f"{old}.html")
         if os.path.exists(path):
             os.remove(path)
-    for name in ORDER:
+    for name in ORDER + EXTRA:
         with open(os.path.join(out, f"{name}.html"), "w", encoding="utf-8") as f:
             f.write(page(lang, name))
 print("pages written")

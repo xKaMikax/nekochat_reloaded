@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime
 import html
 import json
+import os
 import time
 from pathlib import Path
 from urllib.parse import quote, urlencode
@@ -18,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 SITE = Path(__file__).resolve().parent.parent / "site" / "public"
 RELEASES = "https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases/latest"
 WEBAPP = SITE.parent.parent / "webapp"   # the web version of the client (deployed next to the server, not kept in git)
-CATALOG_RAW = "https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded_themes/main"
+CATALOG_RAW = os.environ.get("NEKOCHAT_CATALOG", "https://raw.githubusercontent.com/xKaMikax/nekochat_reloaded_themes/main").rstrip("/")   # a local copy for tests
 CATALOG_TREE = "https://github.com/xKaMikax/nekochat_reloaded_themes/tree/main"
 PAGE_SIZE = 40
 router = APIRouter()
@@ -153,12 +154,14 @@ def games_live_html(live: list[dict], items: list[dict], ru: bool) -> str:
     if not live:
         return ("<p>Сейчас никто не играет. Начните игру из чата: нажмите на чат правой кнопкой и выберите <b>Play ...</b>.</p>" if ru
                 else "<p>Nobody is playing right now. Start a game from a chat: right-click the chat and choose <b>Play ...</b>.</p>")
-    head = ("Игра", "Игроков", "Идёт уже", "Ходов") if ru else ("Game", "Players", "Playing for", "Moves")
+    head = ("Игра", "Игроков", "Идёт уже", "Ходов", "") if ru else ("Game", "Players", "Playing for", "Moves", "")
+    base = "/ru/watch.html" if ru else "/watch.html"
     rows = []
     for n, game in enumerate(sorted(live, key=lambda g: g["created"])):
         minutes = max(0, int((time.time() - float(game["created"])) // 60))
         rows.append(f'<tr{" class=alt" if n % 2 else ""}><td><b>{html.escape(game_title(game["game"], items))}</b></td><td>{len(game["audience"])}</td>'
-                    f'<td>{minutes} {"мин" if ru else "min"}</td><td>{game["seq"]}</td></tr>')
+                    f'<td>{minutes} {"мин" if ru else "min"}</td><td>{game["seq"]}</td>'
+                    f'<td><a href="{base}?id={quote(game.get("watch", ""))}"><b>{"Смотреть" if ru else "Watch"}</b></a></td></tr>')
     return '<table class="data"><tr>' + "".join(f"<th>{h}</th>" for h in head) + "</tr>" + "".join(rows) + "</table>"
 
 
@@ -433,6 +436,15 @@ async def download(request: Request) -> Response:
 @router.get("/ru/download.html", include_in_schema=False)
 async def download_ru(request: Request) -> Response:
     return await dynamic("download", True, None, request.headers.get("user-agent", ""))
+
+
+@router.get("/watch-files/{game}", include_in_schema=False)
+async def watch_files(game: str) -> Response:
+    """Where the spectator page finds the add-on of a game: its folder and files in the catalog."""
+    item = next((i for i in await catalog_items() if i["id"] == f"{game}-addon" and i["files"]), None)
+    if not item:
+        return Response(status_code=404)
+    return Response(json.dumps({"raw": CATALOG_RAW, "dir": item["dir"], "files": item["files"]}), media_type="application/json", headers={"Cache-Control": "no-cache"})
 
 
 @router.get("/catalog.html", include_in_schema=False)

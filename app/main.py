@@ -782,7 +782,8 @@ def create_game(payload: GameIn, account: sqlite3.Row = Depends(current_account)
     name = player_name(account)
     audience = {me_id, int(target)} if kind == "dm" else {me_id}
     _games[game_id] = {"id": game_id, "server": account["server"], "game": payload.game, "chat": payload.chat, "host": me_id, "host_name": name, "audience": audience,
-                       "log": [], "seq": 0, "closed": False, "created": now(), "touched": time.time()}
+                       "log": [], "seq": 0, "closed": False, "created": now(), "touched": time.time(),
+                       "watch": secrets.token_urlsafe(8), "viewers": {}}
     invite = {"type": "game_invite", "session": game_id, "game": payload.game, "from": me_id, "name": name}
     if kind == "dm":
         publish(account["server"], {**invite, "chat": f"dm:{min(me_id, int(target))}-{max(me_id, int(target))}"})
@@ -821,6 +822,7 @@ def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Dep
     if live:
         game["touched"] = time.time()
         item = {"seq": 0, "from": me_id, "name": player_name(account), "kind": "live", "payload": entry.payload, "at": now()}
+        game.setdefault("live", {})[me_id] = {"name": item["name"], "payload": entry.payload, "at": time.time()}   # the latest one, for spectators
         publish(game["server"], {"type": "game", "session": game_id, **item, "_to": sorted(user for user in game["audience"] if user != me_id)})
         return {"seq": 0}
     if len(game["log"]) >= MAX_GAME_ENTRIES:
@@ -835,6 +837,43 @@ def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Dep
     game["touched"] = time.time()
     publish(game["server"], {"type": "game", "session": game_id, **item, "_to": audience})
     return {"seq": item["seq"]}
+
+
+def spectator_game(watch_id: str) -> dict[str, Any] | None:
+    return next((game for game in _games.values() if game.get("watch") == watch_id), None)
+
+
+@app.get("/live", tags=["games"])
+def live_games(server: str = ""):
+    """The games being played now, for spectators (no sign-in): the id to watch each one by (`watch`, see /watch/{watch}),
+    the add-on it is played with, how many play and for how long. `server` keeps the games of one Nekochat server."""
+    sweep_games()
+    wanted = server.strip().rstrip("/")
+    return {"games": [{"watch": game["watch"], "game": game["game"], "players": len(game["audience"]), "moves": game["seq"], "created": game["created"], "server": game["server"]}
+                      for game in sorted(_games.values(), key=lambda g: g["created"]) if not game["closed"] and game.get("watch") and (not wanted or game["server"] == wanted)]}
+
+
+@app.get("/watch/{watch_id}", include_in_schema=False)
+async def watch_game(watch_id: str, request: Request, since: int = 0, wait: float = 0):
+    """What a spectator may see of a game: its public entries (the ones not addressed to somebody) after `since`.
+    The address of a game for spectators is its own random `watch` id, not the session id players use, so
+    nobody can join a game from the public page. `wait` (seconds, at most 20) holds the answer until something new arrives."""
+    game = spectator_game(watch_id)
+    if not game:
+        raise HTTPException(404, "No such game (it may have ended)")
+    viewer = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "?")
+    deadline = time.time() + min(max(wait, 0.0), 20.0)
+    while True:
+        game["viewers"][viewer] = time.time()
+        entries = [entry for entry in game["log"] if entry["seq"] > since and "to" not in entry]
+        if entries or game["closed"] or time.time() >= deadline:
+            break
+        await asyncio.sleep(0.4)
+    watching = sum(1 for seen in game["viewers"].values() if seen > time.time() - 40)
+    recent = {str(user): {"name": item["name"], **(item["payload"] if isinstance(item["payload"], dict) else {})}
+              for user, item in game.get("live", {}).items() if item["at"] > time.time() - 10}
+    return {"game": game["game"], "closed": game["closed"], "created": game["created"], "host": game["host"], "hostName": game["host_name"],
+            "seq": game["seq"], "watching": watching, "entries": entries, "live": recent}
 
 
 @app.delete("/games/{game_id}", tags=["games"])

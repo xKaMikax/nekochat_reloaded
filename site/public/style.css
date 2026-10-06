@@ -103,3 +103,14 @@ pre.desc { white-space: pre-wrap; background-color: #fffff0; border: 1px solid #
 .nav a.special { background-color: #d8f0d0; color: #006000; border-color: #ffffff; }
 .nav a.special:hover { background-color: #fff5c8; }
 h3 { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #000080; margin: 14px 0 4px 0; }
+
+/* watching a game */
+.watchbox { display: inline-block; max-width: 100%; overflow: auto; padding: 8px; background-color: #ece9d8; border: 3px ridge #8090c0; }
+.watchbox iframe { display: block; border: 0; background-color: #ece9d8; }
+
+/* Pinball spectators: a card per player with the ball on a small table */
+.pinboard { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px; }
+.pincard { width: 180px; padding: 8px; background-color: #ece9d8; border: 3px outset #ffffff; text-align: center; }
+.pintable { position: relative; width: 120px; height: 200px; margin: 6px auto; background: linear-gradient(#1a1040, #3a1a6a); border: 3px inset #ffffff; }
+.pintable i.pinball { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #e8e8e8; box-shadow: 0 0 6px #ffffff; }
+.pinscore { font-family: "Courier New", monospace; font-size: 20px; font-weight: bold; color: #000080; }
