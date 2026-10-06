@@ -75,27 +75,9 @@ side.paste(art(112).crop((0, 0, 164, 180)), (0, 0))
 foot = art(111).getpixel((20, 50))
 for y in range(180, 314):
     ImageDraw.Draw(side).line([(0, y), (164, y)], fill=blend(BLUE, foot, (y - 180) / 133))
-# the last page: the Nekochat cat (tools/installer_cat.svg rendered 5x by rsvg-convert -> installer_cat.png), glad that the setup is done:
-# a green check badge and a few sparkles around it
+# the last page: the smiling Nekochat cat (tools/installer_cat.svg with a smile and happy eyes drawn on the 28x26 grid -> installer_cat.png, 5x)
 cat = Image.open("tools/installer_cat.png").convert("RGBA")
 side = side.convert("RGBA")
-cx, cy = 12, 170
-side.alpha_composite(cat, (cx, cy))
-import math
-big = Image.new("RGBA", (28 * 4, 28 * 4), (0, 0, 0, 0))
-bd = ImageDraw.Draw(big)
-bd.ellipse([0, 0, 111, 111], fill=(255, 255, 255, 255))
-bd.ellipse([8, 8, 103, 103], fill=(46, 170, 52, 255))
-bd.line([(28, 58), (48, 78), (86, 34)], fill=(255, 255, 255, 255), width=14, joint="curve")
-badge = big.resize((28, 28), Image.LANCZOS)
-side.alpha_composite(badge, (cx + 140 - 22, cy - 14))
-def sparkle(x, y, r):
-    layer = Image.new("RGBA", (r * 8, r * 8), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(layer)
-    c = r * 4
-    ld.polygon([(c, c - 4 * r), (c + r, c - r), (c + 4 * r, c), (c + r, c + r), (c, c + 4 * r), (c - r, c + r), (c - 4 * r, c), (c - r, c - r)], fill=(255, 255, 255, 235))
-    layer = layer.resize((r * 4, r * 4), Image.LANCZOS)
-    side.alpha_composite(layer, (x - r * 2, y - r * 2))
-sparkle(22, 160, 3); sparkle(150, 205, 2); sparkle(18, 262, 2); sparkle(142, 290, 3)
+side.alpha_composite(cat, (12, 170))
 side.convert("RGB").save("build/installerSidebar.bmp", "BMP")
 print("header, sidebar written")
