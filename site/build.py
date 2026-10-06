@@ -10,17 +10,17 @@ BUILD = int(time.time())   # the style sheet gets this in its address, so a phon
 REPO = "https://github.com/xKaMikax/nekochat_reloaded"
 THEMES = "https://github.com/xKaMikax/nekochat_reloaded_themes"
 OFFICIAL = "https://github.com/komdu/nekochat"
-WEB = "https://xkamikax.github.io/nekochat_reloaded/"
-ORDER = ["index", "features", "download", "addons", "server", "status", "about"]
+WEB = "/app/"   # the web version of the client, served by this server
+ORDER = ["index", "features", "download", "addons", "catalog", "server", "status", "about"]
 
 T = {
     "en": {
         "lang": "en", "other": "ru", "other_name": "Русский", "dir": "",
-        "nav": {"index": "Home", "features": "Features", "download": "Download", "addons": "Add-ons &amp; Themes",
+        "nav": {"index": "Home", "features": "Features", "download": "Download", "addons": "Add-ons &amp; Themes", "catalog": "Catalog",
                 "server": "The Server", "status": "Server Status", "about": "About"},
         "menu": "Menu", "language": "Language", "links": "Links",
-        "guestbook": "Guestbook", "code": "Source code",
-        "titles": {"index": "Welcome!", "features": "Features", "download": "Download", "addons": "Add-ons and Themes",
+        "guestbook": "Guestbook", "code": "Source code", "webclient": "Web version",
+        "titles": {"index": "Welcome!", "features": "Features", "download": "Download", "addons": "Add-ons and Themes", "catalog": "Catalog",
                    "server": "The Nekochat Reloaded Server", "status": "Server Status", "about": "About this site"},
         "visitor": "You are visitor number", "updated": "Last updated", "best": "This page is best viewed with Internet Explorer 6.0 at 1024 x 768, 16-bit colour or better. (Any other browser will do too.)",
         "disclaimer": "Nekochat Reloaded is a fan project. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.",
@@ -28,11 +28,11 @@ T = {
     },
     "ru": {
         "lang": "ru", "other": "en", "other_name": "English", "dir": "ru/",
-        "nav": {"index": "Главная", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы",
+        "nav": {"index": "Главная", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
                 "server": "Сервер", "status": "Состояние сервера", "about": "О сайте"},
         "menu": "Меню", "language": "Язык", "links": "Ссылки",
-        "guestbook": "Гостевая книга", "code": "Исходный код",
-        "titles": {"index": "Добро пожаловать!", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы",
+        "guestbook": "Гостевая книга", "code": "Исходный код", "webclient": "Веб-версия",
+        "titles": {"index": "Добро пожаловать!", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
                    "server": "Сервер Nekochat Reloaded", "status": "Состояние сервера", "about": "О сайте"},
         "visitor": "Вы посетитель номер", "updated": "Обновлено", "best": "Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768 и цвете не менее 16 бит. (Подойдёт и любой другой браузер.)",
         "disclaimer": "Nekochat Reloaded — любительский проект. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.",
@@ -52,6 +52,7 @@ T["en"]["pages"]["index"] = f"""
 share your screen, send files and play the old games of Windows XP together.</p>
 <p>It runs on <b>Windows, Linux, Android, iPhone</b> and in a <b>web browser</b>, so your chats and your settings follow you.</p>
 <p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> <a href="download.html"><b>Download it now!</b></a> It is free.</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Or <a href="{WEB}"><b>try the web version</b></a> right here, nothing to install.</p>
 </td>
 <td width="14">&nbsp;</td>
 <td valign="top" width="410"><img class="shot" src="/img/screenshot.png" width="400" alt="The Nekochat Reloaded window"><br><span class="small">The PC client with the Windows XP (Luna) theme.</span></td>
@@ -97,7 +98,7 @@ T["en"]["pages"]["features"] = f"""
 <tr class="alt"><td>Linux</td><td>AppImage or .deb package</td></tr>
 <tr><td>Android</td><td>.apk, Android 8.0 or later</td></tr>
 <tr class="alt"><td>iPhone / iPad</td><td>.ipa installed with AltStore, iOS 16.4 or later</td></tr>
-<tr><td>Web browser</td><td><a href="{WEB}">{WEB}</a>, nothing to install</td></tr></table>
+<tr><td>Web browser</td><td><a href="{WEB}">Open the web version</a>, nothing to install</td></tr></table>
 """
 
 T["en"]["pages"]["download"] = f"""
@@ -109,7 +110,7 @@ T["en"]["pages"]["download"] = f"""
 <tr class="alt"><td>Linux</td><td>Nekochat-Reloaded-<i>version</i>.AppImage<br>nekochat-reloaded_<i>version</i>_amd64.deb</td><td>AppImage: make it executable and run it.</td></tr>
 <tr><td>Android</td><td>Nekochat-Reloaded-<i>version</i>.apk</td><td>Android 8.0 or later; installs over earlier versions.</td></tr>
 <tr class="alt"><td>iPhone / iPad</td><td>Nekochat-Reloaded-<i>version</i>.ipa</td><td>iOS 16.4 or later. It is not signed: install it with <a href="https://altstore.io">AltStore</a>.</td></tr>
-<tr><td>Web</td><td><a href="{WEB}">Open in the browser</a></td><td>The same client, nothing to install.</td></tr></table>
+<tr><td>Web</td><td><a href="{WEB}">Open the web version</a></td><td>The same client in your browser, nothing to install. Works on a phone too.</td></tr></table>
 <h2>First start</h2>
 <ol>
 <li>Install and start the client.</li>
@@ -129,6 +130,13 @@ T["en"]["pages"]["addons"] = f"""
 <tr class="alt"><td>Assistants</td><td>Rover, Merlin, Courtney and Earl, the helpers of Windows XP.</td></tr>
 <tr><td>Add-ons</td><td>Minesweeper, the Theme Editor, the Admin Panel and the games. Each has its own Help and About box.</td></tr></table>
 <p>Packs live in a public repository: <a href="{THEMES}">{THEMES}</a>.</p>
+"""
+
+T["en"]["pages"]["catalog"] = f"""
+<h1>Catalog</h1>
+<p>Everything in <b>Nekochat Reloaded Update</b>, live from the public catalog: themes, cursors, sounds, wallpapers, assistants, add-ons and combos. To install something, open <b>Windows Update</b> in the Control Panel of the client (<a href="{WEB}">the web version</a> has it too).</p>
+{{{{CATALOG}}}}
+<p class="small">The catalog lives in <a href="{THEMES}">{THEMES}</a>; this list is refreshed every ten minutes.</p>
 """
 
 T["en"]["pages"]["server"] = f"""
@@ -188,6 +196,7 @@ T["ru"]["pages"]["index"] = f"""
 показываете экран, отправляете файлы и вместе играете в старые игры Windows XP.</p>
 <p>Работает на <b>Windows, Linux, Android, iPhone</b> и <b>в браузере</b>, так что чаты и настройки всегда с вами.</p>
 <p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> <a href="download.html"><b>Скачать прямо сейчас!</b></a> Это бесплатно.</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Или <a href="{WEB}"><b>попробуйте веб-версию</b></a> прямо здесь, ничего ставить не нужно.</p>
 </td>
 <td width="14">&nbsp;</td>
 <td valign="top" width="410"><img class="shot" src="/img/screenshot.png" width="400" alt="Окно Nekochat Reloaded"><br><span class="small">Клиент для ПК с темой Windows XP (Luna).</span></td>
@@ -233,7 +242,7 @@ T["ru"]["pages"]["features"] = f"""
 <tr class="alt"><td>Linux</td><td>AppImage или пакет .deb</td></tr>
 <tr><td>Android</td><td>.apk, Android 8.0 и новее</td></tr>
 <tr class="alt"><td>iPhone / iPad</td><td>.ipa, ставится через AltStore, iOS 16.4 и новее</td></tr>
-<tr><td>Браузер</td><td><a href="{WEB}">{WEB}</a>, ничего устанавливать не нужно</td></tr></table>
+<tr><td>Браузер</td><td><a href="{WEB}">Открыть веб-версию</a>, ничего устанавливать не нужно</td></tr></table>
 """
 
 T["ru"]["pages"]["download"] = f"""
@@ -245,7 +254,7 @@ T["ru"]["pages"]["download"] = f"""
 <tr class="alt"><td>Linux</td><td>Nekochat-Reloaded-<i>версия</i>.AppImage<br>nekochat-reloaded_<i>версия</i>_amd64.deb</td><td>AppImage: сделайте файл исполняемым и запустите.</td></tr>
 <tr><td>Android</td><td>Nekochat-Reloaded-<i>версия</i>.apk</td><td>Android 8.0 и новее; ставится поверх прежних версий.</td></tr>
 <tr class="alt"><td>iPhone / iPad</td><td>Nekochat-Reloaded-<i>версия</i>.ipa</td><td>iOS 16.4 и новее. Файл не подписан: ставьте через <a href="https://altstore.io">AltStore</a>.</td></tr>
-<tr><td>Браузер</td><td><a href="{WEB}">Открыть в браузере</a></td><td>Тот же клиент, ничего ставить не нужно.</td></tr></table>
+<tr><td>Браузер</td><td><a href="{WEB}">Открыть веб-версию</a></td><td>Тот же клиент в браузере, ничего ставить не нужно. Работает и на телефоне.</td></tr></table>
 <h2>Первый запуск</h2>
 <ol>
 <li>Установите и запустите клиент.</li>
@@ -265,6 +274,13 @@ T["ru"]["pages"]["addons"] = f"""
 <tr class="alt"><td>Помощники</td><td>Rover, Merlin, Courtney и Earl — помощники Windows XP.</td></tr>
 <tr><td>Дополнения</td><td>Сапёр, Редактор тем, Панель администратора и игры. У каждого своя справка и окно «О программе».</td></tr></table>
 <p>Пакеты лежат в открытом репозитории: <a href="{THEMES}">{THEMES}</a>.</p>
+"""
+
+T["ru"]["pages"]["catalog"] = f"""
+<h1>Каталог</h1>
+<p>Всё, что есть в <b>Nekochat Reloaded Update</b>, прямо из открытого каталога: темы, курсоры, звуки, обои, помощники, дополнения и наборы. Чтобы что-то установить, откройте <b>Windows Update</b> в Панели управления клиента (в <a href="{WEB}">веб-версии</a> он тоже есть).</p>
+{{{{CATALOG}}}}
+<p class="small">Каталог лежит в <a href="{THEMES}">{THEMES}</a>; список обновляется каждые десять минут.</p>
 """
 
 T["ru"]["pages"]["server"] = f"""
@@ -344,7 +360,7 @@ def page(lang, name):
 <div class="head">{t['links']}</div>
 <a href="{REPO}">{t['code']}</a>
 <a href="{REPO}/issues">{t['guestbook']}</a>
-<a href="{WEB}">Web client</a>
+<a href="{WEB}">{t["webclient"]}</a>
 <p align="center"><img src="/img/construction.gif" width="130" height="26" alt="Under construction"></p>
 </td>
 <td class="main" valign="top">
