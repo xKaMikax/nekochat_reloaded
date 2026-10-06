@@ -569,10 +569,69 @@ static void FitBranding(HWND outer) {
     }
   }
 }
+extern "C" __declspec(dllexport) int __stdcall LunaSkinShowFail(HWND outer);
 static VOID CALLBACK ScanTimer(HWND, UINT, UINT_PTR, DWORD) {
   static int ticks;
   if (++ticks == 700 && g_outer) Dump(g_outer);
+  if (ticks == 500 && g_outer && GetEnvironmentVariableW(L"LUNASKIN_FAILTEST", nullptr, 0)) LunaSkinShowFail(g_outer);
   if (g_outer && IsWindow(g_outer)) { EnumChildWindows(g_outer, ScanChild, 0); FitBranding(g_outer); }
+}
+
+// ---------------------------------------------------------------- a failed setup: the sad cat over the page
+static LRESULT CALLBACK FailProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+  if (msg == WM_ERASEBKGND) return 1;
+  if (msg == WM_PAINT) {
+    PAINTSTRUCT ps; HDC hdc = BeginPaint(hwnd, &ps);
+    RECT rc; GetClientRect(hwnd, &rc);
+    int W = rc.right, H = rc.bottom;
+    HDC dc = CreateCompatibleDC(hdc);
+    HBITMAP bmp = CreateCompatibleBitmap(hdc, W, H);
+    HGDIOBJ oldBmp = SelectObject(dc, bmp);
+    FillRect(dc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    {
+      Graphics g(dc);
+      Quality(g);
+      Bitmap* b = Img(IMG_FAIL_SIDE);
+      if (b) Draw(g, IMG_FAIL_SIDE, 0, 0, b->GetWidth(), H, 0, 0, b->GetWidth(), b->GetHeight());
+    }
+    SetBkMode(dc, TRANSPARENT);
+    HFONT head = CreateFontW(-17, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Tahoma");
+    HFONT body = CreateFontW(-11, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Tahoma");
+    HGDIOBJ old = SelectObject(dc, head);
+    RECT t = {180, 16, W - 14, 70};
+    SetTextColor(dc, RGB(0, 0, 0));
+    DrawTextW(dc, L"Nekochat Reloaded Setup was not completed", -1, &t, DT_WORDBREAK | DT_NOPREFIX);
+    SelectObject(dc, body);
+    RECT m = {180, 84, W - 14, H - 10};
+    DrawTextW(dc, L"Nekochat Reloaded could not be installed on your computer.\n\nClick Close to exit Setup. You can run the installer again later.", -1, &m, DT_WORDBREAK | DT_NOPREFIX);
+    SelectObject(dc, old);
+    DeleteObject(head); DeleteObject(body);
+    BitBlt(hdc, 0, 0, W, H, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, oldBmp); DeleteObject(bmp); DeleteDC(dc);
+    EndPaint(hwnd, &ps);
+    return 0;
+  }
+  return DefWindowProcW(hwnd, msg, wp, lp);
+}
+extern "C" __declspec(dllexport) int __stdcall LunaSkinShowFail(HWND outer) {
+  if (!g_outer) return 0;
+  static bool registered;
+  if (!registered) {
+    WNDCLASSW wc = {};
+    wc.lpfnWndProc = FailProc; wc.hInstance = g_inst; wc.lpszClassName = L"LunaFail";
+    wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
+    RegisterClassW(&wc);
+    registered = true;
+  }
+  RECT cr, line;
+  GetClientRect(outer, &cr);
+  int bottom = cr.bottom - 60;
+  for (int id : {1045, 1028, 1256}) {   // above the separator line and the branding text
+    if (HWND l = GetDlgItem(outer, id)) { GetWindowRect(l, &line); MapWindowPoints(nullptr, outer, (POINT*)&line, 2); bottom = min(bottom, (int)line.top); }
+  }
+  HWND w = CreateWindowExW(0, L"LunaFail", L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, FRAME, TITLE, cr.right - 2 * FRAME, bottom - TITLE, outer, nullptr, g_inst, nullptr);
+  SetWindowPos(w, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+  return w != nullptr;
 }
 
 // ---------------------------------------------------------------- entry point

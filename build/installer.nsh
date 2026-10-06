@@ -5,6 +5,7 @@
 
 !ifndef BUILD_UNINSTALLER
   Var NkUpdateRun
+  Var NkSkinLoaded
   Var NkWelcomeBitmap
   Var NkOuterW
   Var NkOuterH
@@ -12,6 +13,15 @@
   Var NkInT
   Var NkInW
   Var NkInH
+!endif
+
+!ifndef BUILD_UNINSTALLER
+  !macro customHeader
+    ; the setup failed: the Luna skin shows the sad cat over the page
+    Function .onInstFailed
+      System::Call '$PLUGINSDIR\lunaskin.dll::LunaSkinShowFail(i $HWNDPARENT)'
+    FunctionEnd
+  !macroend
 !endif
 
 !macro NkChrome SHOW
@@ -49,8 +59,14 @@
     IfSilent 0 +2
     Abort
     ; the Luna skin (tools/installer_skin): no system frame, Luna title bar, borders, buttons, check boxes, progress bar
-    File "/oname=$PLUGINSDIR\lunaskin.dll" "${BUILD_RESOURCES_DIR}\lunaskin.dll"
-    System::Call '$PLUGINSDIR\lunaskin.dll::LunaSkinApply(i $HWNDPARENT) i .r0'
+    ; (once: coming back to this page with Back must not write the DLL again, it is loaded and locked)
+    ${If} $NkSkinLoaded != 1
+      File "/oname=$PLUGINSDIR\lunaskin.dll" "${BUILD_RESOURCES_DIR}\lunaskin.dll"
+      File "/oname=$PLUGINSDIR\nk-welcome.bmp" "${BUILD_RESOURCES_DIR}\installer-welcome.bmp"
+      File "/oname=$PLUGINSDIR\nk-header.bmp" "${BUILD_RESOURCES_DIR}\installer-header.bmp"
+      System::Call '$PLUGINSDIR\lunaskin.dll::LunaSkinApply(i $HWNDPARENT) i .r0'
+      StrCpy $NkSkinLoaded 1
+    ${EndIf}
     ; remember the wizard's size and the page area, then make the window the size of the picture without the wizard's chrome
     System::Alloc 16
     Pop $R9
@@ -82,8 +98,6 @@
     ${If} $0 == error
       Abort
     ${EndIf}
-    File "/oname=$PLUGINSDIR\nk-welcome.bmp" "${BUILD_RESOURCES_DIR}\installer-welcome.bmp"
-    File "/oname=$PLUGINSDIR\nk-header.bmp" "${BUILD_RESOURCES_DIR}\installer-header.bmp"
     ${NSD_CreateBitmap} 0 0 100% 100% ""
     Pop $NkWelcomeBitmap
     ${NSD_SetStretchedImage} $NkWelcomeBitmap "$PLUGINSDIR\nk-welcome.bmp" $1

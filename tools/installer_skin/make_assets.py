@@ -44,6 +44,7 @@ for kind, strip in (("check", check), ("radio", radio)):
         put(f"{kind}_on_{s}", m.strip_state(strip, 13, i + 4))
 icon = Image.open("build/icon.png").convert("RGBA").resize((16, 16), Image.LANCZOS)
 put("icon16", icon)
+put("fail_side", Image.open("tools/installer_skin/fail_side.png"))   # the picture of a failed setup (tools/installer_art.py)
 
 with open("tools/installer_skin/skin.rc", "w") as rc:
     for i, n in enumerate(names, 1):

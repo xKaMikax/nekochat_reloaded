@@ -75,9 +75,26 @@ side.paste(art(112).crop((0, 0, 164, 180)), (0, 0))
 foot = art(111).getpixel((20, 50))
 for y in range(180, 314):
     ImageDraw.Draw(side).line([(0, y), (164, y)], fill=blend(BLUE, foot, (y - 180) / 133))
+base_side = side.copy()
 # the last page: the smiling Nekochat cat (tools/installer_cat.svg with a smile and happy eyes drawn on the 28x26 grid -> installer_cat.png, 5x)
-cat = Image.open("tools/installer_cat.png").convert("RGBA")
-side = side.convert("RGBA")
-side.alpha_composite(cat, (12, 170))
+def with_cat(base, cat28):
+    out = base.convert("RGBA")
+    out.alpha_composite(cat28.resize((140, 130), Image.NEAREST), (12, 170))
+    return out
+cat28 = Image.open("tools/installer_cat28.png").convert("RGBA")
+side = with_cat(side, cat28)
+# if the setup fails (LunaSkinShowFail): the same cat, sad, with tears; the picture goes into the skin DLL
+sad = cat28.copy()
+GRAY, BLACK, TEAR = (152, 152, 152, 255), (0, 0, 0, 255), (110, 190, 255, 255)
+for y in range(12, 21):
+    for x in range(2, 15):
+        if sad.getpixel((x, y))[:3] == (0, 0, 0): sad.putpixel((x, y), GRAY)
+for pt in [(3, 13), (4, 13), (3, 14), (4, 14), (11, 15), (12, 15), (11, 16), (12, 16), (6, 20), (7, 19), (8, 19), (9, 20)]:
+    sad.putpixel(pt, BLACK)
+for pt in [(3, 15), (3, 16), (12, 17), (12, 18)]:
+    sad.putpixel(pt, TEAR)
+sad.save("tools/installer_cat_sad28.png")
+fail_side = with_cat(Image.open("build/installerSidebar.bmp").convert("RGB") if False else base_side, sad)
+fail_side.convert("RGB").save("tools/installer_skin/fail_side.png")
 side.convert("RGB").save("build/installerSidebar.bmp", "BMP")
 print("header, sidebar written")
