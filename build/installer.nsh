@@ -80,6 +80,7 @@
       Abort
     ${EndIf}
     File "/oname=$PLUGINSDIR\nk-welcome.bmp" "${BUILD_RESOURCES_DIR}\installer-welcome.bmp"
+    File "/oname=$PLUGINSDIR\nk-header.bmp" "${BUILD_RESOURCES_DIR}\installer-header.bmp"
     ${NSD_CreateBitmap} 0 0 100% 100% ""
     Pop $NkWelcomeBitmap
     ${NSD_SetStretchedImage} $NkWelcomeBitmap "$PLUGINSDIR\nk-welcome.bmp" $1
@@ -126,6 +127,28 @@
     GetDlgItem $R8 $HWNDPARENT 1018
     System::Call 'user32::SetWindowPos(i $R8, i 0, i $NkInL, i $NkInT, i $NkInW, i $NkInH, i 0x14)'
     !insertmacro NkChrome ${SW_SHOW}
+    ; the other pages: an XP header (blue, flag, orange line) over the whole width, the title and subtitle in white on the same blue
+    System::Alloc 16
+    Pop $R9
+    System::Call 'user32::GetClientRect(i $HWNDPARENT, i $R9)'
+    System::Call '*$R9(i .R0, i .R1, i .R2, i .R3)'
+    System::Free $R9
+    GetDlgItem $R8 $HWNDPARENT 1046
+    ; clip the picture by the controls above it, or it is painted over the title
+    System::Call 'user32::GetWindowLong(i $R8, i -16) i .R0'
+    IntOp $R0 $R0 | 0x04000000
+    System::Call 'user32::SetWindowLong(i $R8, i -16, i $R0)'
+    System::Call 'user32::SetWindowPos(i $R8, i 1, i 0, i 0, i $R2, i 58, i 0x10)'
+    System::Call 'user32::LoadImage(i 0, t "$PLUGINSDIR\nk-header.bmp", i 0, i $R2, i 58, i 0x10) i .R0'
+    SendMessage $R8 0x172 0 $R0
+    GetDlgItem $R8 $HWNDPARENT 1034
+    ShowWindow $R8 ${SW_HIDE}
+    GetDlgItem $R8 $HWNDPARENT 1039
+    ShowWindow $R8 ${SW_HIDE}
+    GetDlgItem $R8 $HWNDPARENT 1037
+    SetCtlColors $R8 0xFFFFFF 0x5A7EDC
+    GetDlgItem $R8 $HWNDPARENT 1038
+    SetCtlColors $R8 0xFFFFFF 0x5A7EDC
   FunctionEnd
 !macroend
 
