@@ -1,343 +1,305 @@
 #!/usr/bin/env python3
 """Builds the website (site/public/*.html and site/public/ru/*.html) from the texts below.
 Run from site/: python3 build.py   (the pictures: python3 tools/make_art.py)
-Tokens like {{VERSION}} in status.html and download.html are filled by the server (app/site.py) when the page is served."""
+Tokens like {{DOWNLOADS}} are filled by the server (app/site.py) when a page is served."""
 import datetime
 import os
 import time
-BUILD = int(time.time())   # the style sheet gets this in its address, so a phone never keeps an old one
 
+BUILD = int(time.time())   # the style sheet gets this in its address, so a phone never keeps an old one
 REPO = "https://github.com/xKaMikax/nekochat_reloaded"
-THEMES = "https://github.com/xKaMikax/nekochat_reloaded_themes"
 OFFICIAL = "https://github.com/komdu/nekochat"
+NEKOCHAT_SERVER = "https://nekochat.komdu.is-cool.dev"
 WEB = "/app/"   # the web version of the client, served by this server
-ORDER = ["index", "features", "download", "addons", "catalog", "server", "status", "about"]
+ORDER = ["index", "features", "download", "catalog", "games", "help", "about"]
 
 T = {
     "en": {
         "lang": "en", "other": "ru", "other_name": "Русский", "dir": "",
-        "nav": {"index": "Home", "features": "Features", "download": "Download", "addons": "Add-ons &amp; Themes", "catalog": "Catalog",
-                "server": "The Server", "status": "Server Status", "about": "About"},
-        "menu": "Menu", "language": "Language", "search": "Find in the catalog", "go": "Go", "links": "Links",
-        "guestbook": "Guestbook", "code": "Source code", "webclient": "Web version",
-        "titles": {"index": "Welcome!", "features": "Features", "download": "Download", "addons": "Add-ons and Themes", "catalog": "Catalog",
-                   "server": "The Nekochat Reloaded Server", "status": "Server Status", "about": "About this site"},
-        "visitor": "You are visitor number", "updated": "Last updated", "best": "This page is best viewed with Internet Explorer 6.0 at 1024 x 768, 16-bit colour or better. (Any other browser will do too.)",
-        "disclaimer": "Nekochat Reloaded is a fan project. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.",
+        "nav": {"index": "Home", "features": "What it can do", "download": "Download", "catalog": "Themes &amp; Games", "games": "Games &amp; Scores",
+                "help": "Help", "about": "About"},
+        "titles": {"index": "Chat like it is 2001", "features": "What it can do", "download": "Download", "catalog": "Themes and Games", "games": "Games and Scores",
+                   "help": "Help", "about": "About"},
+        "menu": "Menu", "language": "Language", "search": "Find a theme or game", "go": "Go", "webclient": "Try it online",
+        "visitor": "You are visitor number", "updated": "Last updated",
+        "best": "This page is best viewed with Internet Explorer 6.0 at 1024 x 768. (Any other browser will do too.)",
+        "disclaimer": "Nekochat Reloaded is made by fans. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.",
         "pages": {},
     },
     "ru": {
         "lang": "ru", "other": "en", "other_name": "English", "dir": "ru/",
-        "nav": {"index": "Главная", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
-                "server": "Сервер", "status": "Состояние сервера", "about": "О сайте"},
-        "menu": "Меню", "language": "Язык", "search": "Поиск в каталоге", "go": "Найти", "links": "Ссылки",
-        "guestbook": "Гостевая книга", "code": "Исходный код", "webclient": "Веб-версия",
-        "titles": {"index": "Добро пожаловать!", "features": "Возможности", "download": "Скачать", "addons": "Дополнения и темы", "catalog": "Каталог",
-                   "server": "Сервер Nekochat Reloaded", "status": "Состояние сервера", "about": "О сайте"},
-        "visitor": "Вы посетитель номер", "updated": "Обновлено", "best": "Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768 и цвете не менее 16 бит. (Подойдёт и любой другой браузер.)",
-        "disclaimer": "Nekochat Reloaded — любительский проект. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.",
+        "nav": {"index": "Главная", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
+                "help": "Помощь", "about": "О проекте"},
+        "titles": {"index": "Общайтесь, как в 2001-м", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
+                   "help": "Помощь", "about": "О проекте"},
+        "menu": "Меню", "language": "Язык", "search": "Найти тему или игру", "go": "Найти", "webclient": "Попробовать онлайн",
+        "visitor": "Вы посетитель номер", "updated": "Обновлено",
+        "best": "Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768. (Подойдёт и любой другой браузер.)",
+        "disclaimer": "Nekochat Reloaded сделан поклонниками. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.",
         "pages": {},
     },
 }
 
-# ---------------------------------------------------------------------------------------------------------- English
+# ----------------------------------------------------------------------------------------------------------- English
 T["en"]["pages"]["index"] = f"""
-<table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Welcome to Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
-<div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Games from Windows XP: Solitaire, Hearts, Reversi, 3D Pinball with shared high scores *** Send files in chats, up to 50 MB kept for good *** Nekochat Reloaded Update: themes, sounds, assistants and add-ons *** </marquee></div>
+<table class="head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Welcome to Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
+<div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Play Solitaire, Hearts, Reversi and 3D Pinball with your friends *** Send files in chats, up to 50 MB *** New themes, sounds and helpers in the built-in Windows Update *** </marquee></div>
 <p>&nbsp;</p>
 <table class="tiles" cellspacing="0" cellpadding="0"><tr>
 <td><a class="tile" href="download.html">Download<span>Windows, Linux, Android, iPhone</span></a></td>
-<td><a class="tile" href="{WEB}">Web version<span>open it right here, no installation</span></a></td>
-<td><a class="tile" href="catalog.html">Catalog<span>themes, sounds, cursors, add-ons</span></a></td>
-<td><a class="tile" href="features.html">Features<span>chats, calls, games, files</span></a></td>
+<td><a class="tile" href="{WEB}">Try it online<span>open it right here, nothing to install</span></a></td>
+<td><a class="tile" href="catalog.html">Themes &amp; Games<span>look around before you install</span></a></td>
+<td><a class="tile" href="games.html">Games &amp; Scores<span>who is playing, the best scores</span></a></td>
 </tr></table>
 <p>&nbsp;</p>
 <table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
-<p><b>Nekochat Reloaded</b> is a chat program that looks and sounds like <b>Windows XP</b>. It is a custom client for the
-<a href="{OFFICIAL}">Nekochat</a> server: you sign in with your Nekochat account and talk in rooms and direct messages, call your friends,
-share your screen, send files and play the old games of Windows XP together.</p>
-<p>It runs on <b>Windows, Linux, Android, iPhone</b> and in a <b>web browser</b>, so your chats and your settings follow you.</p>
-<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> <a href="download.html"><b>Download it now!</b></a> It is free.</p>
-<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Or <a href="{WEB}"><b>try the web version</b></a> right here, nothing to install.</p>
+<p><b>Nekochat Reloaded</b> is a chat program that looks and sounds just like <b>Windows XP</b>. Talk with your friends, make voice calls, share your screen, send files, and play the old Windows games together: Solitaire, Hearts, Reversi, Pinball and more.</p>
+<p>It works on <b>Windows, Linux, Android and iPhone</b>, and in your <b>web browser</b>.</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> {{{{HOME_DOWNLOAD}}}}</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Or <a href="{WEB}"><b>try it online</b></a> right now, nothing to install.</p>
+<h2>Get started in three steps</h2>
+<ol>
+<li><b>Download</b> the program for your device, or open the online version.</li>
+<li><b>Sign in</b> with your Nekochat account. No account yet? Make one on <a href="{NEKOCHAT_SERVER}">the Nekochat server</a>.</li>
+<li><b>Make it yours:</b> open <i>Windows Update</i> in the Control Panel to add themes, sounds, games and helpers.</li>
+</ol>
 </td>
 <td width="14">&nbsp;</td>
-<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="The Nekochat Reloaded window"><br><span class="small">The PC client with the Windows XP (Luna) theme.</span></td>
+<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="The Nekochat Reloaded window"><br><span class="small">Nekochat Reloaded with the Windows XP theme.</span></td>
 </tr></table>
-<h2>What can it do?</h2>
-<ul class="arrows">
-<li>Rooms and direct messages, reactions, pinned messages, typing and read marks, chats in their own windows.</li>
-<li>Voice calls, screen sharing and notifications.</li>
-<li>Windows XP themes (Luna, Classic and more), the XP sounds, a Control Panel and Help and Support.</li>
-<li>Solitaire, Spider Solitaire, FreeCell, Hearts, Spades, Reversi, Checkers, Backgammon, Minesweeper and 3D Pinball.</li>
-<li>Files in chats and <b>Infinity Memory</b>: files kept on the server for friends who were offline.</li>
-</ul>
-<p><a href="features.html">Read more about the features &raquo;</a></p>
-<div class="box"><div class="title">Please note</div><div class="body">Nekochat Reloaded is an <b>unofficial</b> client. The official Nekochat client is here: <a href="{OFFICIAL}">{OFFICIAL}</a>.</div></div>
+<h2>See it in action</h2>
+{{{{GALLERY}}}}
+<p><a href="catalog.html">See all themes and games &raquo;</a></p>
 """
 
 T["en"]["pages"]["features"] = f"""
-<h1>Features</h1>
-<h2>Chats</h2>
+<h1>What it can do</h1>
+<h2>Chat with friends</h2>
 <ul class="arrows">
-<li>Rooms and direct messages on your Nekochat server, reactions, pinned messages, typing marks and read marks.</li>
-<li>Detached chat windows: open a chat in a window of its own, like old messengers did.</li>
-<li>Voice calls and screen sharing; notifications with the XP sounds.</li>
-<li><b>Files:</b> click the paperclip, drag a file into the window or paste it. <b>Infinity Memory</b> keeps a file (up to 50 MB) on the Nekochat Reloaded server, so a friend who was offline can still get it by a link.</li>
-<li>Statuses: online, away, do not disturb and invisible.</li>
+<li>Group chats (rooms) and private messages, with reactions, pinned messages, and marks that show who is typing and who has read.</li>
+<li>Open any chat in a window of its own, like the messengers of old.</li>
+<li>Voice calls and screen sharing.</li>
+<li>Your status: online, away, do not disturb, or invisible.</li>
 </ul>
-<h2>The Windows XP look</h2>
+<h2>Send files</h2>
 <ul class="arrows">
-<li>Windows with Luna title bars and buttons, the Classic theme, and colour schemes; every window uses the theme.</li>
-<li>Original XP sounds for notifications, login and calls; cursors and icons you can change.</li>
-<li>A Control Panel, Help and Support, and the assistants <b>Rover, Merlin, Courtney and Earl</b> (installed from Nekochat Reloaded Update when you want them).</li>
+<li>Click the paperclip, drag a file into the window, or paste it.</li>
+<li>Tick <b>Infinity Memory</b> to keep a file (up to 50 MB) available by a link, so a friend who was away can still get it.</li>
 </ul>
-<h2>Games from Windows XP</h2>
+<h2>Looks and sounds like Windows XP</h2>
 <ul class="arrows">
-<li>Solitaire, Spider Solitaire, FreeCell, Hearts, Spades, Reversi, Checkers and Backgammon with the original cards, boards, dice and sounds. Play against the computer or against friends.</li>
-<li><b>3D Pinball: Space Cadet</b> with <b>High Scores shared</b> by everyone on your Nekochat server.</li>
-<li>Challenges: send a Solitaire, Spider, FreeCell or Minesweeper deal to a chat, everyone gets the same game and the results come back to the chat.</li>
-<li>Minesweeper, also on phones (hold a square to put a flag).</li>
+<li>The classic blue Luna look, the grey Classic look, and more themes to choose from. Every window follows the theme.</li>
+<li>The famous Windows XP sounds, and cursors and icons you can change.</li>
+<li>A Control Panel, Help and Support, and the little helpers <b>Rover, Merlin, Courtney and Earl</b>.</li>
 </ul>
-<h2>Everywhere</h2>
-<table class="data"><tr><th>Platform</th><th>How</th></tr>
-<tr><td>Windows</td><td>Installer (Windows XP style setup) or portable exe</td></tr>
+<h2>Play together</h2>
+<ul class="arrows">
+<li>Solitaire, Spider Solitaire, FreeCell, Hearts, Spades, Reversi, Checkers, Backgammon, Minesweeper and 3D Pinball, with the original cards, boards and sounds.</li>
+<li>Play against the computer, or invite a friend from a chat.</li>
+<li>Send a friend a <b>challenge</b>: the same Solitaire or Minesweeper game for everyone, and the results come back to the chat.</li>
+<li>3D Pinball has <b>high scores</b> shared by everyone: see them on the <a href="games.html">Games &amp; Scores</a> page.</li>
+</ul>
+<h2>Add more with Windows Update</h2>
+<p>Inside the program, <i>Windows Update</i> works like a store: pick themes, sounds, cursors, wallpapers, helpers and games, and install them with one click. You can look through everything first in the <a href="catalog.html">catalog</a>.</p>
+<h2>Works everywhere</h2>
+<table class="data"><tr><th>Device</th><th>How to get it</th></tr>
+<tr><td>Windows</td><td>Installer or portable version, see <a href="download.html">Download</a></td></tr>
 <tr class="alt"><td>Linux</td><td>AppImage or .deb package</td></tr>
-<tr><td>Android</td><td>.apk, Android 8.0 or later</td></tr>
-<tr class="alt"><td>iPhone / iPad</td><td>.ipa installed with AltStore, iOS 16.4 or later</td></tr>
-<tr><td>Web browser</td><td><a href="{WEB}">Open the web version</a>, nothing to install</td></tr></table>
+<tr><td>Android</td><td>.apk file, Android 8.0 or newer</td></tr>
+<tr class="alt"><td>iPhone / iPad</td><td>Installed with AltStore, iOS 16.4 or newer</td></tr>
+<tr><td>Any browser</td><td><a href="{WEB}">Open the online version</a>, nothing to install</td></tr></table>
 """
 
 T["en"]["pages"]["download"] = f"""
 <h1>Download</h1>
-<div class="box"><div class="title">Latest release</div><div class="body">{{{{LATEST_BOX}}}}</div></div>
-<p>All files are on the release page on GitHub: <a href="{REPO}/releases/latest">{REPO}/releases/latest</a>.</p>
-<table class="data"><tr><th>Platform</th><th>File</th><th>Notes</th></tr>
-<tr><td>Windows</td><td>Nekochat-Reloaded-Setup-<i>version</i>.exe</td><td>Installer. The portable version is <i>Nekochat-Reloaded-<i>version</i>-portable.exe</i>.</td></tr>
-<tr class="alt"><td>Linux</td><td>Nekochat-Reloaded-<i>version</i>.AppImage<br>nekochat-reloaded_<i>version</i>_amd64.deb</td><td>AppImage: make it executable and run it.</td></tr>
-<tr><td>Android</td><td>Nekochat-Reloaded-<i>version</i>.apk</td><td>Android 8.0 or later; installs over earlier versions.</td></tr>
-<tr class="alt"><td>iPhone / iPad</td><td>Nekochat-Reloaded-<i>version</i>.ipa</td><td>iOS 16.4 or later. It is not signed: install it with <a href="https://altstore.io">AltStore</a>.</td></tr>
-<tr><td>Web</td><td><a href="{WEB}">Open the web version</a></td><td>The same client in your browser, nothing to install. Works on a phone too.</td></tr></table>
-<h2>First start</h2>
+<div class="box"><div class="title">Latest version</div><div class="body">{{{{LATEST_BOX}}}}</div></div>
+{{{{DOWNLOADS}}}}
+<h2>After you install it</h2>
 <ol>
-<li>Install and start the client.</li>
-<li>Sign in with your <b>Nekochat</b> account (the client uses the Nekochat server for chats and calls).</li>
-<li>Open <b>Windows Update</b> in the Control Panel to add themes, games and assistants.</li>
+<li>Start Nekochat Reloaded and sign in with your <b>Nekochat</b> account. No account yet? Make one on <a href="{NEKOCHAT_SERVER}">the Nekochat server</a>.</li>
+<li>Open <i>Windows Update</i> in the Control Panel to add themes, sounds, games and helpers.</li>
 </ol>
-<p class="small">Beta versions are published on the <a href="{REPO}/releases">releases page</a> too, marked as pre-release.</p>
-"""
-
-T["en"]["pages"]["addons"] = f"""
-<h1>Add-ons and Themes</h1>
-<p><b>Nekochat Reloaded Update</b> is built into the client and looks like Windows Update. It installs things you choose, and keeps the app itself up to date.</p>
-<table class="data"><tr><th>Kind</th><th>What you get</th></tr>
-<tr><td>Themes</td><td>Windows look-alikes for the whole client: Luna, Classic and more.</td></tr>
-<tr class="alt"><td>Sounds, cursors, icons</td><td>Sound schemes, cursor sets and icon packs.</td></tr>
-<tr><td>Wallpapers</td><td>Pictures for the desktop of the client.</td></tr>
-<tr class="alt"><td>Assistants</td><td>Rover, Merlin, Courtney and Earl, the helpers of Windows XP.</td></tr>
-<tr><td>Add-ons</td><td>Minesweeper, the Theme Editor, the Admin Panel and the games. Each has its own Help and About box.</td></tr></table>
-<p>Packs live in a public repository: <a href="{THEMES}">{THEMES}</a>.</p>
+<p>Prefer not to install anything? <a href="{WEB}">Use the online version.</a></p>
 """
 
 T["en"]["pages"]["catalog"] = f"""
-<h1>Catalog</h1>
+<h1>Themes and Games</h1>
 {{{{CATALOG}}}}
-<p class="small">The catalog lives in <a href="{THEMES}">{THEMES}</a>; this list is refreshed every ten minutes.</p>
 """
 
-T["en"]["pages"]["server"] = f"""
-<h1>The Nekochat Reloaded Server</h1>
-<p>The clients talk to two servers: your <b>Nekochat</b> server (chats and calls) and the <b>Nekochat Reloaded</b> server, a small companion that this site runs on.
-It does <b>not</b> replace or proxy the Nekochat server; it adds what Nekochat does not have.</p>
-<table class="data"><tr><th>Feature</th><th>What it does</th></tr>
-<tr><td>Settings and read state</td><td>Your settings and what you have read follow you from one device to another.</td></tr>
-<tr class="alt"><td>Statuses and presence</td><td>Online, away, do not disturb, invisible; reactions, pins, typing marks.</td></tr>
-<tr><td>Games</td><td>Relays the moves of the XP games between players.</td></tr>
-<tr class="alt"><td>High scores</td><td>One best score per user for 3D Pinball.</td></tr>
-<tr><td>Infinity Memory</td><td>Files up to 50 MB kept for good, shared by a link nobody can guess.</td></tr>
-<tr class="alt"><td>Backups</td><td>Settings backups made by the client.</td></tr></table>
-<p>Your Nekochat token is checked once and never stored. See the live <a href="/api/docs">API documentation</a> and the <a href="status.html">server status</a>.</p>
+T["en"]["pages"]["games"] = f"""
+<h1>Games and Scores</h1>
+<p>Friends play the old Windows games together. Here you can see how many games are being played right now, and the best scores. The page refreshes itself every 30 seconds.</p>
+<h2>Playing now: {{{{GAMES_COUNT}}}}</h2>
+{{{{GAMES_LIVE}}}}
+<h2>High scores</h2>
+{{{{SCORES_TABLES}}}}
+<p class="small">The scores are kept for each chat server. Every player has one best score, shown under the name they use in chat. Play 3D Pinball in Nekochat Reloaded to get on the list!</p>
 """
 
-T["en"]["pages"]["status"] = f"""
-<h1>Server Status</h1>
-<p><span class="red">&#9679;</span> <b>{{{{STATE}}}}</b></p>
-<table class="data"><tr><th>Item</th><th>Value</th></tr>
-<tr><td>Server version</td><td>{{{{VERSION}}}}</td></tr>
-<tr class="alt"><td>Up for</td><td>{{{{UPTIME}}}}</td></tr>
-<tr><td>Nekochat servers accepted</td><td>{{{{SERVERS}}}}</td></tr>
-<tr class="alt"><td>Linked accounts</td><td>{{{{ACCOUNTS}}}}</td></tr>
-<tr><td>Games being played now</td><td>{{{{GAMES}}}}</td></tr>
-<tr class="alt"><td>High scores kept</td><td>{{{{SCORES}}}}</td></tr>
-<tr><td>Files in Infinity Memory</td><td>{{{{FILES}}}} ({{{{FILES_MB}}}} MB)</td></tr>
-<tr class="alt"><td>Server time</td><td>{{{{NOW}}}}</td></tr></table>
-<p class="small">The page is made by the server each time you open it.</p>
+T["en"]["pages"]["help"] = f"""
+<h1>Help</h1>
+<h2>What is Nekochat?</h2>
+<p>Nekochat is the chat service your friends use. <b>Nekochat Reloaded</b> is a program for it that looks like Windows XP and adds games, themes and more. You sign in with your Nekochat account.</p>
+<h2>Do I need an account?</h2>
+<p>Yes. Make one on <a href="{NEKOCHAT_SERVER}">the Nekochat server</a>, then sign in to Nekochat Reloaded with the same name and password.</p>
+<h2>Is it free?</h2>
+<p>Yes, everything here is free.</p>
+<h2>How do I get new themes and games?</h2>
+<p>Open <b>Windows Update</b> in the Control Panel of the program, tick what you like and press <b>Review and Install Items</b>. You can look at everything first in the <a href="catalog.html">catalog</a>.</p>
+<h2>How do I play with a friend?</h2>
+<p>Right-click the chat with your friend and choose <b>Play ...</b>. Your friend gets an invitation with a Play button. Games like Hearts and Spades can have up to four players.</p>
+<h2>How do I send a big file?</h2>
+<p>Click the paperclip next to the message box, or drag the file into the window. Tick <b>Infinity Memory</b> if your friend is not online: the file stays available by a link (up to 50 MB).</p>
+<h2>How do I install it on an iPhone?</h2>
+<p>The iPhone file is not signed by Apple, so it is installed with <a href="https://altstore.io">AltStore</a>. Download the .ipa file on the <a href="download.html">Download</a> page and open it with AltStore.</p>
+<h2>Something does not work</h2>
+<p>Write to us on <a href="{REPO}/issues">GitHub</a> and tell what happened and on which device. A screenshot helps a lot.</p>
 """
 
 T["en"]["pages"]["about"] = f"""
-<h1>About this site</h1>
-<p>This is the home page of <b>Nekochat Reloaded</b>, made the way home pages were made around 2002: tables, bevelled buttons, a visitor counter and a marquee. It is served by the Nekochat Reloaded server itself.</p>
-<h2>Who makes it</h2>
-<p>Nekochat Reloaded is made by <b>KaMika</b> (<a href="https://github.com/xKaMikax">xKaMikax</a>) and the Nekochat Reloaded Team. The iPhone client is made together with VASHYAN-CMD.</p>
+<h1>About</h1>
+<p>Nekochat Reloaded is a program for chatting with friends that looks and sounds like Windows XP. It is made by <b>KaMika</b> and the Nekochat Reloaded Team. The iPhone version is made together with VASHYAN-CMD.</p>
+<p>This home page is made the way home pages looked around 2002.</p>
 <h2>Links</h2>
 <ul class="arrows">
-<li><a href="{REPO}">The client on GitHub</a> (PC, Android, iPhone and web branches)</li>
-<li><a href="{REPO}/issues">Guestbook</a>: write a note or report a problem (GitHub Issues)</li>
-<li><a href="{THEMES}">Themes and add-ons</a></li>
-<li><a href="{OFFICIAL}">Nekochat</a>, the official client and server this one works with</li>
+<li><a href="{REPO}">Nekochat Reloaded on GitHub</a></li>
+<li><a href="{REPO}/issues">Questions and ideas</a></li>
+<li><a href="{OFFICIAL}">Nekochat</a>, the chat service it works with</li>
 </ul>
-<h2>Please note</h2>
-<p>Nekochat Reloaded is a fan project. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.</p>
+<p class="small">Nekochat Reloaded is made by fans. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.</p>
 """
 
-# ---------------------------------------------------------------------------------------------------------- Russian
+# ----------------------------------------------------------------------------------------------------------- Russian
 T["ru"]["pages"]["index"] = f"""
-<table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Добро пожаловать в Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
-<div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Игры из Windows XP: Косынка, Червы, Реверси, 3D Pinball с общими рекордами *** Файлы в чатах, до 50 МБ хранятся навсегда *** Nekochat Reloaded Update: темы, звуки, помощники и дополнения *** </marquee></div>
+<table class="head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Добро пожаловать в Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
+<div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Играйте с друзьями в Косынку, Червы, Реверси и 3D Pinball *** Отправляйте файлы в чатах, до 50 МБ *** Новые темы, звуки и помощники во встроенном Windows Update *** </marquee></div>
 <p>&nbsp;</p>
 <table class="tiles" cellspacing="0" cellpadding="0"><tr>
 <td><a class="tile" href="download.html">Скачать<span>Windows, Linux, Android, iPhone</span></a></td>
-<td><a class="tile" href="{WEB}">Веб-версия<span>откройте прямо здесь, без установки</span></a></td>
-<td><a class="tile" href="catalog.html">Каталог<span>темы, звуки, курсоры, дополнения</span></a></td>
-<td><a class="tile" href="features.html">Возможности<span>чаты, звонки, игры, файлы</span></a></td>
+<td><a class="tile" href="{WEB}">Попробовать онлайн<span>откройте прямо здесь, ничего ставить не нужно</span></a></td>
+<td><a class="tile" href="catalog.html">Темы и игры<span>посмотрите, прежде чем ставить</span></a></td>
+<td><a class="tile" href="games.html">Игры и рекорды<span>кто играет, лучшие результаты</span></a></td>
 </tr></table>
 <p>&nbsp;</p>
 <table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
-<p><b>Nekochat Reloaded</b> — программа для общения, которая выглядит и звучит как <b>Windows XP</b>. Это свой клиент для сервера
-<a href="{OFFICIAL}">Nekochat</a>: вы входите со своей учётной записью Nekochat, общаетесь в комнатах и личных сообщениях, звоните друзьям,
-показываете экран, отправляете файлы и вместе играете в старые игры Windows XP.</p>
-<p>Работает на <b>Windows, Linux, Android, iPhone</b> и <b>в браузере</b>, так что чаты и настройки всегда с вами.</p>
-<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> <a href="download.html"><b>Скачать прямо сейчас!</b></a> Это бесплатно.</p>
-<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Или <a href="{WEB}"><b>попробуйте веб-версию</b></a> прямо здесь, ничего ставить не нужно.</p>
+<p><b>Nekochat Reloaded</b> — программа для общения, которая выглядит и звучит как <b>Windows XP</b>. Общайтесь с друзьями, звоните, показывайте экран, отправляйте файлы и играйте вместе в старые игры Windows: Косынку, Червы, Реверси, Pinball и другие.</p>
+<p>Работает на <b>Windows, Linux, Android и iPhone</b>, а также <b>в браузере</b>.</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> {{{{HOME_DOWNLOAD}}}}</p>
+<p><img src="/img/bullet-red.gif" width="11" height="11" alt="*"> Или <a href="{WEB}"><b>попробуйте онлайн</b></a> прямо сейчас, ничего ставить не нужно.</p>
+<h2>Начните за три шага</h2>
+<ol>
+<li><b>Скачайте</b> программу для своего устройства или откройте онлайн-версию.</li>
+<li><b>Войдите</b> со своей учётной записью Nekochat. Ещё нет учётной записи? Создайте её на <a href="{NEKOCHAT_SERVER}">сервере Nekochat</a>.</li>
+<li><b>Настройте под себя:</b> откройте <i>Windows Update</i> в Панели управления, чтобы добавить темы, звуки, игры и помощников.</li>
+</ol>
 </td>
 <td width="14">&nbsp;</td>
-<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="Окно Nekochat Reloaded"><br><span class="small">Клиент для ПК с темой Windows XP (Luna).</span></td>
+<td valign="top" width="590"><img class="shot" src="/img/screenshot.png" width="560" alt="Окно Nekochat Reloaded"><br><span class="small">Nekochat Reloaded с темой Windows XP.</span></td>
 </tr></table>
-<h2>Что он умеет?</h2>
-<ul class="arrows">
-<li>Комнаты и личные сообщения, реакции, закреплённые сообщения, «печатает…» и отметки прочтения, чаты в отдельных окнах.</li>
-<li>Голосовые звонки, показ экрана и уведомления.</li>
-<li>Темы Windows XP (Luna, Classic и другие), звуки XP, Панель управления и Центр справки и поддержки.</li>
-<li>Косынка, Паук, FreeCell, Червы, Пики, Реверси, Шашки, Нарды, Сапёр и 3D Pinball.</li>
-<li>Файлы в чатах и <b>Infinity Memory</b>: файлы хранятся на сервере для друзей, которые были не в сети.</li>
-</ul>
-<p><a href="features.html">Подробнее о возможностях &raquo;</a></p>
-<div class="box"><div class="title">Обратите внимание</div><div class="body">Nekochat Reloaded — <b>неофициальный</b> клиент. Официальный клиент Nekochat: <a href="{OFFICIAL}">{OFFICIAL}</a>.</div></div>
+<h2>Посмотрите в деле</h2>
+{{{{GALLERY}}}}
+<p><a href="catalog.html">Все темы и игры &raquo;</a></p>
 """
 
 T["ru"]["pages"]["features"] = f"""
-<h1>Возможности</h1>
-<h2>Чаты</h2>
+<h1>Что умеет</h1>
+<h2>Общение с друзьями</h2>
 <ul class="arrows">
-<li>Комнаты и личные сообщения на вашем сервере Nekochat, реакции, закреплённые сообщения, отметки «печатает» и «прочитано».</li>
-<li>Чаты в отдельных окнах, как в старых мессенджерах.</li>
-<li>Голосовые звонки и показ экрана; уведомления со звуками XP.</li>
-<li><b>Файлы:</b> нажмите скрепку, перетащите файл в окно или вставьте его. <b>Infinity Memory</b> хранит файл (до 50 МБ) на сервере Nekochat Reloaded, и друг, который был не в сети, скачает его по ссылке.</li>
-<li>Статусы: в сети, отошёл, не беспокоить и невидимка.</li>
+<li>Групповые чаты (комнаты) и личные сообщения, реакции, закреплённые сообщения и отметки: кто печатает и кто прочитал.</li>
+<li>Любой чат можно открыть в отдельном окне, как в старых мессенджерах.</li>
+<li>Голосовые звонки и показ экрана.</li>
+<li>Ваш статус: в сети, отошёл, не беспокоить или невидимка.</li>
 </ul>
-<h2>Внешний вид Windows XP</h2>
+<h2>Отправка файлов</h2>
 <ul class="arrows">
-<li>Окна с заголовками и кнопками Luna, тема Classic и цветовые схемы; тему используют все окна.</li>
-<li>Оригинальные звуки XP для уведомлений, входа и звонков; курсоры и значки можно менять.</li>
-<li>Панель управления, Центр справки и поддержки и помощники <b>Rover, Merlin, Courtney и Earl</b> (ставятся из Nekochat Reloaded Update, когда захотите).</li>
+<li>Нажмите скрепку, перетащите файл в окно или вставьте его.</li>
+<li>Отметьте <b>Infinity Memory</b>, чтобы файл (до 50 МБ) остался доступен по ссылке: друг, который был не в сети, всё равно его получит.</li>
 </ul>
-<h2>Игры из Windows XP</h2>
+<h2>Выглядит и звучит как Windows XP</h2>
 <ul class="arrows">
-<li>Косынка, Паук, FreeCell, Червы, Пики, Реверси, Шашки и Нарды с оригинальными картами, досками, костями и звуками. Играйте с компьютером или с друзьями.</li>
-<li><b>3D Pinball: Space Cadet</b> с <b>общими рекордами</b> всех пользователей вашего сервера Nekochat.</li>
-<li>Вызовы: отправьте в чат расклад Косынки, Паука, FreeCell или Сапёра — у всех одна и та же игра, результаты приходят в чат.</li>
-<li>Сапёр и на телефонах (удерживайте клетку, чтобы поставить флажок).</li>
+<li>Знакомый синий вид Luna, серый вид Classic и другие темы на выбор. Тему используют все окна.</li>
+<li>Знаменитые звуки Windows XP, а курсоры и значки можно менять.</li>
+<li>Панель управления, Центр справки и поддержки и помощники <b>Rover, Merlin, Courtney и Earl</b>.</li>
 </ul>
-<h2>Везде</h2>
-<table class="data"><tr><th>Платформа</th><th>Как</th></tr>
-<tr><td>Windows</td><td>Установщик (в стиле установки Windows XP) или портативный exe</td></tr>
+<h2>Играйте вместе</h2>
+<ul class="arrows">
+<li>Косынка, Паук, FreeCell, Червы, Пики, Реверси, Шашки, Нарды, Сапёр и 3D Pinball с оригинальными картами, досками и звуками.</li>
+<li>Играйте с компьютером или пригласите друга из чата.</li>
+<li>Отправьте другу <b>вызов</b>: у всех одна и та же партия Косынки или Сапёра, а результаты приходят в чат.</li>
+<li>У 3D Pinball есть <b>общие рекорды</b>: смотрите их на странице <a href="games.html">Игры и рекорды</a>.</li>
+</ul>
+<h2>Добавляйте новое через Windows Update</h2>
+<p>Внутри программы <i>Windows Update</i> работает как магазин: выберите темы, звуки, курсоры, обои, помощников и игры и установите их одним нажатием. Сначала можно всё посмотреть в <a href="catalog.html">каталоге</a>.</p>
+<h2>Работает везде</h2>
+<table class="data"><tr><th>Устройство</th><th>Как получить</th></tr>
+<tr><td>Windows</td><td>Установщик или портативная версия, см. <a href="download.html">Скачать</a></td></tr>
 <tr class="alt"><td>Linux</td><td>AppImage или пакет .deb</td></tr>
-<tr><td>Android</td><td>.apk, Android 8.0 и новее</td></tr>
-<tr class="alt"><td>iPhone / iPad</td><td>.ipa, ставится через AltStore, iOS 16.4 и новее</td></tr>
-<tr><td>Браузер</td><td><a href="{WEB}">Открыть веб-версию</a>, ничего устанавливать не нужно</td></tr></table>
+<tr><td>Android</td><td>Файл .apk, Android 8.0 и новее</td></tr>
+<tr class="alt"><td>iPhone / iPad</td><td>Устанавливается через AltStore, iOS 16.4 и новее</td></tr>
+<tr><td>Любой браузер</td><td><a href="{WEB}">Откройте онлайн-версию</a>, ничего ставить не нужно</td></tr></table>
 """
 
 T["ru"]["pages"]["download"] = f"""
 <h1>Скачать</h1>
-<div class="box"><div class="title">Последний выпуск</div><div class="body">{{{{LATEST_BOX}}}}</div></div>
-<p>Все файлы лежат на странице выпуска на GitHub: <a href="{REPO}/releases/latest">{REPO}/releases/latest</a>.</p>
-<table class="data"><tr><th>Платформа</th><th>Файл</th><th>Примечания</th></tr>
-<tr><td>Windows</td><td>Nekochat-Reloaded-Setup-<i>версия</i>.exe</td><td>Установщик. Портативная версия: <i>Nekochat-Reloaded-<i>версия</i>-portable.exe</i>.</td></tr>
-<tr class="alt"><td>Linux</td><td>Nekochat-Reloaded-<i>версия</i>.AppImage<br>nekochat-reloaded_<i>версия</i>_amd64.deb</td><td>AppImage: сделайте файл исполняемым и запустите.</td></tr>
-<tr><td>Android</td><td>Nekochat-Reloaded-<i>версия</i>.apk</td><td>Android 8.0 и новее; ставится поверх прежних версий.</td></tr>
-<tr class="alt"><td>iPhone / iPad</td><td>Nekochat-Reloaded-<i>версия</i>.ipa</td><td>iOS 16.4 и новее. Файл не подписан: ставьте через <a href="https://altstore.io">AltStore</a>.</td></tr>
-<tr><td>Браузер</td><td><a href="{WEB}">Открыть веб-версию</a></td><td>Тот же клиент в браузере, ничего ставить не нужно. Работает и на телефоне.</td></tr></table>
-<h2>Первый запуск</h2>
+<div class="box"><div class="title">Последняя версия</div><div class="body">{{{{LATEST_BOX}}}}</div></div>
+{{{{DOWNLOADS}}}}
+<h2>После установки</h2>
 <ol>
-<li>Установите и запустите клиент.</li>
-<li>Войдите со своей учётной записью <b>Nekochat</b> (чаты и звонки идут через сервер Nekochat).</li>
-<li>Откройте <b>Windows Update</b> в Панели управления, чтобы добавить темы, игры и помощников.</li>
+<li>Запустите Nekochat Reloaded и войдите со своей учётной записью <b>Nekochat</b>. Ещё нет учётной записи? Создайте её на <a href="{NEKOCHAT_SERVER}">сервере Nekochat</a>.</li>
+<li>Откройте <i>Windows Update</i> в Панели управления, чтобы добавить темы, звуки, игры и помощников.</li>
 </ol>
-<p class="small">Бета-версии тоже публикуются на <a href="{REPO}/releases">странице выпусков</a> с пометкой «pre-release».</p>
-"""
-
-T["ru"]["pages"]["addons"] = f"""
-<h1>Дополнения и темы</h1>
-<p><b>Nekochat Reloaded Update</b> встроен в клиент и похож на Windows Update. Он ставит то, что вы выберете, и обновляет само приложение.</p>
-<table class="data"><tr><th>Вид</th><th>Что вы получите</th></tr>
-<tr><td>Темы</td><td>Оформление в стиле Windows для всего клиента: Luna, Classic и другие.</td></tr>
-<tr class="alt"><td>Звуки, курсоры, значки</td><td>Схемы звуков, наборы курсоров и значков.</td></tr>
-<tr><td>Обои</td><td>Картинки для рабочего стола клиента.</td></tr>
-<tr class="alt"><td>Помощники</td><td>Rover, Merlin, Courtney и Earl — помощники Windows XP.</td></tr>
-<tr><td>Дополнения</td><td>Сапёр, Редактор тем, Панель администратора и игры. У каждого своя справка и окно «О программе».</td></tr></table>
-<p>Пакеты лежат в открытом репозитории: <a href="{THEMES}">{THEMES}</a>.</p>
+<p>Не хотите ничего ставить? <a href="{WEB}">Используйте онлайн-версию.</a></p>
 """
 
 T["ru"]["pages"]["catalog"] = f"""
-<h1>Каталог</h1>
+<h1>Темы и игры</h1>
 {{{{CATALOG}}}}
-<p class="small">Каталог лежит в <a href="{THEMES}">{THEMES}</a>; список обновляется каждые десять минут.</p>
 """
 
-T["ru"]["pages"]["server"] = f"""
-<h1>Сервер Nekochat Reloaded</h1>
-<p>Клиенты общаются с двумя серверами: вашим сервером <b>Nekochat</b> (чаты и звонки) и сервером <b>Nekochat Reloaded</b> — небольшим помощником, на котором работает этот сайт.
-Он <b>не</b> заменяет сервер Nekochat и не проксирует его; он добавляет то, чего в Nekochat нет.</p>
-<table class="data"><tr><th>Возможность</th><th>Что делает</th></tr>
-<tr><td>Настройки и отметки прочтения</td><td>Настройки и прочитанное переходят с одного устройства на другое.</td></tr>
-<tr class="alt"><td>Статусы и присутствие</td><td>В сети, отошёл, не беспокоить, невидимка; реакции, закрепления, «печатает».</td></tr>
-<tr><td>Игры</td><td>Передаёт ходы игр XP между игроками.</td></tr>
-<tr class="alt"><td>Рекорды</td><td>Один лучший результат на пользователя в 3D Pinball.</td></tr>
-<tr><td>Infinity Memory</td><td>Файлы до 50 МБ хранятся навсегда, доступ по ссылке, которую нельзя угадать.</td></tr>
-<tr class="alt"><td>Резервные копии</td><td>Копии настроек, которые делает клиент.</td></tr></table>
-<p>Токен Nekochat проверяется один раз и не сохраняется. Смотрите живую <a href="/api/docs">документацию API</a> и <a href="status.html">состояние сервера</a>.</p>
+T["ru"]["pages"]["games"] = f"""
+<h1>Игры и рекорды</h1>
+<p>Друзья вместе играют в старые игры Windows. Здесь видно, сколько игр идёт прямо сейчас, и лучшие результаты. Страница обновляется сама каждые 30 секунд.</p>
+<h2>Играют сейчас: {{{{GAMES_COUNT}}}}</h2>
+{{{{GAMES_LIVE}}}}
+<h2>Рекорды</h2>
+{{{{SCORES_TABLES}}}}
+<p class="small">Результаты хранятся отдельно для каждого чат-сервера. У каждого игрока один лучший результат, он показан под именем, которое игрок использует в чате. Сыграйте в 3D Pinball в Nekochat Reloaded, чтобы попасть в список!</p>
 """
 
-T["ru"]["pages"]["status"] = f"""
-<h1>Состояние сервера</h1>
-<p><span class="red">&#9679;</span> <b>{{{{STATE}}}}</b></p>
-<table class="data"><tr><th>Параметр</th><th>Значение</th></tr>
-<tr><td>Версия сервера</td><td>{{{{VERSION}}}}</td></tr>
-<tr class="alt"><td>Работает</td><td>{{{{UPTIME}}}}</td></tr>
-<tr><td>Принимаемые серверы Nekochat</td><td>{{{{SERVERS}}}}</td></tr>
-<tr class="alt"><td>Привязанных учётных записей</td><td>{{{{ACCOUNTS}}}}</td></tr>
-<tr><td>Игр идёт сейчас</td><td>{{{{GAMES}}}}</td></tr>
-<tr class="alt"><td>Хранится рекордов</td><td>{{{{SCORES}}}}</td></tr>
-<tr><td>Файлов в Infinity Memory</td><td>{{{{FILES}}}} ({{{{FILES_MB}}}} МБ)</td></tr>
-<tr class="alt"><td>Время сервера</td><td>{{{{NOW}}}}</td></tr></table>
-<p class="small">Страницу сервер создаёт заново при каждом открытии.</p>
+T["ru"]["pages"]["help"] = f"""
+<h1>Помощь</h1>
+<h2>Что такое Nekochat?</h2>
+<p>Nekochat — чат, которым пользуются ваши друзья. <b>Nekochat Reloaded</b> — программа для него, похожая на Windows XP, с играми, темами и другим. Вы входите со своей учётной записью Nekochat.</p>
+<h2>Нужна ли учётная запись?</h2>
+<p>Да. Создайте её на <a href="{NEKOCHAT_SERVER}">сервере Nekochat</a> и войдите в Nekochat Reloaded с тем же именем и паролем.</p>
+<h2>Это бесплатно?</h2>
+<p>Да, всё здесь бесплатно.</p>
+<h2>Как получить новые темы и игры?</h2>
+<p>Откройте <b>Windows Update</b> в Панели управления программы, отметьте нужное и нажмите <b>Review and Install Items</b>. Сначала можно всё посмотреть в <a href="catalog.html">каталоге</a>.</p>
+<h2>Как сыграть с другом?</h2>
+<p>Нажмите правой кнопкой на чат с другом и выберите <b>Play ...</b>. Друг получит приглашение с кнопкой Play. В Червы и Пики могут играть до четырёх человек.</p>
+<h2>Как отправить большой файл?</h2>
+<p>Нажмите скрепку рядом с полем сообщения или перетащите файл в окно. Отметьте <b>Infinity Memory</b>, если друга нет в сети: файл останется доступен по ссылке (до 50 МБ).</p>
+<h2>Как поставить на iPhone?</h2>
+<p>Файл для iPhone не подписан Apple, поэтому его ставят через <a href="https://altstore.io">AltStore</a>. Скачайте файл .ipa на странице <a href="download.html">Скачать</a> и откройте его в AltStore.</p>
+<h2>Что-то не работает</h2>
+<p>Напишите нам на <a href="{REPO}/issues">GitHub</a>: что случилось и на каком устройстве. Очень помогает скриншот.</p>
 """
 
 T["ru"]["pages"]["about"] = f"""
-<h1>О сайте</h1>
-<p>Это домашняя страница <b>Nekochat Reloaded</b>, сделанная так, как делали домашние страницы около 2002 года: таблицы, объёмные кнопки, счётчик посетителей и бегущая строка. Её отдаёт сам сервер Nekochat Reloaded.</p>
-<h2>Кто делает</h2>
-<p>Nekochat Reloaded делает <b>KaMika</b> (<a href="https://github.com/xKaMikax">xKaMikax</a>) и команда Nekochat Reloaded. Клиент для iPhone делается вместе с VASHYAN-CMD.</p>
+<h1>О проекте</h1>
+<p>Nekochat Reloaded — программа для общения с друзьями, которая выглядит и звучит как Windows XP. Её делает <b>KaMika</b> и команда Nekochat Reloaded. Версия для iPhone делается вместе с VASHYAN-CMD.</p>
+<p>Эта домашняя страница сделана так, как выглядели домашние страницы около 2002 года.</p>
 <h2>Ссылки</h2>
 <ul class="arrows">
-<li><a href="{REPO}">Клиент на GitHub</a> (ветки для ПК, Android, iPhone и веба)</li>
-<li><a href="{REPO}/issues">Гостевая книга</a>: оставьте записку или сообщите о проблеме (GitHub Issues)</li>
-<li><a href="{THEMES}">Темы и дополнения</a></li>
-<li><a href="{OFFICIAL}">Nekochat</a> — официальный клиент и сервер, с которым это работает</li>
+<li><a href="{REPO}">Nekochat Reloaded на GitHub</a></li>
+<li><a href="{REPO}/issues">Вопросы и идеи</a></li>
+<li><a href="{OFFICIAL}">Nekochat</a> — чат, с которым это работает</li>
 </ul>
-<h2>Обратите внимание</h2>
-<p>Nekochat Reloaded — любительский проект. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.</p>
+<p class="small">Nekochat Reloaded сделан поклонниками. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.</p>
 """
 
 
@@ -345,19 +307,21 @@ def page(lang, name):
     t = T[lang]
     here = t["dir"]
     nav = "".join(
-        f'<a href="/{here}{p}.html"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>' if p != "index" else
-        f'<a href="/{here}"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>'
+        (f'<a href="/{here}{p}.html"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>' if p != "index" else
+         f'<a href="/{here}"{" class=\"here\"" if p == name else ""}>{t["nav"][p]}</a>')
         for p in ORDER)
     other_url = ("/" if lang == "ru" else "/ru/") + ("" if name == "index" else f"{name}.html")
     now = datetime.date.today().strftime("%d %B %Y") if lang == "en" else datetime.date.today().strftime("%d.%m.%Y")
+    refresh = '<meta http-equiv="refresh" content="30">' if name == "games" else ""
     return f"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="{t['lang']}">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nekochat Reloaded - {t['titles'][name]}</title>
-<meta name="description" content="Nekochat Reloaded - the Windows XP style client for Nekochat">
+<meta name="description" content="Nekochat Reloaded - a chat program that looks and sounds like Windows XP">
 <link rel="stylesheet" href="/style.css?v={BUILD}" type="text/css">
+{refresh}
 <link rel="shortcut icon" href="/favicon.ico">
 </head>
 <body background="/img/bg.gif" bgcolor="#e2eaf7">
@@ -367,15 +331,11 @@ def page(lang, name):
 <td class="nav" valign="top">
 <div class="head">{t['menu']}</div>
 {nav}
+<a href="{WEB}" class="special">{t['webclient']}</a>
 <div class="head">{t['search']}</div>
 <form action="/{here}catalog.html" method="get"><input type="text" name="q" size="12"> <input type="submit" value="{t['go']}"></form>
 <div class="head">{t['language']}</div>
 <a href="{other_url}">{t['other_name']}</a>
-<div class="head">{t['links']}</div>
-<a href="{REPO}">{t['code']}</a>
-<a href="{REPO}/issues">{t['guestbook']}</a>
-<a href="{WEB}">{t["webclient"]}</a>
-<p align="center"><img src="/img/construction.gif" width="130" height="26" alt="Under construction"></p>
 </td>
 <td class="main" valign="top">
 {t['pages'][name]}
@@ -385,7 +345,7 @@ def page(lang, name):
 </tr>
 <tr><td colspan="2" class="foot">
 <p>{t['visitor']} <img class="counter" src="/counter.svg" width="96" height="22" alt="visitor counter"></p>
-<p><img src="/img/btn-notepad.gif" width="88" height="31" alt="Made with Notepad"> <img src="/img/btn-ie6.gif" width="88" height="31" alt="Best viewed in Internet Explorer 6"> <img src="/img/btn-html.gif" width="88" height="31" alt="Valid HTML 4.01"> <img src="/img/btn-python.gif" width="88" height="31" alt="Powered by Python"> <img src="/img/btn-res.gif" width="88" height="31" alt="1024 x 768"> <img src="/img/btn-nekochat.gif" width="88" height="31" alt="Nekochat Reloaded"></p>
+<p><img src="/img/btn-ie6.gif" width="88" height="31" alt="Best viewed in Internet Explorer 6"> <img src="/img/btn-res.gif" width="88" height="31" alt="1024 x 768"> <img src="/img/btn-nekochat.gif" width="88" height="31" alt="Nekochat Reloaded"></p>
 <p>{t['disclaimer']}</p>
 <p>&copy; 2026 Nekochat Reloaded Team. {t['updated']}: {now}.</p>
 </td></tr>
@@ -399,6 +359,10 @@ root = os.path.dirname(os.path.abspath(__file__))
 for lang in ("en", "ru"):
     out = os.path.join(root, "public", T[lang]["dir"])
     os.makedirs(out, exist_ok=True)
+    for old in ("addons", "server", "status"):   # pages of an older version of the site (the server redirects them)
+        path = os.path.join(out, f"{old}.html")
+        if os.path.exists(path):
+            os.remove(path)
     for name in ORDER:
         with open(os.path.join(out, f"{name}.html"), "w", encoding="utf-8") as f:
             f.write(page(lang, name))

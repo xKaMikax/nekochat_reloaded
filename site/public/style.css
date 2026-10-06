@@ -97,3 +97,9 @@ pre.desc { white-space: pre-wrap; background-color: #fffff0; border: 1px solid #
   .card .pic img { max-height: 106px; }
   .foot img { margin: 2px; }
 }
+.box .body .tile { display: inline-block; padding: 14px 40px; }
+
+/* menu button to the online version, a small gallery */
+.nav a.special { background-color: #d8f0d0; color: #006000; border-color: #ffffff; }
+.nav a.special:hover { background-color: #fff5c8; }
+h3 { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #000080; margin: 14px 0 4px 0; }

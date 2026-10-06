@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime
 import html
+import json
 import time
 from pathlib import Path
 from urllib.parse import quote, urlencode
@@ -51,7 +52,146 @@ def uptime_text(ru: bool) -> str:
     return (f"{days} д {hours} ч {minutes} мин" if ru else f"{days} d {hours} h {minutes} min")
 
 
-async def tokens(page: str, ru: bool) -> dict[str, str]:
+FILE_KINDS = [  # (match, platform key, English label, Russian label, English note, Russian note)
+    ("-Setup-", "windows", "Windows - installer", "Windows - установщик", "The easy way: a Windows XP style setup.", "Проще всего: установка в стиле Windows XP."),
+    ("-portable.exe", "windows", "Windows - portable", "Windows - портативная", "No installation: run it from any folder.", "Без установки: запуск из любой папки."),
+    (".AppImage", "linux", "Linux - AppImage", "Linux - AppImage", "Make the file executable and run it.", "Сделайте файл исполняемым и запустите."),
+    (".deb", "linux", "Linux - .deb package", "Linux - пакет .deb", "For Debian and Ubuntu.", "Для Debian и Ubuntu."),
+    (".apk", "android", "Android", "Android", "Android 8.0 or later; installs over earlier versions.", "Android 8.0 и новее; ставится поверх прежних версий."),
+    (".ipa", "ios", "iPhone / iPad", "iPhone / iPad", "iOS 16.4 or later; not signed - install it with AltStore.", "iOS 16.4 и новее; файл не подписан - ставьте через AltStore."),
+]
+
+
+def platform_of(user_agent: str) -> str:
+    ua = user_agent.lower()
+    if "android" in ua:
+        return "android"
+    if "iphone" in ua or "ipad" in ua or "ipod" in ua:
+        return "ios"
+    if "windows" in ua:
+        return "windows"
+    if "linux" in ua or "x11" in ua:
+        return "linux"
+    return ""
+
+
+def release_files(release: dict | None) -> list[dict]:
+    """The downloadable files of a release, in the order of FILE_KINDS (the installer before the portable version)."""
+    files = []
+    for match, platform, en, ru_label, note_en, note_ru in FILE_KINDS:
+        for asset in (release or {}).get("assets", []):
+            if match in asset["name"] and not asset["name"].endswith((".blockmap", ".yml")):
+                files.append({"name": asset["name"], "url": asset["browser_download_url"], "size": asset["size"], "count": asset.get("download_count", 0),
+                              "platform": platform, "label": (en, ru_label), "note": (note_en, note_ru)})
+                break
+    return files
+
+
+def downloads_html(release: dict | None, ru: bool, ua: str) -> str:
+    files = release_files(release)
+    page = ("https://github.com/xKaMikax/nekochat_reloaded/releases/latest")
+    if not files:
+        return (f'<p><a href="{page}">{"Страница последнего выпуска на GitHub" if ru else "The latest release on GitHub"} &raquo;</a></p>')
+    mine = platform_of(ua)
+    out = []
+    first = next((f for f in files if f["platform"] == mine), None)
+    if first:
+        out.append(f'<div class="box"><div class="title">{"Для вашей системы" if ru else "For your system"}</div><div class="body">'
+                   f'<a class="tile" href="{html.escape(first["url"])}">{"Скачать" if ru else "Download"} {html.escape(first["label"][1 if ru else 0])}'
+                   f'<span>{html.escape(first["name"])} - {first["size"] / 1048576:.0f} {"МБ" if ru else "MB"}</span></a></div></div>')
+    elif mine == "":
+        pass
+    head = ("Для чего", "Файл", "Размер", "Примечания") if ru else ("For", "File", "Size", "Notes")
+    rows = []
+    for n, f in enumerate(files):
+        rows.append(f'<tr{" class=alt" if n % 2 else ""}><td><b>{html.escape(f["label"][1 if ru else 0])}</b></td>'
+                    f'<td><a href="{html.escape(f["url"])}">{html.escape(f["name"])}</a></td>'
+                    f'<td align="right">{f["size"] / 1048576:.0f} {"МБ" if ru else "MB"}</td>'
+                    f'<td>{html.escape(f["note"][1 if ru else 0])}</td></tr>')
+    rows.append(f'<tr><td><b>{"Браузер" if ru else "Web"}</b></td><td><a href="/app/">{"Открыть веб-версию" if ru else "Open the web version"}</a></td><td align="right">-</td>'
+                f'<td>{"Тот же клиент в браузере, ничего ставить не нужно. Работает и на телефоне." if ru else "The same client in your browser, nothing to install. Works on a phone too."}</td></tr>')
+    out.append('<table class="data"><tr>' + "".join(f"<th>{h}</th>" for h in head) + "</tr>" + "".join(rows) + "</table>")
+    return "".join(out)
+
+
+def home_download(release: dict | None, ru: bool, ua: str) -> str:
+    """The download line of the home page: the file for the visitor's system when it is known."""
+    mine = platform_of(ua)
+    first = next((f for f in release_files(release) if f["platform"] == mine), None)
+    if first:
+        return (f'<a href="{html.escape(first["url"])}"><b>{"Скачать" if ru else "Download"} {html.escape(first["label"][1 if ru else 0])}</b></a> '
+                f'({first["size"] / 1048576:.0f} {"МБ" if ru else "MB"}). {"Это бесплатно." if ru else "It is free."} '
+                f'<a href="download.html">{"Другие системы" if ru else "Other systems"} &raquo;</a>')
+    return f'<a href="download.html"><b>{"Скачать прямо сейчас!" if ru else "Download it now!"}</b></a> {"Это бесплатно." if ru else "It is free."}'
+
+
+GALLERY_IDS = ["pinball-addon", "reversi-addon", "hearts-addon", "spider-addon", "minesweeper-addon", "freecell-addon", "Royale", "Zune"]
+
+
+def gallery_html(items: list[dict], ru: bool) -> str:
+    """A few pictures of games and themes from the catalog for the home page."""
+    base = "/ru/catalog.html" if ru else "/catalog.html"
+    known = {i["id"]: i for i in items}
+    cards = []
+    for key in GALLERY_IDS:
+        item = known.get(key)
+        url = preview_url(item) if item else None
+        if item and url:
+            cards.append(f'<a class="card" href="{base}?id={quote(item["id"])}"><span class="pic"><img src="{html.escape(url)}" alt=""></span>'
+                         f'<span class="name">{html.escape(item["name"])}</span></a>')
+    return '<div class="cards">' + "".join(cards) + "</div>" if cards else ""
+
+
+def game_title(game: str, items: list[dict]) -> str:
+    for item in items:
+        if item["id"] in (f"{game}-addon", game):
+            return item["name"]
+    return game.replace("-", " ").title()
+
+
+def games_live_html(live: list[dict], items: list[dict], ru: bool) -> str:
+    if not live:
+        return ("<p>Сейчас никто не играет. Начните игру из чата: нажмите на чат правой кнопкой и выберите <b>Play ...</b>.</p>" if ru
+                else "<p>Nobody is playing right now. Start a game from a chat: right-click the chat and choose <b>Play ...</b>.</p>")
+    head = ("Игра", "Игроков", "Идёт уже", "Ходов") if ru else ("Game", "Players", "Playing for", "Moves")
+    rows = []
+    for n, game in enumerate(sorted(live, key=lambda g: g["created"])):
+        minutes = max(0, int((time.time() - float(game["created"])) // 60))
+        rows.append(f'<tr{" class=alt" if n % 2 else ""}><td><b>{html.escape(game_title(game["game"], items))}</b></td><td>{len(game["audience"])}</td>'
+                    f'<td>{minutes} {"мин" if ru else "min"}</td><td>{game["seq"]}</td></tr>')
+    return '<table class="data"><tr>' + "".join(f"<th>{h}</th>" for h in head) + "</tr>" + "".join(rows) + "</table>"
+
+
+def scores_html(items: list[dict], ru: bool) -> str:
+    from . import main
+    out = []
+    head = ("Место", "Игрок", "Результат", "Когда") if ru else ("Rank", "Player", "Score", "When")
+    with main.database() as db:
+        for game in sorted(main.SCORE_GAMES):
+            for server in main.NEKOCHAT_SERVERS:
+                rows = db.execute(
+                    "SELECT s.score, s.updated_at, a.profile, s.nekochat_id FROM game_scores s LEFT JOIN accounts a ON a.server = s.server AND a.nekochat_id = s.nekochat_id "
+                    "WHERE s.game = ? AND s.server = ? ORDER BY s.score DESC, s.updated_at ASC LIMIT 20", (game, server)).fetchall()
+                title = html.escape(game_title(game, items))
+                out.append(f'<h3>{title}</h3>')
+                if not rows:
+                    out.append("<p>Пока нет результатов. Будьте первым!</p>" if ru else "<p>No scores yet. Be the first!</p>")
+                    continue
+                body = []
+                for rank, row in enumerate(rows, 1):
+                    try:
+                        profile = json.loads(row["profile"] or "{}")
+                    except ValueError:
+                        profile = {}
+                    name = str(profile.get("display_name") or profile.get("username") or ("Игрок" if ru else "Player"))[:40]
+                    when = datetime.datetime.fromtimestamp(row["updated_at"], datetime.timezone.utc).strftime("%Y-%m-%d") if row["updated_at"] else ""
+                    medal = {1: "&#129351; ", 2: "&#129352; ", 3: "&#129353; "}.get(rank, "")
+                    body.append(f'<tr{" class=alt" if rank % 2 == 0 else ""}><td>{medal}{rank}</td><td><b>{html.escape(name)}</b></td><td align="right">{row["score"]:,}</td><td class="small">{when}</td></tr>')
+                out.append('<table class="data"><tr>' + "".join(f"<th>{h}</th>" for h in head) + "</tr>" + "".join(body) + "</table>")
+    return "".join(out)
+
+
+async def tokens(page: str, ru: bool, ua: str = "") -> dict[str, str]:
     from . import main   # the data lives in the main module
     values: dict[str, str] = {}
     release = await latest_release()
@@ -65,19 +205,16 @@ async def tokens(page: str, ru: bool) -> dict[str, str]:
         values["LATEST_LINE"] = "Скачайте последнюю версию!" if ru else "Get the latest version!"
         values["LATEST_BOX"] = ('См. <a href="https://github.com/xKaMikax/nekochat_reloaded/releases/latest">страницу выпуска</a>.' if ru
                                 else 'See the <a href="https://github.com/xKaMikax/nekochat_reloaded/releases/latest">release page</a>.')
-    if page == "status":
-        with main.database() as db:
-            accounts = db.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
-            scores = db.execute("SELECT COUNT(*) FROM game_scores").fetchone()[0]
-            files, size = db.execute("SELECT COUNT(*), COALESCE(SUM(size), 0) FROM files").fetchone()
-        values.update({
-            "STATE": "Сервер работает" if ru else "The server is running",
-            "VERSION": main.VERSION, "UPTIME": uptime_text(ru),
-            "SERVERS": ", ".join(html.escape(s) for s in main.NEKOCHAT_SERVERS),
-            "ACCOUNTS": str(accounts), "SCORES": str(scores), "FILES": str(files), "FILES_MB": f"{size / 1048576:.1f}",
-            "GAMES": str(sum(1 for g in main._games.values() if not g["closed"])),
-            "NOW": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        })
+    values["DOWNLOADS"] = downloads_html(release, ru, ua)
+    values["HOME_DOWNLOAD"] = home_download(release, ru, ua)
+    if page == "index":
+        values["GALLERY"] = gallery_html(await catalog_items(), ru)
+    if page == "games":
+        items = await catalog_items()
+        live = [g for g in main._games.values() if not g["closed"]]
+        values["GAMES_COUNT"] = str(len(live))
+        values["GAMES_LIVE"] = games_live_html(live, items, ru)
+        values["SCORES_TABLES"] = scores_html(items, ru)
     return values
 
 
@@ -258,12 +395,12 @@ def catalog_html(items: list[dict], query: dict, ru: bool, description: str = ""
     return "\n".join(out)
 
 
-async def dynamic(name: str, ru: bool, query: dict | None = None) -> Response:
+async def dynamic(name: str, ru: bool, query: dict | None = None, ua: str = "") -> Response:
     path = SITE / ("ru" if ru else "") / f"{name}.html"
     if not path.is_file():
         return Response(status_code=404)
     text = path.read_text(encoding="utf-8")
-    for key, value in (await tokens(name, ru)).items():
+    for key, value in (await tokens(name, ru, ua)).items():
         text = text.replace("{{" + key + "}}", value)
     if name == "catalog":
         items = await catalog_items()
@@ -272,30 +409,30 @@ async def dynamic(name: str, ru: bool, query: dict | None = None) -> Response:
         if wanted and wanted["type"] == "themes":
             description = await catalog_text(f'{CATALOG_RAW}/{quote(wanted["dir"])}/Description.md')
         text = text.replace("{{CATALOG}}", catalog_html(items, query or {}, ru, description))
-    return HTMLResponse(text, headers={"Cache-Control": "no-cache"})
+    return HTMLResponse(text, headers={"Cache-Control": "no-cache", "Vary": "User-Agent"})
 
 
 @router.get("/", include_in_schema=False)
 @router.get("/index.html", include_in_schema=False)
-async def home() -> Response:
-    return await dynamic("index", False)
+async def home(request: Request) -> Response:
+    return await dynamic("index", False, None, request.headers.get("user-agent", ""))
 
 
 @router.get("/ru", include_in_schema=False)
 @router.get("/ru/", include_in_schema=False)
 @router.get("/ru/index.html", include_in_schema=False)
-async def home_ru() -> Response:
-    return await dynamic("index", True)
+async def home_ru(request: Request) -> Response:
+    return await dynamic("index", True, None, request.headers.get("user-agent", ""))
 
 
 @router.get("/download.html", include_in_schema=False)
-async def download() -> Response:
-    return await dynamic("download", False)
+async def download(request: Request) -> Response:
+    return await dynamic("download", False, None, request.headers.get("user-agent", ""))
 
 
 @router.get("/ru/download.html", include_in_schema=False)
-async def download_ru() -> Response:
-    return await dynamic("download", True)
+async def download_ru(request: Request) -> Response:
+    return await dynamic("download", True, None, request.headers.get("user-agent", ""))
 
 
 @router.get("/catalog.html", include_in_schema=False)
@@ -308,14 +445,21 @@ async def catalog_ru(request: Request) -> Response:
     return await dynamic("catalog", True, dict(request.query_params))
 
 
-@router.get("/status.html", include_in_schema=False)
-async def status() -> Response:
-    return await dynamic("status", False)
+@router.get("/games.html", include_in_schema=False)
+async def games() -> Response:
+    return await dynamic("games", False)
 
 
-@router.get("/ru/status.html", include_in_schema=False)
-async def status_ru() -> Response:
-    return await dynamic("status", True)
+@router.get("/ru/games.html", include_in_schema=False)
+async def games_ru() -> Response:
+    return await dynamic("games", True)
+
+
+# pages of an older version of the site
+OLD_PAGES = {"/status.html": "/games.html", "/addons.html": "/catalog.html", "/server.html": "/help.html"}
+for _old, _new in OLD_PAGES.items():
+    for _prefix in ("", "/ru"):
+        router.add_api_route(_prefix + _old, (lambda target: (lambda: Response(status_code=308, headers={"Location": target})))(_prefix + _new), methods=["GET"], include_in_schema=False)
 
 
 @router.get("/counter.svg", include_in_schema=False)
