@@ -96,12 +96,14 @@ def downloads_html(release: dict | None, ru: bool, ua: str) -> str:
     mine = platform_of(ua)
     out = []
     first = next((f for f in files if f["platform"] == mine), None)
+    tiles = []
     if first:
-        out.append(f'<div class="box"><div class="title">{"Для вашей системы" if ru else "For your system"}</div><div class="body">'
-                   f'<a class="tile" href="{html.escape(first["url"])}">{"Скачать" if ru else "Download"} {html.escape(first["label"][1 if ru else 0])}'
-                   f'<span>{html.escape(first["name"])} - {first["size"] / 1048576:.0f} {"МБ" if ru else "MB"}</span></a></div></div>')
-    elif mine == "":
-        pass
+        tiles.append(f'<a class="tile" href="{html.escape(first["url"])}">{"Скачать" if ru else "Download"} {html.escape(first["label"][1 if ru else 0])}'
+                     f'<span>{html.escape(first["name"])} - {first["size"] / 1048576:.0f} {"МБ" if ru else "MB"}</span></a>')
+    # the web version works on every system: it is always one of the choices
+    tiles.append(f'<a class="tile" href="/app/">{"Открыть веб-версию" if ru else "Open the web version"}'
+                 f'<span>{"работает в любом браузере, ничего ставить не нужно" if ru else "works in any browser, nothing to install"}</span></a>')
+    out.append(f'<div class="box"><div class="title">{"Для вашей системы" if ru else "For your system"}</div><div class="body">{" ".join(tiles)}</div></div>')
     head = ("Для чего", "Файл", "Размер", "Примечания") if ru else ("For", "File", "Size", "Notes")
     rows = []
     for n, f in enumerate(files):
