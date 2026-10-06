@@ -50,7 +50,10 @@ img.banner { max-width: 100%; }
   .shot { max-width: 100%; height: auto; }
   img[src$="screenshot.png"] { max-width: 100%; height: auto; }
   table.data { font-size: 13px; }
-  table.data td, table.data th { padding: 4px; word-break: break-word; }
+  table.data td, table.data th { padding: 4px; overflow-wrap: break-word; }
+  img[src$="rainbow.gif"] { width: 100%; height: 4px; }
+  img { max-width: 100%; }
+  .main { overflow-x: hidden; }
   h1 { font-size: 18px; }
   .news { font-size: 11px; }
   .foot img { margin: 2px; }
