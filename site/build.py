@@ -40,10 +40,10 @@ T = {
 
 # ---------------------------------------------------------------------------------------------------------- English
 T["en"]["pages"]["index"] = f"""
-<table width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Welcome to Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
+<table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Welcome to Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
 <div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Games from Windows XP: Solitaire, Hearts, Reversi, 3D Pinball with shared high scores *** Send files in chats, up to 50 MB kept for good *** Nekochat Reloaded Update: themes, sounds, assistants and add-ons *** </marquee></div>
 <p>&nbsp;</p>
-<table width="100%" cellspacing="0" cellpadding="0"><tr>
+<table class="cols" width="100%" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
 <p><b>Nekochat Reloaded</b> is a chat program that looks and sounds like <b>Windows XP</b>. It is a custom client for the
 <a href="{OFFICIAL}">Nekochat</a> server: you sign in with your Nekochat account and talk in rooms and direct messages, call your friends,
@@ -176,10 +176,10 @@ T["en"]["pages"]["about"] = f"""
 
 # ---------------------------------------------------------------------------------------------------------- Russian
 T["ru"]["pages"]["index"] = f"""
-<table width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Добро пожаловать в Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
+<table class="cols head" width="100%" cellspacing="0" cellpadding="0"><tr><td><h1>Добро пожаловать в Nekochat Reloaded!</h1></td><td align="right" valign="top"><img src="/img/new.gif" width="42" height="16" alt="NEW!"></td></tr></table>
 <div class="news"><marquee behavior="scroll" direction="left" scrollamount="3">*** {{{{LATEST_LINE}}}} *** Игры из Windows XP: Косынка, Червы, Реверси, 3D Pinball с общими рекордами *** Файлы в чатах, до 50 МБ хранятся навсегда *** Nekochat Reloaded Update: темы, звуки, помощники и дополнения *** </marquee></div>
 <p>&nbsp;</p>
-<table width="100%" cellspacing="0" cellpadding="0"><tr>
+<table class="cols" width="100%" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
 <p><b>Nekochat Reloaded</b> — программа для общения, которая выглядит и звучит как <b>Windows XP</b>. Это свой клиент для сервера
 <a href="{OFFICIAL}">Nekochat</a>: вы входите со своей учётной записью Nekochat, общаетесь в комнатах и личных сообщениях, звоните друзьям,
@@ -324,6 +324,7 @@ def page(lang, name):
 <html lang="{t['lang']}">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nekochat Reloaded - {t['titles'][name]}</title>
 <meta name="description" content="Nekochat Reloaded - the Windows XP style client for Nekochat">
 <link rel="stylesheet" href="/style.css" type="text/css">
@@ -331,7 +332,7 @@ def page(lang, name):
 </head>
 <body background="/img/bg.gif" bgcolor="#e2eaf7">
 <table class="outer" width="760" align="center" cellspacing="0" cellpadding="0" border="0">
-<tr><td colspan="2"><a href="/{here}"><img src="/img/banner.png" width="760" height="100" alt="Nekochat Reloaded"></a></td></tr>
+<tr><td colspan="2"><a href="/{here}"><img class="banner" src="/img/banner.png" width="760" height="100" alt="Nekochat Reloaded"></a></td></tr>
 <tr>
 <td class="nav" width="160" valign="top">
 <div class="head">{t['menu']}</div>

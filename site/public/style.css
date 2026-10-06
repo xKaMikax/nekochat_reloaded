@@ -31,3 +31,27 @@ table.data tr.alt td { background-color: #eef2ff; }
 ul.arrows { list-style-image: url(/img/bullet-blue.gif); margin-top: 4px; }
 .shot { border: 3px ridge #8090c0; }
 .counter { vertical-align: middle; }
+
+/* a phone: the 760 px page becomes one column; the look stays */
+img.banner { max-width: 100%; }
+@media (max-width: 820px) {
+  body { margin: 0; }
+  td, p, li, th, body { font-size: 14px; line-height: 1.5em; }
+  .outer, .outer > tbody, .outer > tbody > tr, .outer > tbody > tr > td { display: block; width: auto !important; }
+  .outer { border-left: 0; border-right: 0; }
+  img.banner { height: auto; width: 100%; display: block; }
+  .nav { border-right: 0; border-bottom: 1px solid #000080; padding: 6px; }
+  .nav a { display: inline-block; margin: 0 4px 4px 0; padding: 5px 9px; font-size: 13px; }
+  .nav .head { display: block; margin: 8px 0 4px 0; font-size: 12px; }
+  .nav p { display: none; }
+  .main { padding: 10px; }
+  table.cols, table.cols > tbody, table.cols > tbody > tr, table.cols > tbody > tr > td { display: block; width: auto !important; }
+  table.cols.head > tbody > tr > td[align="right"] { display: none; }
+  .shot { max-width: 100%; height: auto; }
+  img[src$="screenshot.png"] { max-width: 100%; height: auto; }
+  table.data { font-size: 13px; }
+  table.data td, table.data th { padding: 4px; word-break: break-word; }
+  h1 { font-size: 18px; }
+  .news { font-size: 11px; }
+  .foot img { margin: 2px; }
+}
