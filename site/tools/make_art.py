@@ -35,6 +35,24 @@ banner.save(f"{OUT}/banner.png")
 strip = banner.crop((W - 1, 0, W, H)).resize((8, H))
 strip.save(f"{OUT}/banner-fill.png")
 
+# --- the picture a link to the site shows in chats (Open Graph): 1200 x 630 ---------------------------------------------------
+og = Image.new("RGB", (1200, 630))
+od = ImageDraw.Draw(og)
+for y in range(630):
+    t = y / 629
+    od.line([(0, y), (1200, y)], fill=(int(10 + 20 * t), int(40 + 70 * t), int(150 + 80 * t)))
+glare_og = Image.new("RGBA", (1200, 630), (0, 0, 0, 0))
+ImageDraw.Draw(glare_og).ellipse([-300, -400, 800, 260], fill=(255, 255, 255, 40))
+og = Image.alpha_composite(og.convert("RGBA"), glare_og).convert("RGB")
+od = ImageDraw.Draw(og)
+big_cat = Image.open("tools/cat28.png").convert("RGBA").resize((28 * 9, 26 * 9), Image.NEAREST)
+og.paste(big_cat, (90, 140), big_cat)
+f1 = font("DejaVuSans-BoldOblique.ttf", 84); f2 = font("DejaVuSans-Oblique.ttf", 36)
+od.text((402, 172), "Nekochat Reloaded", font=f1, fill=(0, 20, 90)); od.text((398, 168), "Nekochat Reloaded", font=f1, fill=(255, 255, 255))
+od.text((404, 292), "Chat, call and play like it is Windows XP", font=f2, fill=(0, 20, 90)); od.text((402, 290), "Chat, call and play like it is Windows XP", font=f2, fill=(255, 238, 120))
+od.rectangle([0, 600, 1200, 630], fill=(255, 150, 40))
+og.save(f"{OUT}/og.png")
+
 # --- the page background: a small pale tile -----------------------------------------------------------------
 tile = Image.new("RGB", (8, 8), (226, 234, 247))
 td = ImageDraw.Draw(tile)

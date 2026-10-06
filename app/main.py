@@ -748,7 +748,7 @@ def game_for(game_id: str, account: sqlite3.Row) -> dict[str, Any]:
 
 def game_view(game: dict[str, Any], user: int, log: bool = True) -> dict[str, Any]:
     view = {"id": game["id"], "game": game["game"], "chat": game["chat"], "host": game["host"], "host_name": game["host_name"], "players": sorted(game["audience"]),
-            "closed": game["closed"], "created": game["created"], "seq": game["seq"]}
+            "closed": game["closed"], "created": game["created"], "seq": game["seq"], "watch": game.get("watch", "")}
     if log:
         view["log"] = [entry for entry in game["log"] if game_entry_visible(entry, user)]
     return view

@@ -10,18 +10,19 @@ BUILD = int(time.time())   # the style sheet gets this in its address, so a phon
 REPO = "https://github.com/xKaMikax/nekochat_reloaded"
 OFFICIAL = "https://github.com/komdu/nekochat"
 NEKOCHAT_SERVER = "https://nekochat.komdu.is-cool.dev"
+SITE = "https://nekochat-reloaded.kamika.is-cool.dev"
 WEB = "/app/"   # the web version of the client, served by this server
-ORDER = ["index", "features", "download", "catalog", "games", "help", "about"]
+ORDER = ["index", "features", "download", "news", "catalog", "games", "guestbook", "help", "about"]
 EXTRA = ["watch"]   # pages that are not in the menu
 
 T = {
     "en": {
         "lang": "en", "other": "ru", "other_name": "Русский", "dir": "",
-        "nav": {"index": "Home", "features": "What it can do", "download": "Download", "catalog": "Themes &amp; Games", "games": "Games &amp; Scores",
-                "help": "Help", "about": "About"},
-        "titles": {"index": "Chat like it is 2001", "features": "What it can do", "download": "Download", "catalog": "Themes and Games", "games": "Games and Scores",
-                   "help": "Help", "about": "About", "watch": "Watching a game"},
-        "menu": "Menu", "language": "Language", "search": "Find a theme or game", "go": "Go", "webclient": "Try it online",
+        "nav": {"index": "Home", "features": "What it can do", "download": "Download", "news": "What's new", "catalog": "Themes &amp; Games", "games": "Games &amp; Scores",
+                "guestbook": "Guestbook", "help": "Help", "about": "About"},
+        "titles": {"index": "Chat like it is 2001", "features": "What it can do", "download": "Download", "news": "What's new", "catalog": "Themes and Games", "games": "Games and Scores",
+                   "guestbook": "Guestbook", "help": "Help", "about": "About", "watch": "Watching a game"},
+        "menu": "Menu", "language": "Language", "sound": "Sound", "soundon": "Sound: on", "soundoff": "Sound: off", "description": "Nekochat Reloaded is a chat program that looks and sounds like Windows XP: chats, calls, files and the old Windows games with friends.", "search": "Find a theme or game", "go": "Go", "webclient": "Try it online",
         "visitor": "You are visitor number", "updated": "Last updated",
         "best": "This page is best viewed with Internet Explorer 6.0 at 1024 x 768. (Any other browser will do too.)",
         "disclaimer": "Nekochat Reloaded is made by fans. It is not made by or connected with Microsoft. Windows and Windows XP are trademarks of Microsoft Corporation.",
@@ -29,11 +30,11 @@ T = {
     },
     "ru": {
         "lang": "ru", "other": "en", "other_name": "English", "dir": "ru/",
-        "nav": {"index": "Главная", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
-                "help": "Помощь", "about": "О проекте"},
-        "titles": {"index": "Общайтесь, как в 2001-м", "features": "Что умеет", "download": "Скачать", "catalog": "Темы и игры", "games": "Игры и рекорды",
-                   "help": "Помощь", "about": "О проекте", "watch": "Просмотр игры"},
-        "menu": "Меню", "language": "Язык", "search": "Найти тему или игру", "go": "Найти", "webclient": "Попробовать онлайн",
+        "nav": {"index": "Главная", "features": "Что умеет", "download": "Скачать", "news": "Что нового", "catalog": "Темы и игры", "games": "Игры и рекорды",
+                "guestbook": "Гостевая книга", "help": "Помощь", "about": "О проекте"},
+        "titles": {"index": "Общайтесь, как в 2001-м", "features": "Что умеет", "download": "Скачать", "news": "Что нового", "catalog": "Темы и игры", "games": "Игры и рекорды",
+                   "guestbook": "Гостевая книга", "help": "Помощь", "about": "О проекте", "watch": "Просмотр игры"},
+        "menu": "Меню", "language": "Язык", "sound": "Звук", "soundon": "Звук: включён", "soundoff": "Звук: выключен", "description": "Nekochat Reloaded: программа для общения, которая выглядит и звучит как Windows XP. Чаты, звонки, файлы и старые игры Windows с друзьями.", "search": "Найти тему или игру", "go": "Найти", "webclient": "Попробовать онлайн",
         "visitor": "Вы посетитель номер", "updated": "Обновлено",
         "best": "Сайт лучше всего смотреть в Internet Explorer 6.0 при разрешении 1024 x 768. (Подойдёт и любой другой браузер.)",
         "disclaimer": "Nekochat Reloaded сделан поклонниками. Он не создан Microsoft и не связан с ней. Windows и Windows XP — товарные знаки Microsoft Corporation.",
@@ -52,6 +53,7 @@ T["en"]["pages"]["index"] = f"""
 <td><a class="tile" href="catalog.html">Themes &amp; Games<span>look around before you install</span></a></td>
 <td><a class="tile" href="games.html">Games &amp; Scores<span>who is playing, the best scores</span></a></td>
 </tr></table>
+{{{{NOWPLAYING}}}}
 <p>&nbsp;</p>
 <table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
@@ -139,6 +141,18 @@ T["en"]["pages"]["games"] = f"""
 <p class="small">The scores are kept for each chat server. Every player has one best score, shown under the name they use in chat. Play 3D Pinball in Nekochat Reloaded to get on the list!</p>
 """
 
+T["en"]["pages"]["news"] = f"""
+<h1>What's new</h1>
+<p>The latest versions of Nekochat Reloaded and what changed in them. The full list is on <a href="{REPO}/releases">GitHub</a>.</p>
+{{{{NEWS}}}}
+"""
+
+T["en"]["pages"]["guestbook"] = f"""
+<h1>Guestbook</h1>
+<p>Leave a few words for us: what you like, what you would add, or just say hi. Please no links and no rude words; entries that break this are removed.</p>
+{{{{GUESTBOOK}}}}
+"""
+
 T["en"]["pages"]["help"] = f"""
 <h1>Help</h1>
 <h2>What is Nekochat?</h2>
@@ -183,6 +197,7 @@ T["ru"]["pages"]["index"] = f"""
 <td><a class="tile" href="catalog.html">Темы и игры<span>посмотрите, прежде чем ставить</span></a></td>
 <td><a class="tile" href="games.html">Игры и рекорды<span>кто играет, лучшие результаты</span></a></td>
 </tr></table>
+{{{{NOWPLAYING}}}}
 <p>&nbsp;</p>
 <table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
@@ -270,6 +285,18 @@ T["ru"]["pages"]["games"] = f"""
 <p class="small">Результаты хранятся отдельно для каждого чат-сервера. У каждого игрока один лучший результат, он показан под именем, которое игрок использует в чате. Сыграйте в 3D Pinball в Nekochat Reloaded, чтобы попасть в список!</p>
 """
 
+T["ru"]["pages"]["news"] = f"""
+<h1>Что нового</h1>
+<p>Последние версии Nekochat Reloaded и что в них изменилось. Полный список на <a href="{REPO}/releases">GitHub</a>.</p>
+{{{{NEWS}}}}
+"""
+
+T["ru"]["pages"]["guestbook"] = f"""
+<h1>Гостевая книга</h1>
+<p>Оставьте нам пару слов: что нравится, что хотели бы добавить или просто поздоровайтесь. Пожалуйста, без ссылок и грубостей: такие записи удаляются.</p>
+{{{{GUESTBOOK}}}}
+"""
+
 T["ru"]["pages"]["help"] = f"""
 <h1>Помощь</h1>
 <h2>Что такое Nekochat?</h2>
@@ -338,7 +365,14 @@ def page(lang, name):
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nekochat Reloaded - {t['titles'][name]}</title>
-<meta name="description" content="Nekochat Reloaded - a chat program that looks and sounds like Windows XP">
+<meta name="description" content="{t['description']}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nekochat Reloaded">
+<meta property="og:title" content="Nekochat Reloaded - {t['titles'][name]}">
+<meta property="og:description" content="{t['description']}">
+<meta property="og:image" content="{SITE}/img/og.png">
+<meta property="og:url" content="{SITE}/{here}{'' if name == 'index' else name + '.html'}">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/style.css?v={BUILD}" type="text/css">
 {refresh}
 <link rel="shortcut icon" href="/favicon.ico">
@@ -355,6 +389,8 @@ def page(lang, name):
 <form action="/{here}catalog.html" method="get"><input type="text" name="q" size="12"> <input type="submit" value="{t['go']}"></form>
 <div class="head">{t['language']}</div>
 <a href="{other_url}">{t['other_name']}</a>
+<div class="head">{t['sound']}</div>
+<a href="#" id="xp-sound" data-on="{t['soundon']}" data-off="{t['soundoff']}">{t['soundoff']}</a>
 </td>
 <td class="main" valign="top">
 {t['pages'][name]}
@@ -369,6 +405,7 @@ def page(lang, name):
 <p>&copy; 2026 Nekochat Reloaded Team. {t['updated']}: {now}.</p>
 </td></tr>
 </table>
+<script src="/sound.js?v={BUILD}"></script>
 </body>
 </html>
 """

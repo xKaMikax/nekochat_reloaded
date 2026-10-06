@@ -4,8 +4,15 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nekochat Reloaded - Общайтесь, как в 2001-м</title>
-<meta name="description" content="Nekochat Reloaded - a chat program that looks and sounds like Windows XP">
-<link rel="stylesheet" href="/style.css?v=1791290030" type="text/css">
+<meta name="description" content="Nekochat Reloaded: программа для общения, которая выглядит и звучит как Windows XP. Чаты, звонки, файлы и старые игры Windows с друзьями.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nekochat Reloaded">
+<meta property="og:title" content="Nekochat Reloaded - Общайтесь, как в 2001-м">
+<meta property="og:description" content="Nekochat Reloaded: программа для общения, которая выглядит и звучит как Windows XP. Чаты, звонки, файлы и старые игры Windows с друзьями.">
+<meta property="og:image" content="https://nekochat-reloaded.kamika.is-cool.dev/img/og.png">
+<meta property="og:url" content="https://nekochat-reloaded.kamika.is-cool.dev/ru/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/style.css?v=1791296767" type="text/css">
 
 <link rel="shortcut icon" href="/favicon.ico">
 </head>
@@ -15,12 +22,14 @@
 <tr>
 <td class="nav" valign="top">
 <div class="head">Меню</div>
-<a href="/ru/" class="here">Главная</a><a href="/ru/features.html">Что умеет</a><a href="/ru/download.html">Скачать</a><a href="/ru/catalog.html">Темы и игры</a><a href="/ru/games.html">Игры и рекорды</a><a href="/ru/help.html">Помощь</a><a href="/ru/about.html">О проекте</a>
+<a href="/ru/" class="here">Главная</a><a href="/ru/features.html">Что умеет</a><a href="/ru/download.html">Скачать</a><a href="/ru/news.html">Что нового</a><a href="/ru/catalog.html">Темы и игры</a><a href="/ru/games.html">Игры и рекорды</a><a href="/ru/guestbook.html">Гостевая книга</a><a href="/ru/help.html">Помощь</a><a href="/ru/about.html">О проекте</a>
 <a href="/app/" class="special">Попробовать онлайн</a>
 <div class="head">Найти тему или игру</div>
 <form action="/ru/catalog.html" method="get"><input type="text" name="q" size="12"> <input type="submit" value="Найти"></form>
 <div class="head">Язык</div>
 <a href="/">English</a>
+<div class="head">Звук</div>
+<a href="#" id="xp-sound" data-on="Звук: включён" data-off="Звук: выключен">Звук: выключен</a>
 </td>
 <td class="main" valign="top">
 
@@ -33,6 +42,7 @@
 <td><a class="tile" href="catalog.html">Темы и игры<span>посмотрите, прежде чем ставить</span></a></td>
 <td><a class="tile" href="games.html">Игры и рекорды<span>кто играет, лучшие результаты</span></a></td>
 </tr></table>
+{{NOWPLAYING}}
 <p>&nbsp;</p>
 <table class="hero" cellspacing="0" cellpadding="0"><tr>
 <td valign="top">
@@ -65,5 +75,6 @@
 <p>&copy; 2026 Nekochat Reloaded Team. Обновлено: 06.10.2026.</p>
 </td></tr>
 </table>
+<script src="/sound.js?v=1791296767"></script>
 </body>
 </html>

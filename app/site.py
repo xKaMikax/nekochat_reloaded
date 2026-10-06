@@ -4,12 +4,17 @@ GET /counter.svg is the visitor counter."""
 from __future__ import annotations
 
 import datetime
+import hashlib
+import hmac
 import html
 import json
 import os
+import random
+import re
+import secrets
 import time
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qs, quote, urlencode
 
 import httpx
 from fastapi import APIRouter, FastAPI, Request
@@ -61,6 +66,162 @@ FILE_KINDS = [  # (match, platform key, English label, Russian label, English no
     (".apk", "android", "Android", "Android", "Android 8.0 or later; installs over earlier versions.", "Android 8.0 и новее; ставится поверх прежних версий."),
     (".ipa", "ios", "iPhone / iPad", "iPhone / iPad", "iOS 16.4 or later; not signed - install it with AltStore.", "iOS 16.4 и новее; файл не подписан - ставьте через AltStore."),
 ]
+
+
+_releases: dict = {"at": 0.0, "data": []}
+RELEASES_ALL = "https://api.github.com/repos/xKaMikax/nekochat_reloaded/releases?per_page=8"
+
+
+async def all_releases() -> list[dict]:
+    if time.time() - _releases["at"] < 3600 and _releases["data"]:
+        return _releases["data"]
+    if time.time() - _releases["at"] < 300:
+        return _releases["data"]
+    _releases["at"] = time.time()
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            answer = await client.get(RELEASES_ALL, headers={"Accept": "application/vnd.github+json"})
+        if answer.status_code == 200:
+            _releases["data"] = answer.json()
+    except httpx.HTTPError:
+        pass
+    return _releases["data"]
+
+
+def markdown_lite(text: str, limit: int = 28) -> str:
+    """A release note as simple HTML: headings, bullets, paragraphs, **bold** and `code`; tables and long notes are cut."""
+    out, items, shown = [], False, 0
+    def inline(line: str) -> str:
+        line = html.escape(line)
+        line = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", line)
+        return re.sub(r"`([^`]+)`", r"<code>\1</code>", line)
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("|") or line.startswith("---"):
+            if items and not line.startswith("|"):
+                out.append("</ul>"); items = False
+            continue
+        if shown >= limit:
+            break
+        shown += 1
+        if line.startswith("#"):
+            if items: out.append("</ul>"); items = False
+            level = min(4, max(3, len(line) - len(line.lstrip("#")) + 1))
+            if level == 3 and line.startswith("# "):
+                continue   # the release's own title
+            out.append(f"<h{level}>{inline(line.lstrip('#').strip())}</h{level}>")
+        elif line.startswith(("- ", "* ")):
+            if not items: out.append('<ul class="arrows">'); items = True
+            out.append(f"<li>{inline(line[2:])}</li>")
+        else:
+            if items: out.append("</ul>"); items = False
+            out.append(f"<p>{inline(line)}</p>")
+    if items:
+        out.append("</ul>")
+    return "".join(out)
+
+
+def news_html(releases: list[dict], ru: bool) -> str:
+    if not releases:
+        return f'<p class="red">{"Не удалось загрузить список выпусков, попробуйте позже." if ru else "The list of releases could not be loaded, please try again later."}</p>'
+    out = []
+    for release in releases:
+        if release.get("draft"):
+            continue
+        name = html.escape(release.get("name") or release.get("tag_name") or "")
+        date = (release.get("published_at") or "")[:10]
+        tag = ' <span class="badge">beta</span>' if release.get("prerelease") else ""
+        url = html.escape(release.get("html_url") or "")
+        body = markdown_lite(release.get("body") or "")
+        out.append(f'<div class="box"><div class="title">{name}{tag} - {date}</div><div class="body">{body}'
+                   f'<p><a href="{url}">{"Весь выпуск на GitHub" if ru else "The whole release on GitHub"} &raquo;</a></p></div></div>')
+    return "".join(out)
+
+
+def now_playing_html(live: list[dict], ru: bool) -> str:
+    base = "/ru/games.html" if ru else "/games.html"
+    if live:
+        return (f'<p class="news" style="font-size:13px;color:#33ff33">&#9679; {"Сейчас играют" if ru else "Playing now"}: <b>{len(live)}</b> - '
+                f'<a href="{base}" style="color:#ffee78">{"смотреть игры" if ru else "watch the games"} &raquo;</a></p>')
+    return f'<p class="small">{"Сейчас никто не играет." if ru else "Nobody is playing right now."} <a href="{base}">{"Игры и рекорды" if ru else "Games and scores"} &raquo;</a></p>'
+
+
+# ---- the guestbook: a few checks instead of a login (a sum to solve, one hidden field, a few entries per hour, no links)
+_GB_KEY = secrets.token_bytes(16)
+_GB_LIMIT = 3
+
+
+def guestbook_table() -> None:
+    from . import main
+    with main.database() as db:
+        db.execute("CREATE TABLE IF NOT EXISTS guestbook (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, text TEXT NOT NULL, lang TEXT NOT NULL, created_at INTEGER NOT NULL, ip_hash TEXT NOT NULL)")
+
+
+def gb_sign(a: int, b: int, stamp: int) -> str:
+    return hmac.new(_GB_KEY, f"{a}:{b}:{stamp}".encode(), hashlib.sha256).hexdigest()[:20]
+
+
+def guestbook_html(ru: bool, note: str = "") -> str:
+    from . import main
+    guestbook_table()
+    with main.database() as db:
+        rows = db.execute("SELECT name, text, created_at FROM guestbook ORDER BY id DESC LIMIT 60").fetchall()
+    a, b, stamp = random.randint(2, 9), random.randint(2, 9), int(time.time())
+    action = "/guestbook"
+    text = {"name": "Ваше имя", "msg": "Ваше сообщение", "sum": f"Сколько будет {a} + {b}?", "send": "Отправить", "empty": "Пока никто не писал. Будьте первым!"} if ru else \
+           {"name": "Your name", "msg": "Your message", "sum": f"What is {a} + {b}?", "send": "Send", "empty": "Nobody has written yet. Be the first!"}
+    form = (f'<form method="post" action="{action}" class="finder"><input type="hidden" name="lang" value="{"ru" if ru else "en"}">'
+            f'<input type="hidden" name="a" value="{a}"><input type="hidden" name="b" value="{b}"><input type="hidden" name="t" value="{stamp}"><input type="hidden" name="h" value="{gb_sign(a, b, stamp)}">'
+            f'<div style="position:absolute;left:-5000px"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>'
+            f'<p>{text["name"]}:<br><input type="text" name="name" maxlength="40" size="30"></p>'
+            f'<p>{text["msg"]}:<br><textarea name="text" rows="4" cols="60" maxlength="300"></textarea></p>'
+            f'<p>{text["sum"]} <input type="text" name="answer" size="4" autocomplete="off"></p>'
+            f'<p><input type="submit" value="{text["send"]}"></p></form>')
+    entries = "".join(
+        f'<div class="box"><div class="title">{html.escape(row["name"])} <span class="small">- {datetime.datetime.fromtimestamp(row["created_at"], datetime.timezone.utc).strftime("%Y-%m-%d")}</span></div>'
+        f'<div class="body">{html.escape(row["text"]).replace(chr(10), "<br>")}</div></div>' for row in rows) or f'<p>{text["empty"]}</p>'
+    return (f'<p class="red">{note}</p>' if note else "") + form + entries
+
+
+async def post_guestbook(request: Request) -> Response:
+    from . import main
+    data = {key: values[0] for key, values in parse_qs((await request.body())[:8000].decode("utf-8", "replace")).items()}
+    ru = data.get("lang") == "ru"
+    page = "/ru/guestbook.html" if ru else "/guestbook.html"
+    def back(code: str) -> Response:
+        return Response(status_code=303, headers={"Location": f"{page}?msg={code}"})
+    try:
+        a, b, stamp = int(data.get("a", "")), int(data.get("b", "")), int(data.get("t", ""))
+    except ValueError:
+        return back("bad")
+    name, text = " ".join(data.get("name", "").split())[:40], data.get("text", "").strip()[:300]
+    ip = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "?")
+    ip_hash = hashlib.sha256((ip + "nekochat-guestbook").encode()).hexdigest()[:24]
+    if data.get("website"):
+        return back("sent")   # a robot filled the hidden field: pretend it worked
+    if not hmac.compare_digest(gb_sign(a, b, stamp), data.get("h", "")) or not (3 <= time.time() - stamp <= 3600):
+        return back("bad")
+    if data.get("answer", "").strip() != str(a + b):
+        return back("sum")
+    if len(name) < 1 or len(text) < 3:
+        return back("short")
+    if re.search(r"https?:|www\.|\.(com|ru|net|org|dev|io|xyz)\b", text + " " + name, re.I):
+        return back("links")
+    guestbook_table()
+    with main.database() as db:
+        recent = db.execute("SELECT COUNT(*) FROM guestbook WHERE ip_hash = ? AND created_at > ?", (ip_hash, int(time.time()) - 3600)).fetchone()[0]
+        if recent >= _GB_LIMIT:
+            return back("many")
+        db.execute("INSERT INTO guestbook (name, text, lang, created_at, ip_hash) VALUES (?, ?, ?, ?, ?)", (name, text, "ru" if ru else "en", int(time.time()), ip_hash))
+    return back("sent")
+
+
+GB_NOTES = {
+    "en": {"sent": "Thank you! Your message is in the book.", "bad": "The form has expired, please try again.", "sum": "The sum is not right, please try again.", "short": "Please write your name and a message.",
+           "links": "Links are not allowed in the guestbook.", "many": "That is enough for now: please come back in an hour."},
+    "ru": {"sent": "Спасибо! Ваше сообщение в книге.", "bad": "Форма устарела, попробуйте ещё раз.", "sum": "Сумма неверна, попробуйте ещё раз.", "short": "Напишите своё имя и сообщение.",
+           "links": "Ссылки в гостевой книге нельзя.", "many": "На сегодня достаточно: загляните через час."},
+}
 
 
 def platform_of(user_agent: str) -> str:
@@ -196,7 +357,7 @@ def scores_html(items: list[dict], ru: bool) -> str:
     return "".join(out)
 
 
-async def tokens(page: str, ru: bool, ua: str = "") -> dict[str, str]:
+async def tokens(page: str, ru: bool, ua: str = "", query: dict | None = None) -> dict[str, str]:
     from . import main   # the data lives in the main module
     values: dict[str, str] = {}
     release = await latest_release()
@@ -205,7 +366,9 @@ async def tokens(page: str, ru: bool, ua: str = "") -> dict[str, str]:
         url = html.escape(release.get("html_url") or "")
         date = (release.get("published_at") or "")[:10]
         values["LATEST_LINE"] = (f"Новый выпуск: {name}!" if ru else f"New release: {name}!")
-        values["LATEST_BOX"] = (f'<b><a href="{url}">{name}</a></b> — {date}.' if ru else f'<b><a href="{url}">{name}</a></b> - published {date}.')
+        total = sum(int(asset.get("download_count") or 0) for asset in release.get("assets", []) if not asset["name"].endswith((".yml", ".blockmap")))
+        counted = (f" Скачали раз: {total}." if ru else f" Downloaded {total} times.") if total else ""
+        values["LATEST_BOX"] = (f'<b><a href="{url}">{name}</a></b> — {date}.{counted}' if ru else f'<b><a href="{url}">{name}</a></b> - published {date}.{counted}')
     else:
         values["LATEST_LINE"] = "Скачайте последнюю версию!" if ru else "Get the latest version!"
         values["LATEST_BOX"] = ('См. <a href="https://github.com/xKaMikax/nekochat_reloaded/releases/latest">страницу выпуска</a>.' if ru
@@ -214,6 +377,12 @@ async def tokens(page: str, ru: bool, ua: str = "") -> dict[str, str]:
     values["HOME_DOWNLOAD"] = home_download(release, ru, ua)
     if page == "index":
         values["GALLERY"] = gallery_html(await catalog_items(), ru)
+        values["NOWPLAYING"] = now_playing_html([g for g in main._games.values() if not g["closed"]], ru)
+    if page == "news":
+        values["NEWS"] = news_html(await all_releases(), ru)
+    if page == "guestbook":
+        note = GB_NOTES["ru" if ru else "en"].get((query or {}).get("msg", ""), "")
+        values["GUESTBOOK"] = guestbook_html(ru, note)
     if page == "games":
         items = await catalog_items()
         live = [g for g in main._games.values() if not g["closed"]]
@@ -405,7 +574,7 @@ async def dynamic(name: str, ru: bool, query: dict | None = None, ua: str = "") 
     if not path.is_file():
         return Response(status_code=404)
     text = path.read_text(encoding="utf-8")
-    for key, value in (await tokens(name, ru, ua)).items():
+    for key, value in (await tokens(name, ru, ua, query)).items():
         text = text.replace("{{" + key + "}}", value)
     if name == "catalog":
         items = await catalog_items()
@@ -457,6 +626,31 @@ async def catalog(request: Request) -> Response:
 @router.get("/ru/catalog.html", include_in_schema=False)
 async def catalog_ru(request: Request) -> Response:
     return await dynamic("catalog", True, dict(request.query_params))
+
+
+@router.get("/news.html", include_in_schema=False)
+async def news() -> Response:
+    return await dynamic("news", False)
+
+
+@router.get("/ru/news.html", include_in_schema=False)
+async def news_ru() -> Response:
+    return await dynamic("news", True)
+
+
+@router.get("/guestbook.html", include_in_schema=False)
+async def guestbook(request: Request) -> Response:
+    return await dynamic("guestbook", False, dict(request.query_params))
+
+
+@router.get("/ru/guestbook.html", include_in_schema=False)
+async def guestbook_ru(request: Request) -> Response:
+    return await dynamic("guestbook", True, dict(request.query_params))
+
+
+@router.post("/guestbook", include_in_schema=False)
+async def guestbook_post(request: Request) -> Response:
+    return await post_guestbook(request)
 
 
 @router.get("/games.html", include_in_schema=False)
@@ -523,6 +717,13 @@ def install(app: FastAPI) -> None:
     """Adds the site's routes; the static files go last, so no API path is covered."""
     app.include_router(router)
     if WEBAPP.is_dir():
+        @app.get("/app/", include_in_schema=False)
+        @app.get("/app/index.html", include_in_schema=False)
+        def app_start() -> Response:
+            """The start page of the web version, with a small script that offers to install it as an app."""
+            page = (WEBAPP / "index.html").read_text(encoding="utf-8")
+            return HTMLResponse(page.replace("</body>", '<script src="/pwa-install.js"></script></body>', 1), headers={"Cache-Control": "no-store"})
+
         @app.get("/app", include_in_schema=False)
         def app_slash() -> Response:
             return Response(status_code=308, headers={"Location": "/app/"})
