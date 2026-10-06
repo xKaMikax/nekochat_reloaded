@@ -25,8 +25,17 @@ images = m.bitmaps(Path("themes/luna/Luna/luna.msstyles"))
 def sheet(suffix):
     return m.find(images, suffix, "BLUE")
 button = sheet("_BUTTON_BMP")           # normal, hot, pressed, disabled, default (23 px each)
+def clean_button(state):
+    state = state.convert("RGBA")
+    px = state.load()
+    for y in range(state.height):
+        for x in range(state.width):
+            r, g, b, _ = px[x, y]
+            if (r, g, b) == (154, 133, 106) or (y == state.height - 1 and (r, g, b) == (255, 255, 255)):
+                px[x, y] = (r, g, b, 0)   # the picture's key colour and its separator row
+    return state
 for i, s in enumerate(("normal", "hot", "pressed", "disabled", "default")):
-    put(f"button_{s}", m.button_state(button, i))
+    put(f"button_{s}", clean_button(m.button_state(button, i)))
 check = sheet("_CHECKBOX13_BMP")        # 13 px each: unchecked normal/hot/pressed/disabled, checked ..., mixed ...
 radio = sheet("_RADIOBUTTON13_BMP")     # unchecked normal/hot/pressed/disabled, checked ...
 for kind, strip in (("check", check), ("radio", radio)):

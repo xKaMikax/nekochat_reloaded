@@ -96,9 +96,14 @@ static int HitCaption(int x, int y, int width) {
   return 0;
 }
 
+static void PaintFrameCore(HDC hdc, int W, int H, const wchar_t* title);
 static void PaintFrame(HDC hdc, HWND hwnd) {
   RECT rc; GetClientRect(hwnd, &rc);
-  int W = rc.right, H = rc.bottom;
+  wchar_t title[256]; GetWindowTextW(hwnd, title, 256);
+  PaintFrameCore(hdc, rc.right, rc.bottom, title);
+}
+static void PaintFrameCore(HDC hdc, int W, int H, const wchar_t* title) {
+  RECT rc = {0, 0, W, H};
   HDC dc = CreateCompatibleDC(hdc);
   HBITMAP bmp = CreateCompatibleBitmap(hdc, W, H);
   HGDIOBJ oldBmp = SelectObject(dc, bmp);
@@ -107,16 +112,17 @@ static void PaintFrame(HDC hdc, HWND hwnd) {
     Graphics g(dc);
     Quality(g);
     int a = g_active ? 0 : 1;
-    // title bar
-    Draw(g, a ? IMG_TITLE_FILL_INACTIVE : IMG_TITLE_FILL, 0, 0, W, TITLE, 0, 0, 3, TITLE);
-    DrawWhole(g, a ? IMG_TITLE_LEFT_INACTIVE : IMG_TITLE_LEFT, 0, 0);
-    DrawWhole(g, a ? IMG_TITLE_RIGHT_INACTIVE : IMG_TITLE_RIGHT, W - 35, 0);
     // sides and bottom: the pictures hold the active state on top, the inactive one below
-    Draw(g, IMG_FRAME_LEFT, 0, TITLE, FRAME, H - TITLE - BOTTOM, 0, a * 31, FRAME, 31);
-    Draw(g, IMG_FRAME_RIGHT, W - FRAME, TITLE, FRAME, H - TITLE - BOTTOM, 0, a * 31, FRAME, 31);
+    // (the sides reach 2 px under the title and 2 px into the bottom: the stretched picture leaves its first row empty)
+    Draw(g, IMG_FRAME_LEFT, 0, TITLE - 2, FRAME, H - TITLE - BOTTOM + 4, 0, a * 31, FRAME, 31);
+    Draw(g, IMG_FRAME_RIGHT, W - FRAME, TITLE - 2, FRAME, H - TITLE - BOTTOM + 4, 0, a * 31, FRAME, 31);
     Draw(g, IMG_BOTTOM_LEFT, 0, H - BOTTOM, FRAME, BOTTOM, 0, a * 5, FRAME, 5);
     Draw(g, IMG_BOTTOM_FILL, FRAME, H - BOTTOM, W - 2 * FRAME, BOTTOM, 0, a * 5, 39, 5);
     Draw(g, IMG_BOTTOM_RIGHT, W - FRAME, H - BOTTOM, FRAME, BOTTOM, 0, a * 5, FRAME, 5);
+    // title bar (over the top of the sides)
+    Draw(g, a ? IMG_TITLE_FILL_INACTIVE : IMG_TITLE_FILL, 0, 0, W, TITLE, 0, 0, 3, TITLE);
+    DrawWhole(g, a ? IMG_TITLE_LEFT_INACTIVE : IMG_TITLE_LEFT, 0, 0);
+    DrawWhole(g, a ? IMG_TITLE_RIGHT_INACTIVE : IMG_TITLE_RIGHT, W - 35, 0);
     DrawWhole(g, IMG_ICON16, 6, 6);
     // caption buttons
     for (int i = 1; i <= 2; i++) {
@@ -133,7 +139,6 @@ static void PaintFrame(HDC hdc, HWND hwnd) {
   // the title: Trebuchet MS bold, white over a dark shadow
   static HFONT font;
   if (!font) font = CreateFontW(-13, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Trebuchet MS");
-  wchar_t title[256]; GetWindowTextW(hwnd, title, 256);
   HGDIOBJ oldFont = SelectObject(dc, font);
   SetBkMode(dc, TRANSPARENT);
   RECT tr = {27, 7, W - 60, 25};
@@ -149,13 +154,31 @@ static void PaintFrame(HDC hdc, HWND hwnd) {
   DeleteDC(dc);
 }
 
+// the window's outline: a rectangle without the transparent corner pixels of the title bar pictures (the XP rounded top corners)
+static void CutCorner(HRGN rgn, int id, bool right, int W) {
+  Bitmap* b = Img(id);
+  if (!b) return;
+  int bw = b->GetWidth(), bh = min((int)b->GetHeight(), TITLE);
+  for (int y = 0; y < bh; y++) {
+    int run = 0;
+    for (int i = 0; i < bw; i++) {
+      Color c;
+      b->GetPixel(right ? bw - 1 - i : i, y, &c);
+      if (c.GetA() > 8) break;
+      run++;
+    }
+    if (!run) continue;
+    HRGN cut = CreateRectRgn(right ? W - run : 0, y, right ? W : run, y + 1);
+    CombineRgn(rgn, rgn, cut, RGN_DIFF);
+    DeleteObject(cut);
+  }
+}
 static void RoundCorners(HWND hwnd) {
   RECT rc; GetClientRect(hwnd, &rc);
-  HRGN round = CreateRoundRectRgn(0, 0, rc.right + 1, rc.bottom + 40, 14, 14);
-  HRGN box = CreateRectRgn(0, 0, rc.right, rc.bottom);
-  CombineRgn(round, round, box, RGN_AND);
-  DeleteObject(box);
-  SetWindowRgn(hwnd, round, TRUE);
+  HRGN rgn = CreateRectRgn(0, 0, rc.right, rc.bottom);
+  CutCorner(rgn, IMG_TITLE_LEFT, false, rc.right);
+  CutCorner(rgn, IMG_TITLE_RIGHT, true, rc.right);
+  SetWindowRgn(hwnd, rgn, TRUE);
 }
 
 static void InvalidateCaption(HWND hwnd) {
@@ -245,6 +268,7 @@ static LRESULT CALLBACK OuterProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_SIZE:
       RoundCorners(hwnd);
+      InvalidateRect(hwnd, nullptr, TRUE);
       break;
     case WM_CTLCOLORSTATIC: {
       int id = GetDlgCtrlID((HWND)lp);
@@ -281,7 +305,33 @@ static HFONT TahomaFor(HWND h) {
   return CreateFontIndirectW(&lf);
 }
 
+static void PaintGroup(HWND hwnd, HDC hdc) {
+  RECT rc; GetClientRect(hwnd, &rc);
+  int W = rc.right, H = rc.bottom;
+  HBRUSH bg = (HBRUSH)SendMessageW(GetParent(hwnd), WM_CTLCOLORBTN, (WPARAM)hdc, (LPARAM)hwnd);
+  wchar_t text[256]; GetWindowTextW(hwnd, text, 256);
+  HFONT font = (HFONT)SendMessageW(hwnd, WM_GETFONT, 0, 0);
+  HGDIOBJ oldFont = font ? SelectObject(hdc, font) : nullptr;
+  SIZE ext = {0, 8};
+  GetTextExtentPoint32W(hdc, text, lstrlenW(text), &ext);
+  int top = ext.cy / 2;
+  {
+    Graphics g(hdc);
+    Pen pen(Color(255, 208, 208, 191));
+    g.SetSmoothingMode(SmoothingModeNone);
+    g.DrawRectangle(&pen, 0, top, W - 1, H - top - 1);
+  }
+  RECT tr = {7, 0, 7 + ext.cx + 4, ext.cy + 1};
+  FillRect(hdc, &tr, bg ? bg : g_beigeBrush);
+  SetBkMode(hdc, TRANSPARENT);
+  SetTextColor(hdc, RGB(0, 70, 213));
+  OffsetRect(&tr, 2, 0);
+  DrawTextW(hdc, text, -1, &tr, DT_SINGLELINE | DT_HIDEPREFIX | DT_NOCLIP);
+  if (oldFont) SelectObject(hdc, oldFont);
+}
+
 static void PaintButton(HWND hwnd, HDC hdc, int kind) {
+  if (kind == K_GROUP) { PaintGroup(hwnd, hdc); return; }
   RECT rc; GetClientRect(hwnd, &rc);
   int W = rc.right, H = rc.bottom;
   HDC dc = CreateCompatibleDC(hdc);
@@ -451,7 +501,7 @@ static LRESULT CALLBACK CtlProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 static void Skin(HWND h, int kind) {
-  if (kind != K_DIALOG) SetWindowLongW(h, GWL_STYLE, GetWindowLongW(h, GWL_STYLE) | WS_CLIPSIBLINGS);
+  if (kind != K_DIALOG && kind != K_GROUP) SetWindowLongW(h, GWL_STYLE, GetWindowLongW(h, GWL_STYLE) | WS_CLIPSIBLINGS);
   WNDPROC old = (WNDPROC)SetWindowLongPtrW(h, GWLP_WNDPROC, (LONG_PTR)CtlProc);
   SetPropW(h, PROP_OLD, (HANDLE)old);
   SetPropW(h, PROP_KIND, (HANDLE)(INT_PTR)kind);
@@ -489,8 +539,40 @@ static BOOL CALLBACK ScanChild(HWND h, LPARAM) {
   return TRUE;
 }
 
+static void Dump(HWND outer) {
+  RECT cr; GetClientRect(outer, &cr);
+  Log("client %d x %d\n", cr.right, cr.bottom);
+  for (HWND c = GetWindow(outer, GW_CHILD); c; c = GetWindow(c, GW_HWNDNEXT)) {
+    RECT r; GetWindowRect(c, &r); MapWindowPoints(nullptr, outer, (POINT*)&r, 2);
+    wchar_t cls[32]; GetClassNameW(c, cls, 32);
+    char a[32]; WideCharToMultiByte(CP_ACP, 0, cls, -1, a, 32, 0, 0);
+    Log("child id=%d %s vis=%d  %d,%d - %d,%d\n", GetDlgCtrlID(c), a, IsWindowVisible(c), r.left, r.top, r.right, r.bottom);
+  }
+}
+// the branding text (version) sits on the separator line: its box is only as wide as the text, so the line goes on past it
+static void FitBranding(HWND outer) {
+  for (int id : {1028, 1256}) {
+    HWND c = GetDlgItem(outer, id);
+    if (!c) continue;
+    wchar_t text[256]; GetWindowTextW(c, text, 256);
+    HDC dc = GetDC(c);
+    HGDIOBJ old = SelectObject(dc, (HFONT)SendMessageW(c, WM_GETFONT, 0, 0));
+    SIZE ext = {0, 0};
+    GetTextExtentPoint32W(dc, text, lstrlenW(text), &ext);
+    SelectObject(dc, old);
+    ReleaseDC(c, dc);
+    RECT r; GetWindowRect(c, &r);
+    int want = text[0] ? ext.cx + 6 : 1;
+    if (r.right - r.left != want) {
+      SetWindowPos(c, HWND_TOP, 0, 0, want, r.bottom - r.top, SWP_NOMOVE | SWP_NOACTIVATE);
+      InvalidateRect(outer, nullptr, FALSE);
+    }
+  }
+}
 static VOID CALLBACK ScanTimer(HWND, UINT, UINT_PTR, DWORD) {
-  if (g_outer && IsWindow(g_outer)) EnumChildWindows(g_outer, ScanChild, 0);
+  static int ticks;
+  if (++ticks == 700 && g_outer) Dump(g_outer);
+  if (g_outer && IsWindow(g_outer)) { EnumChildWindows(g_outer, ScanChild, 0); FitBranding(g_outer); }
 }
 
 // ---------------------------------------------------------------- entry point
@@ -517,6 +599,7 @@ extern "C" __declspec(dllexport) int __stdcall LunaSkinApply(HWND outer) {
   for (HWND c = GetWindow(outer, GW_CHILD); c; c = GetWindow(c, GW_HWNDNEXT)) {
     RECT r; GetWindowRect(c, &r);
     MapWindowPoints(nullptr, outer, (POINT*)&r, 2);
+    int id = GetDlgCtrlID(c);
     int left = max((int)r.left, 0), right = min((int)r.right, (int)cr.right);   // a line wider than the window is cut to it
     SetWindowPos(c, nullptr, left + FRAME, r.top + TITLE, right - left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE);
   }
@@ -526,5 +609,34 @@ extern "C" __declspec(dllexport) int __stdcall LunaSkinApply(HWND outer) {
   SetTimer(nullptr, 0, 30, ScanTimer);
   ScanTimer(nullptr, 0, 0, 0);
   InvalidateRect(outer, nullptr, TRUE);
+  return 1;
+}
+
+// debugging: draws the frame of a W x H window into a 24-bit BMP file (no installer needed)
+extern "C" __declspec(dllexport) int __stdcall LunaSkinDumpFrame(const wchar_t* path, int W, int H, int active) {
+  GdiplusStartupInput in;
+  if (GdiplusStartup(&g_gdip, &in, nullptr) != Ok) return 0;
+  g_beigeBrush = CreateSolidBrush(BEIGE);
+  g_active = active != 0;
+  BITMAPINFO bi = {};
+  bi.bmiHeader.biSize = sizeof bi.bmiHeader; bi.bmiHeader.biWidth = W; bi.bmiHeader.biHeight = -H;
+  bi.bmiHeader.biPlanes = 1; bi.bmiHeader.biBitCount = 24;
+  void* bits = nullptr;
+  HDC screen = GetDC(nullptr);
+  HDC dc = CreateCompatibleDC(screen);
+  HBITMAP bmp = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+  SelectObject(dc, bmp);
+  PaintFrameCore(dc, W, H, L"Nekochat Reloaded Setup");
+  GdiFlush();
+  int stride = (W * 3 + 3) & ~3;
+  BITMAPFILEHEADER fh = {0x4D42, (DWORD)(54 + stride * H), 0, 0, 54};
+  bi.bmiHeader.biHeight = -H;   // top-down BMP
+  bi.bmiHeader.biSizeImage = stride * H;
+  HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+  DWORD w;
+  WriteFile(f, &fh, sizeof fh, &w, nullptr);
+  WriteFile(f, &bi.bmiHeader, sizeof bi.bmiHeader, &w, nullptr);
+  WriteFile(f, bits, stride * H, &w, nullptr);
+  CloseHandle(f);
   return 1;
 }
