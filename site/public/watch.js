@@ -97,28 +97,13 @@
     $('watch-stage').hidden = false;
   }
 
-  // ---- Pinball: everybody plays at their own table, so a spectator sees the scores and the balls ----------------
-  const pin = { players: new Map(), started: false };
-  function pinballUpdate(data) {
-    const stage = $('watch-stage');
-    if (!pin.root) {
-      pin.root = document.createElement('div'); pin.root.className = 'pinboard';
-      $('watch-frame').remove(); stage.append(pin.root); stage.hidden = false;
-      $('watch-title').textContent = '3D Pinball';
+  // ---- Pinball: everybody plays at their own table at once. The add-on draws the other players' balls over its table
+  // (it reads the latest "live" entry of each player from nk_game_live:<session>); here the server's latest ones are written there.
+  function feedLive(data) {
+    for (const [id, item] of Object.entries(data.live || {})) {
+      const { name, ...payload } = item;
+      try { localStorage.setItem(`nk_game_live:${watchId}`, JSON.stringify({ from: Number(id), name, payload, t: Date.now(), r: Math.random() })); } catch {}
     }
-    if (data.host) pin.players.set(String(data.host), pin.players.get(String(data.host)) || { name: data.hostName || '' });
-    for (const entry of log.entries) {
-      if (entry.kind === 'join' || entry.kind === 'start') pin.players.set(String(entry.from), pin.players.get(String(entry.from)) || { name: entry.name });
-      if (entry.name && pin.players.has(String(entry.from))) pin.players.get(String(entry.from)).name = entry.name;
-      if (entry.kind === 'start') for (const id of entry.payload?.players || []) pin.players.set(String(id), pin.players.get(String(id)) || { name: '' });
-      if (entry.kind === 'final') { const p = pin.players.get(String(entry.from)); if (p) p.final = Number(entry.payload?.score) || 0; }
-    }
-    for (const [id, item] of Object.entries(data.live || {})) { const p = pin.players.get(id) || { name: item.name }; p.name = item.name || p.name; p.live = item; pin.players.set(id, p); }
-    pin.root.innerHTML = [...pin.players.values()].map(p => {
-      const score = p.final ?? p.live?.s ?? 0, state = p.final !== undefined ? (ru ? 'закончил' : 'finished') : p.live ? (ru ? 'играет' : 'playing') : (ru ? 'ждёт начала игры' : 'waiting for the game to start');
-      const ball = p.final === undefined && p.live && Number.isFinite(p.live.x) ? `<i class="pinball" style="left:${Math.max(0, Math.min(1, p.live.x)) * 100}%;top:${Math.max(0, Math.min(1, p.live.y)) * 100}%"></i>` : '';
-      return `<div class="pincard"><b>${(p.name || '…').replace(/[<>&"]/g, '')}</b><div class="pintable">${ball}</div><div class="pinscore">${Number(score).toLocaleString()}</div><div class="small">${state}</div></div>`;
-    }).join('');
   }
 
   async function main() {
@@ -129,14 +114,15 @@
       const first = await fetchLog(0);
       addEntries(first);
       const pinball = first.game === 'pinball';
-      if (pinball) pinballUpdate(first); else await openAddon(first.game);
+      await openAddon(first.game);
+      if (pinball) { $('watch-shield').hidden = false; feedLive(first); }
       status(first.closed ? T.ended : T.live);
       if (first.closed) return;
       for (;;) {
         let data;
         try { data = pinball ? (await new Promise(resolve => setTimeout(resolve, 600)), await fetchLog(0)) : await fetchLog(15); } catch (error) { if (error.gone) { log.ended = true; store(); status(T.ended); return; } await new Promise(resolve => setTimeout(resolve, 3000)); continue; }
         addEntries(data);
-        if (pinball) pinballUpdate(data);
+        if (pinball) feedLive(data);
         if (data.closed) { status(T.ended); return; }
         status(T.live);
       }

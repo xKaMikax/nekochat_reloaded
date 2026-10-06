@@ -308,7 +308,7 @@ T["en"]["pages"]["watch"] = f"""
 <h1>Watching: <span id="watch-title">a game</span></h1>
 <p><a href="games.html">&laquo; Back to Games &amp; Scores</a></p>
 <p><b id="watch-status">Loading the game...</b> &nbsp; Players: <b id="watch-players">-</b> &nbsp; Watching: <b id="watch-count">-</b></p>
-<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="The game" allow="autoplay"></iframe></div>
+<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="The game" allow="autoplay"></iframe><div id="watch-shield" hidden></div></div>
 <p class="small">You are a spectator: you see the game as the players play it, you cannot move. Cards that players hold in their hands stay hidden.</p>
 <script src="/watch.js?v={BUILD}"></script>
 """
@@ -317,7 +317,7 @@ T["ru"]["pages"]["watch"] = f"""
 <h1>Смотрим: <span id="watch-title">игру</span></h1>
 <p><a href="games.html">&laquo; К странице «Игры и рекорды»</a></p>
 <p><b id="watch-status">Загрузка игры...</b> &nbsp; Игроки: <b id="watch-players">-</b> &nbsp; Смотрят: <b id="watch-count">-</b></p>
-<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="Игра" allow="autoplay"></iframe></div>
+<div id="watch-stage" class="watchbox" hidden><iframe id="watch-frame" title="Игра" allow="autoplay"></iframe><div id="watch-shield" hidden></div></div>
 <p class="small">Вы зритель: видите игру так, как её видят игроки, но ходить нельзя. Карты на руках у игроков скрыты.</p>
 <script src="/watch.js?v={BUILD}"></script>
 """
