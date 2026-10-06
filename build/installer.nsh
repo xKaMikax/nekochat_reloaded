@@ -71,7 +71,7 @@
     IntOp $R0 $R0 / 2
     IntOp $R1 $R1 - 505
     IntOp $R1 $R1 / 2
-    System::Call 'user32::SetWindowPos(i $HWNDPARENT, i 0, i R0, i R1, i 806, i 505, i 0x14)'
+    System::Call 'user32::SetWindowPos(i $HWNDPARENT, i 0, i $R0, i $R1, i 806, i 505, i 0x14)'
     GetDlgItem $R8 $HWNDPARENT 1018
     System::Call 'user32::SetWindowPos(i $R8, i 0, i 0, i 0, i 800, i 460, i 0x14)'
     nsDialogs::Create 1018
@@ -84,43 +84,40 @@
     Pop $NkWelcomeBitmap
     ${NSD_SetStretchedImage} $NkWelcomeBitmap "$PLUGINSDIR\nk-welcome.bmp" $1
 
-    ${NSD_CreateLink} 34.5% 48% 60% 8% " "
-    Pop $0
-    SetCtlColors $0 0xFFFFFF transparent
-    ${NSD_OnClick} $0 NkWelcomeInstall
-
-    ${NSD_CreateLink} 34.5% 57% 60% 8% " "
-    Pop $0
-    SetCtlColors $0 0xFFFFFF transparent
-    ${NSD_OnClick} $0 NkWelcomeNotes
-
-    ${NSD_CreateLink} 34.5% 66% 60% 8% " "
-    Pop $0
-    SetCtlColors $0 0xFFFFFF transparent
-    ${NSD_OnClick} $0 NkWelcomePage
-
-    ${NSD_CreateLink} 11.5% 87% 20% 7% " "
-    Pop $0
-    SetCtlColors $0 0xFFFFFF transparent
-    ${NSD_OnClick} $0 NkWelcomeExit
+    ; one click handler on the picture: the item under the mouse is found by its place on the picture (800x460)
+    ${NSD_OnClick} $NkWelcomeBitmap NkWelcomeClick
+    ; hand cursor over the picture
+    System::Call 'user32::LoadCursor(i 0, i 32649) i .R0'
+    System::Call 'user32::SetClassLong(i $NkWelcomeBitmap, i -12, i $R0)'
     nsDialogs::Show
     ${NSD_FreeImage} $1
   FunctionEnd
 
-  Function NkWelcomeInstall
-    SendMessage $HWNDPARENT 0x408 1 0
-  FunctionEnd
-
-  Function NkWelcomeNotes
-    ExecShell "open" "https://github.com/xKaMikax/nekochat_reloaded/releases"
-  FunctionEnd
-
-  Function NkWelcomePage
-    ExecShell "open" "https://github.com/xKaMikax/nekochat_reloaded"
-  FunctionEnd
-
-  Function NkWelcomeExit
-    SendMessage $HWNDPARENT ${WM_CLOSE} 0 0
+  Function NkWelcomeClick
+    System::Alloc 8
+    Pop $R9
+    System::Call 'user32::GetCursorPos(i $R9)'
+    System::Call 'user32::ScreenToClient(i $NkWelcomeBitmap, i $R9)'
+    System::Call '*$R9(i .R0, i .R1)'
+    System::Free $R9
+    ${If} $R0 >= 40
+    ${AndIf} $R0 < 140
+    ${AndIf} $R1 >= 385
+    ${AndIf} $R1 < 420
+      SendMessage $HWNDPARENT ${WM_CLOSE} 0 0
+    ${ElseIf} $R0 >= 235
+    ${AndIf} $R0 < 520
+      ${If} $R1 >= 212
+      ${AndIf} $R1 < 250
+        SendMessage $HWNDPARENT 0x408 1 0
+      ${ElseIf} $R1 >= 252
+      ${AndIf} $R1 < 290
+        ExecShell "open" "https://github.com/xKaMikax/nekochat_reloaded/releases"
+      ${ElseIf} $R1 >= 292
+      ${AndIf} $R1 < 330
+        ExecShell "open" "https://github.com/xKaMikax/nekochat_reloaded"
+      ${EndIf}
+    ${EndIf}
   FunctionEnd
 
   Function NkWelcomeLeave
