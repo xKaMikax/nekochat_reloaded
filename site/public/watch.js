@@ -106,6 +106,7 @@
       $('watch-frame').remove(); stage.append(pin.root); stage.hidden = false;
       $('watch-title').textContent = '3D Pinball';
     }
+    if (data.host) pin.players.set(String(data.host), pin.players.get(String(data.host)) || { name: data.hostName || '' });
     for (const entry of log.entries) {
       if (entry.kind === 'join' || entry.kind === 'start') pin.players.set(String(entry.from), pin.players.get(String(entry.from)) || { name: entry.name });
       if (entry.name && pin.players.has(String(entry.from))) pin.players.get(String(entry.from)).name = entry.name;
@@ -114,7 +115,7 @@
     }
     for (const [id, item] of Object.entries(data.live || {})) { const p = pin.players.get(id) || { name: item.name }; p.name = item.name || p.name; p.live = item; pin.players.set(id, p); }
     pin.root.innerHTML = [...pin.players.values()].map(p => {
-      const score = p.final ?? p.live?.s ?? 0, state = p.final !== undefined ? (ru ? 'закончил' : 'finished') : p.live ? (ru ? 'играет' : 'playing') : (ru ? 'ждёт' : 'waiting');
+      const score = p.final ?? p.live?.s ?? 0, state = p.final !== undefined ? (ru ? 'закончил' : 'finished') : p.live ? (ru ? 'играет' : 'playing') : (ru ? 'ждёт начала игры' : 'waiting for the game to start');
       const ball = p.final === undefined && p.live && Number.isFinite(p.live.x) ? `<i class="pinball" style="left:${Math.max(0, Math.min(1, p.live.x)) * 100}%;top:${Math.max(0, Math.min(1, p.live.y)) * 100}%"></i>` : '';
       return `<div class="pincard"><b>${(p.name || '…').replace(/[<>&"]/g, '')}</b><div class="pintable">${ball}</div><div class="pinscore">${Number(score).toLocaleString()}</div><div class="small">${state}</div></div>`;
     }).join('');
