@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-VERSION = "0.13.0"
+VERSION = "0.13.1"
 # Nekochat servers this companion accepts accounts from (comma-separated base URLs).
 NEKOCHAT_SERVERS = [url.strip().rstrip("/") for url in os.environ.get("NEKOCHAT_SERVERS", "https://nekochat.komdu.is-cool.dev").split(",") if url.strip()]
 DATABASE = Path(os.environ.get("RELOADED_DB", "reloaded.db"))
@@ -284,7 +284,10 @@ async def link(payload: LinkIn, credentials: HTTPAuthorizationCredentials | None
         raise HTTPException(401, "The Nekochat token is not valid")
     if response.status_code != 200:
         raise HTTPException(502, f"The Nekochat server answered {response.status_code}")
-    profile = response.json()
+    try:
+        profile = response.json()
+    except ValueError:
+        raise HTTPException(502, "Unexpected answer from the Nekochat server")
     if not isinstance(profile, dict) or not isinstance(profile.get("id"), int):
         raise HTTPException(502, "Unexpected answer from the Nekochat server")
 
@@ -552,11 +555,14 @@ async def link_preview(url: str, account: sqlite3.Row = Depends(current_account)
             parsed = urlparse(target)
             if parsed.scheme not in ("http", "https") or not parsed.hostname or len(target) > 2000:
                 raise HTTPException(400, "Only http and https links")
-            address = await public_address(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
-            # Plain http goes to the checked address itself, so DNS cannot change it in between;
-            # https keeps the name (a certificate would not match a private service anyway).
-            request_url = target if parsed.scheme == "https" else parsed._replace(netloc=f"[{address}]:{parsed.port or 80}" if ":" in address else f"{address}:{parsed.port or 80}").geturl()
-            async with client.stream("GET", request_url, headers={"Host": parsed.netloc} if parsed.scheme == "http" else {}) as response:
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            address = await public_address(parsed.hostname, port)
+            hostname = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+            host = hostname if parsed.port is None else f"{hostname}:{parsed.port}"
+            request_url = parsed._replace(netloc=f"[{address}]:{port}" if ":" in address else f"{address}:{port}").geturl()
+            # Connect to the checked address.  Keep the original name for the Host header and,
+            # for HTTPS, SNI and certificate verification.
+            async with client.stream("GET", request_url, headers={"Host": host}, extensions={"sni_hostname": parsed.hostname}) as response:
                 if response.status_code in (301, 302, 303, 307, 308) and response.headers.get("location"):
                     target = urljoin(target, response.headers["location"])
                     continue
@@ -721,7 +727,7 @@ MAX_GAME_PAYLOAD = 6000
 MAX_GAME_PLAYERS = 8
 MAX_OPEN_GAMES = 5
 _games: dict[str, dict[str, Any]] = {}
-_game_rate: dict[int, list[float]] = {}
+_game_rate: dict[tuple[str, int], list[float]] = {}
 
 
 def sweep_games() -> None:
@@ -795,7 +801,13 @@ def create_game(payload: GameIn, account: sqlite3.Row = Depends(current_account)
 @app.get("/games/{game_id}", tags=["games"])
 def get_game(game_id: str, account: sqlite3.Row = Depends(current_account)):
     """The game and its log (the entries meant for you), for someone who joins late."""
-    return game_view(game_for(game_id, account), int(account["nekochat_id"]))
+    game = game_for(game_id, account)
+    me_id = int(account["nekochat_id"])
+    # A direct game belongs to its two players. A room game's id is its invitation: the invited fetch it
+    # before they join, and the server does not know a room's members.
+    if game["chat"].startswith("dm:") and me_id != game["host"] and me_id not in game["audience"]:
+        raise HTTPException(403, "Not your game")
+    return game_view(game, me_id)
 
 
 @app.post("/games/{game_id}/send", tags=["games"])
@@ -807,10 +819,11 @@ def send_game_entry(game_id: str, entry: GameEntryIn, account: sqlite3.Row = Dep
         raise HTTPException(409, "This game has ended")
     live = entry.kind == "live"
     # A "live" entry (the position of a ball, a cursor) is passed on at once and never kept in the log.
-    stamps = [stamp for stamp in _game_rate.get(me_id, []) if stamp > time.time() - 2]
+    rate_key = (account["server"], me_id)
+    stamps = [stamp for stamp in _game_rate.get(rate_key, []) if stamp > time.time() - 2]
     if len(stamps) >= (60 if live else 40):
         raise HTTPException(429, "Too many moves at once")
-    _game_rate[me_id] = stamps + [time.time()]
+    _game_rate[rate_key] = stamps + [time.time()]
     if len(json.dumps(entry.payload)) > (800 if live else MAX_GAME_PAYLOAD):
         raise HTTPException(413, "Entry too large")
     if entry.kind == "join":
@@ -881,7 +894,7 @@ def end_game(game_id: str, account: sqlite3.Row = Depends(current_account)):
     """Ends the game (the host, or anyone in a game of two)."""
     game = game_for(game_id, account)
     me_id = int(account["nekochat_id"])
-    if me_id != game["host"] and me_id not in game["audience"]:
+    if me_id != game["host"] and (me_id not in game["audience"] or len(game["audience"]) != 2):
         raise HTTPException(403, "Not your game")
     if not game["closed"]:
         game["closed"] = True
@@ -976,8 +989,6 @@ async def upload_file(request: Request, name: str = "", mime: str = "", account:
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > MAX_FILE_BYTES:
         raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
-    with database() as db:
-        used = db.execute("SELECT COALESCE(SUM(size), 0) FROM files WHERE account_id = ?", (account["id"],)).fetchone()[0]
     data = bytearray()
     async for chunk in request.stream():
         data += chunk
@@ -985,19 +996,29 @@ async def upload_file(request: Request, name: str = "", mime: str = "", account:
             raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
     if not data:
         raise HTTPException(400, "The file is empty")
-    if used + len(data) > MAX_FILES_BYTES:
-        raise HTTPException(409, f"Your files take {used // (1024 * 1024)} MB of {MAX_FILES_BYTES // (1024 * 1024)} MB; delete some first")
     file_id, secret = secrets.token_hex(8), secrets.token_urlsafe(16)
     FILES.mkdir(parents=True, exist_ok=True)
     temporary = FILES / f"{file_id}.part"
     temporary.write_bytes(data)
-    temporary.replace(file_path(file_id))
     clean = "".join(ch for ch in name.strip() if ch not in '/\\\r\n\0')[:120] or "file"
     kind = mime.strip()[:100] if re.fullmatch(r"[\w.+-]+/[\w.+-]+", mime.strip()) else "application/octet-stream"
-    with database() as db:
-        db.execute("INSERT INTO files (id, secret_hash, account_id, name, mime, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                   (file_id, token_hash(secret), account["id"], clean, kind, len(data), hashlib.sha256(data).hexdigest(), now()))
-        row = db.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+    stored = False
+    try:
+        with database() as db:
+            db.execute("BEGIN IMMEDIATE")
+            used = db.execute("SELECT COALESCE(SUM(size), 0) FROM files WHERE account_id = ?", (account["id"],)).fetchone()[0]
+            if used + len(data) > MAX_FILES_BYTES:
+                raise HTTPException(409, f"Your files take {used // (1024 * 1024)} MB of {MAX_FILES_BYTES // (1024 * 1024)} MB; delete some first")
+            temporary.replace(file_path(file_id))
+            stored = True
+            db.execute("INSERT INTO files (id, secret_hash, account_id, name, mime, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (file_id, token_hash(secret), account["id"], clean, kind, len(data), hashlib.sha256(data).hexdigest(), now()))
+            row = db.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        if stored:
+            file_path(file_id).unlink(missing_ok=True)
+        raise
     return file_view(row, secret)
 
 
@@ -1058,10 +1079,6 @@ def list_backups(account: sqlite3.Row = Depends(current_account)):
           openapi_extra={"requestBody": {"required": True, "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}}}})
 async def create_backup(request: Request, name: str = "", device: str = "", client: str = "", account: sqlite3.Row = Depends(current_account)):
     """Stores the request body (a zip archive) as a new backup. `client` names the app that made it, e.g. `PC 1.3.1`."""
-    with database() as db:
-        count = db.execute("SELECT COUNT(*) FROM backups WHERE account_id = ?", (account["id"],)).fetchone()[0]
-    if count >= MAX_BACKUPS:
-        raise HTTPException(409, f"You already have {MAX_BACKUPS} backups; delete one first")
     data = bytearray()
     async for chunk in request.stream():
         data += chunk
@@ -1073,12 +1090,24 @@ async def create_backup(request: Request, name: str = "", device: str = "", clie
     BACKUPS.mkdir(parents=True, exist_ok=True)
     temporary = BACKUPS / f"{backup_id}.part"
     temporary.write_bytes(data)
-    temporary.replace(backup_path(backup_id))
     name = name.strip()[:80] or time.strftime("Backup %Y-%m-%d %H:%M", time.gmtime())
-    with database() as db:
-        db.execute("INSERT INTO backups (id, account_id, name, device, client, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                   (backup_id, account["id"], name, device.strip()[:80], client.strip()[:40], len(data), hashlib.sha256(data).hexdigest(), now()))
-        row = db.execute("SELECT * FROM backups WHERE id = ?", (backup_id,)).fetchone()
+    stored = False
+    try:
+        with database() as db:
+            db.execute("BEGIN IMMEDIATE")
+            count = db.execute("SELECT COUNT(*) FROM backups WHERE account_id = ?", (account["id"],)).fetchone()[0]
+            if count >= MAX_BACKUPS:
+                raise HTTPException(409, f"You already have {MAX_BACKUPS} backups; delete one first")
+            temporary.replace(backup_path(backup_id))
+            stored = True
+            db.execute("INSERT INTO backups (id, account_id, name, device, client, size, sha256, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (backup_id, account["id"], name, device.strip()[:80], client.strip()[:40], len(data), hashlib.sha256(data).hexdigest(), now()))
+            row = db.execute("SELECT * FROM backups WHERE id = ?", (backup_id,)).fetchone()
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        if stored:
+            backup_path(backup_id).unlink(missing_ok=True)
+        raise
     return backup_view(row)
 
 
