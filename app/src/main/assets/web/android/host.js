@@ -158,7 +158,7 @@
     return new Promise(resolve => {
       if (!isDestroyed(installWindow)) { resolve({ ok: [], failed: [], busy: true }); return; }
       const job = { items: cleanInstallItems(items), resolve, done: false };
-      installWindow = createWindow({ url: '/assets/html/install_update.html', width: 520, height: 420, parent: owner });
+      installWindow = createWindow({ url: 'assets/html/install_update.html', width: 520, height: 420, parent: owner });
       const opened = installWindow; installJobs.set(opened, job);
       opened.onClosed = () => { if (!job.done) resolve({ ok: [], failed: [], closed: true }); installJobs.delete(opened); if (installWindow === opened) installWindow = null; };
     });

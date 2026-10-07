@@ -334,6 +334,7 @@ class ThemeManager(private val context: Context) {
                 .put("version", details.optString("Version", "")).put("previewUrl", entry.optString("Preview", if (type == "wallpapers" && fileList.isNotEmpty()) "$CATALOG_ROOT/$directory/${enc(fileList[0])}" else "$CATALOG_ROOT/$directory/Preview.png")).put("files", JSONArray(fileList))
                 // Add-ons (like the Theme Editor) may need the desktop app: "Platforms": ["desktop"].
                 .put("platforms", entry.optJSONArray("Platforms") ?: entry.optJSONArray("platforms") ?: JSONObject.NULL)
+                .put("descriptionUrl", entry.optString("Description", "$CATALOG_ROOT/$directory/Description.md"))
                 .put("zipUrl", entry.optString("PackZIP", "$CATALOG_ROOT/$directory/Pack.ZIP")).put("includes", includes ?: JSONObject.NULL))
         }
         return result
