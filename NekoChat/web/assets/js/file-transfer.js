@@ -227,6 +227,7 @@
       if (jsonLength < 4 || jsonLength > 4096 || length < 4 + jsonLength) return;
       let meta; try { meta = JSON.parse(new TextDecoder().decode(payload.subarray(4, 4 + jsonLength))); } catch { return; }
       if (typeof meta?.n !== 'string' || typeof meta?.s !== 'number' || meta.s > MAX_LIVE) return;
+      if (length - 4 - jsonLength > meta.s) return;   // the first frame must not carry more than the declared size
       record = { meta, parts: [], got: 0, item: { dir: 'in', name: meta.n.replace(/[\\/\0]/g, '_').slice(0, 200) || 'file', size: meta.s, done: 0, state: 'receiving', peer: senderName(from) } };
       record.item.image = isImage(record.item.name, meta.t);
       incoming.set(key, record); transfers.set(key, record.item);

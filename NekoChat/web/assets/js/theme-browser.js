@@ -33,7 +33,7 @@ const descriptions = new Map();
 function applyFrame(theme) { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; }
 // Add-ons made for the desktop app ("Platforms": ["desktop"]) are hidden on phones and the web.
 let platform = 'desktop';
-Promise.resolve(controls.getUpdateInfo?.()).then(info => { platform = ['android', 'ios'].includes(info?.platform) ? info.platform : info?.mode === 'reload' ? 'web' : 'desktop'; }).catch(() => {});
+const platformReady = Promise.resolve(controls.getUpdateInfo?.()).then(info => { platform = ['android', 'ios'].includes(info?.platform) ? info.platform : info?.mode === 'reload' ? 'web' : 'desktop'; }).catch(() => {});
 const fitsPlatform = item => !Array.isArray(item.platforms) || !item.platforms.length || item.platforms.includes(platform);
 // Tells the other windows that add-ons changed, so their buttons appear or go away.
 function packsChanged() { try { localStorage.setItem('nk_packs_changed', String(Date.now())); } catch {} window.nkAddons?.(true); }
@@ -45,6 +45,7 @@ const available = () => state.items.filter(item => !isInstalled(item));
 
 // ---- data ------------------------------------------------------------------------------------
 async function loadCatalog() {
+  await platformReady;   // the platform filter needs the answer before the first render
   const [themes, installedThemes, catalogPacks, installedPacks] = await Promise.all([controls.listCatalogThemes(), controls.listThemes(), controls.listCatalogPacks ? controls.listCatalogPacks().catch(() => []) : [], controls.listPacks ? controls.listPacks().catch(() => []) : []]);
   // Newest first by the catalog's "Added" date; entries without one keep their order (appended = newer).
   state.items = [...themes.filter(theme => !['luna', 'classic'].includes(String(theme.id).toLowerCase())).map(theme => ({ ...theme, kind: 'theme', type: 'theme' })), ...catalogPacks.map(pack => ({ ...pack, kind: 'pack' }))].map((item, position) => ({ ...item, position })).filter(fitsPlatform);
