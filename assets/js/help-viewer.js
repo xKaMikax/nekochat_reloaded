@@ -46,21 +46,21 @@ function renderPanel() {
   const panel = $('#hh-panel');
   document.querySelectorAll('.hh-tabs button').forEach(button => { button.classList.toggle('active', button.dataset.tab === tab); button.textContent = t(button.dataset.tab); });
   if (tab === 'contents') {
-    panel.innerHTML = `<div class="hh-tree">${books().map((book, index) => `<a href="#" class="hh-node" data-book="${index}"><img src="assets/images/hh/${openBooks.has(index) ? 'book-open' : 'book'}.png" alt="">${esc(book.title)}</a>${openBooks.has(index) ? `<div class="hh-children">${book.topics.map(topic => `<a href="#" class="hh-node${topic.id === current ? ' selected' : ''}" data-topic="${topic.id}"><img src="assets/images/hh/page.png" alt="">${esc(topic.title)}</a>`).join('')}</div>` : ''}`).join('')}</div>`;
+    panel.innerHTML = `<div class="hh-tree">${books().map((book, index) => `<a href="#" class="hh-node" data-book="${index}"><img src="assets/images/hh/${openBooks.has(index) ? 'book-open' : 'book'}.png" alt="">${esc(book.title)}</a>${openBooks.has(index) ? `<div class="hh-children">${book.topics.map(topic => `<a href="#" class="hh-node${topic.id === current ? ' selected' : ''}" data-topic="${esc(topic.id)}"><img src="assets/images/hh/page.png" alt="">${esc(topic.title)}</a>`).join('')}</div>` : ''}`).join('')}</div>`;
   } else if (tab === 'index') {
     const entries = topics().flatMap(topic => topic.keys.map(key => [key, topic.id])).sort((a, b) => a[0].localeCompare(b[0], language));
-    panel.innerHTML = `<label class="hh-label">${esc(t('keyword'))}<input id="hh-key" type="search"></label><div class="hh-list" id="hh-index">${entries.map(([key, id]) => `<a href="#" data-topic="${id}" data-key="${esc(key.toLowerCase())}">${esc(key)}</a>`).join('')}</div><div class="hh-panel-buttons"><button type="button" id="hh-display">${esc(t('display'))}</button></div>`;
+    panel.innerHTML = `<label class="hh-label">${esc(t('keyword'))}<input id="hh-key" type="search"></label><div class="hh-list" id="hh-index">${entries.map(([key, id]) => `<a href="#" data-topic="${esc(id)}" data-key="${esc(key.toLowerCase())}">${esc(key)}</a>`).join('')}</div><div class="hh-panel-buttons"><button type="button" id="hh-display">${esc(t('display'))}</button></div>`;
     $('#hh-key').oninput = () => { const value = $('#hh-key').value.toLowerCase(); const first = [...panel.querySelectorAll('#hh-index a')].find(link => link.dataset.key.startsWith(value)); panel.querySelectorAll('#hh-index a').forEach(link => link.classList.toggle('selected', link === first)); first?.scrollIntoView({ block: 'nearest' }); };
     $('#hh-display').onclick = () => { const selected = panel.querySelector('#hh-index a.selected'); if (selected) show(selected.dataset.topic); };
   } else {
     panel.innerHTML = `<label class="hh-label">${esc(t('words'))}<input id="hh-words" type="search"></label><div class="hh-panel-buttons"><button type="button" id="hh-list">${esc(t('list'))}</button></div><p class="hh-count" id="hh-count"></p><div class="hh-list" id="hh-results"></div>`;
-    const run = () => { const value = $('#hh-words').value.trim().toLowerCase(); if (!value) return; const hits = topics().filter(topic => (topic.title + ' ' + topic.html.replace(/<[^>]+>/g, ' ')).toLowerCase().includes(value)); $('#hh-count').textContent = t('found', { count: hits.length }); $('#hh-results').innerHTML = hits.map(topic => `<a href="#" data-topic="${topic.id}">${esc(topic.title)}</a>`).join(''); };
+    const run = () => { const value = $('#hh-words').value.trim().toLowerCase(); if (!value) return; const hits = topics().filter(topic => (topic.title + ' ' + topic.html.replace(/<[^>]+>/g, ' ')).toLowerCase().includes(value)); $('#hh-count').textContent = t('found', { count: hits.length }); $('#hh-results').innerHTML = hits.map(topic => `<a href="#" data-topic="${esc(topic.id)}">${esc(topic.title)}</a>`).join(''); };
     $('#hh-list').onclick = run; $('#hh-words').onkeydown = event => { if (event.key === 'Enter') run(); };
   }
 }
 function render() {
   const topic = topicById(current) || topics()[0]; if (!topic) return; current = topic.id;
-  $('#hh-topic').innerHTML = `${topic.html}${topic.related?.length ? `<p class="hh-related"><a href="#" data-related>${esc(t('related'))}</a></p><ul class="hh-related-list" hidden>${topic.related.map(id => `<li><a href="#" data-topic="${id}">${esc(topicById(id)?.title || id)}</a></li>`).join('')}</ul>` : ''}`;
+  $('#hh-topic').innerHTML = `${topic.html}${topic.related?.length ? `<p class="hh-related"><a href="#" data-related>${esc(t('related'))}</a></p><ul class="hh-related-list" hidden>${topic.related.map(id => `<li><a href="#" data-topic="${esc(id)}">${esc(topicById(id)?.title || id)}</a></li>`).join('')}</ul>` : ''}`;
   renderPanel();
   $('#hh-back').disabled = !back.length; $('#hh-forward').disabled = !forward.length;
 }
@@ -101,12 +101,45 @@ function applyText() {
 }
 controls.getActiveTheme().then(theme => { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; });
 controls.onThemeChanged(theme => { if (theme?.cssUrl) $('#frame-theme').href = theme.cssUrl; });
+// The Help of an add-on comes from a pack, so its HTML is cleaned before it is shown: only plain text
+// formatting tags, no scripts, handlers or styles; links go to # or https, pictures to assets/, https or data:image.
+const HELP_TAGS = new Set('H1 H2 H3 H4 P UL OL LI B I U EM STRONG BR A IMG TABLE THEAD TBODY TR TD TH DIV SPAN CODE PRE HR BLOCKQUOTE SUB SUP DL DT DD'.split(' '));
+const HELP_ATTRS = new Set(['class', 'href', 'src', 'alt', 'title', 'width', 'height', 'colspan', 'rowspan', 'data-topic', 'data-expand', 'data-book']);
+function cleanHelpHtml(html) {
+  const doc = new DOMParser().parseFromString(`<body>${String(html ?? '')}`, 'text/html');
+  const walk = node => {
+    for (const child of [...node.children]) {
+      if (!HELP_TAGS.has(child.tagName)) { child.remove(); continue; }
+      for (const attr of [...child.attributes]) {
+        const name = attr.name.toLowerCase(); const value = attr.value.trim();
+        const bad = !HELP_ATTRS.has(name)
+          || (name === 'href' && !/^(#|https:\/\/)/i.test(value))
+          || (name === 'src' && !/^(assets\/|https:\/\/|data:image\/(png|gif|jpeg|webp);)/i.test(value));
+        if (bad) child.removeAttribute(attr.name);
+      }
+      if (child.tagName === 'A' && child.getAttribute('href')?.startsWith('https:')) { child.target = '_blank'; child.rel = 'noopener noreferrer'; }
+      walk(child);
+    }
+  };
+  walk(doc.body);
+  return doc.body.innerHTML;
+}
+// Plain strings and a clean html for every topic of a pack's help.json.
+function cleanHelpBooks(books) {
+  const text = value => String(value ?? '');
+  const out = {};
+  for (const [lang, list] of Object.entries(books && typeof books === 'object' ? books : {})) {
+    out[lang] = (Array.isArray(list) ? list : []).map(book => ({ title: text(book?.title), topics: (Array.isArray(book?.topics) ? book.topics : []).map(topic => ({
+      id: text(topic?.id), title: text(topic?.title), keys: (Array.isArray(topic?.keys) ? topic.keys : []).map(text), related: (Array.isArray(topic?.related) ? topic.related : []).map(text), html: cleanHelpHtml(topic?.html) })) }));
+  }
+  return out;
+}
 // An add-on's Help comes with it: help.json { title: { ru, en }, first, books: { ru: [...], en: [...] } }.
 async function loadAddonHelp(id) {
   const addon = ((await window.nkAddons?.()) || []).find(item => item.id === id);
   if (!addon?.help) return;
   const help = await (await fetch(addon.help)).json();
-  set = { title: help.title || addon.name || { en: id }, books: help.books || {}, first: help.first };
+  set = { title: help.title || addon.name || { en: id }, books: cleanHelpBooks(help.books), first: String(help.first ?? '') || undefined };
   current = set.first || (set.books[language] || set.books.en || [])[0]?.topics[0]?.id; applyText();
 }
 controls.getDisplaySettings().then(display => { language = display?.language === 'en' ? 'en' : 'ru'; applyText(); });
