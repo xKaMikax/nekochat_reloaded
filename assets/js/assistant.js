@@ -200,7 +200,8 @@
 
   async function show() {
     if (host || !files || !enabled() || !document.querySelector('#chat-app')) return;
-    await load();
+    try { await load(); } catch { return; }   // a broken or missing pack: no assistant, no unhandled rejection
+    if (host || !enabled()) return;           // it was switched off (or shown by another call) while loading
     host = document.createElement('div'); host.className = 'assistant-host'; host.title = data.name || 'Rover';
     canvas = document.createElement('canvas'); canvas.width = data.width; canvas.height = data.height;
     Object.assign(host.style, { width: `${data.width}px`, height: `${data.height}px` }); Object.assign(canvas.style, { width: `${data.width}px`, height: `${data.height}px` });

@@ -259,6 +259,9 @@ function openAdminPanel(owner, server) {
 async function adminRequest({ server, method = 'GET', path: route = '', body } = {}) {
   const url = typeof server === 'string' && /^https?:\/\//.test(server) ? server.replace(/\/$/, '') : '';
   if (!url || typeof route !== 'string' || !/^\/[a-z0-9/_?=&%.-]*$/i.test(route)) throw new Error('Invalid admin request.');
+  // "/../x" or an encoded dot segment would leave /admin once the URL is normalised.
+  const adminBase = new URL(`${url}/admin`).pathname; const adminPath = new URL(`${url}/admin${route}`).pathname;
+  if (adminPath !== adminBase && !adminPath.startsWith(`${adminBase}/`)) throw new Error('Invalid admin request.');
   const response = await fetch(`${url}/admin${route}`, {
     method, headers: { 'Content-Type': 'application/json', ...(adminCookies.get(url) ? { Cookie: adminCookies.get(url) } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -968,7 +971,10 @@ async function saveEditedTheme({ name, css, images, base }) {
     const file = fileName(path.basename(wanted)); await fs.writeFile(path.join(staging, 'images', file), Buffer.from(data)); used.set(`edited:${wanted}`, file);
   }
   let output = String(css || '');
-  const references = [...output.matchAll(/url\((["']?)(file:[^"')]+)\1\)/g)].map(match => match[2]);
+  // Only pictures that live in a theme folder can be copied; any other file: URL is left as it is.
+  const themeRoots = [themesRoot, userThemesRoot, runtimeThemesRoot].map(root => `${path.resolve(root)}${path.sep}`);
+  const inThemes = url => { try { return themeRoots.some(root => path.resolve(fileURLToPath(url)).startsWith(root)); } catch { return false; } };
+  const references = [...output.matchAll(/url\((["']?)(file:[^"')]+)\1\)/g)].map(match => match[2]).filter(inThemes);
   for (const url of new Set(references)) {
     const file = fileName(path.basename(fileURLToPath(url)));
     await fs.copyFile(fileURLToPath(url), path.join(staging, 'images', file)); used.set(url, file);
@@ -1127,7 +1133,7 @@ function createTray() {
   tray.on('click', showMainWindow);
 }
 async function notificationIcon(avatarUrl) {
-  if (!avatarUrl) return path.join(__dirname, 'assets', 'images', 'nekochat_icon.png');
+  if (!avatarUrl || !/^https?:\/\//i.test(String(avatarUrl))) return path.join(__dirname, 'assets', 'images', 'nekochat_icon.png');
   try {
     const response = await fetch(avatarUrl);
     if (!response.ok) throw new Error('Avatar unavailable');
@@ -1299,8 +1305,10 @@ app.whenReady().then(async () => {
       }
     }
   });
-  ipcMain.on('window:resize', (e, { direction, dx, dy }) => {
+  ipcMain.on('window:resize', (e, { direction, dx, dy } = {}) => {
+    if (typeof direction !== 'string' || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
     const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win) return;
     const bounds = win.getBounds();
     const minimum = win.getMinimumSize();
     let { x, y, width, height } = bounds;
