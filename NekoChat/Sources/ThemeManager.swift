@@ -408,6 +408,7 @@ final class ThemeManager {
                     // Add-ons (like the Theme Editor) may need the desktop app: "Platforms": ["desktop"].
                     "platforms": (entry["Platforms"] as? [String] ?? entry["platforms"] as? [String]).map { $0 as Any } ?? NSNull(),
                     "previewUrl": preview,
+                    "descriptionUrl": entry["Description"] as? String ?? "\(Self.catalogRoot)/\(directory)/Description.md",
                     "zipUrl": entry["PackZIP"] as? String ?? "\(Self.catalogRoot)/\(directory)/Pack.ZIP"]
         }
     }
