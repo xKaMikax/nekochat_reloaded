@@ -188,7 +188,12 @@ async function useSavedSession(index) {
   if (!session.token) { API = session.server; localStorage.setItem('nk_server_url', API); $('#server-url').value = API; $('#classic-server-url').value = API; showLoginForm(); $('#auth-username').value = session.user?.username || ''; $('#auth-password')?.focus(); return; }
   API = session.server; token = session.token; localStorage.setItem('nk_server_url', API); localStorage.setItem('nk_token', token); $('#server-url').value = API; $('#classic-server-url').value = API; showWelcome();
   try { const user = await api('/api/me'); rememberSession(user); setLoggedIn(user, true); await refresh(); }
-  catch (error) { writeSavedSessions(savedSessions().filter(item => item?.key !== session.key)); token = null; localStorage.removeItem('nk_token'); showAuthScreen(); showLoginForm(); $('#auth-username').value = session.user?.username || ''; showSystemDialog(t('sessionExpired'), 'warning', t('sessionEnded')); }
+  catch (error) {
+    token = null; localStorage.removeItem('nk_token'); showAuthScreen(); showLoginForm(); $('#auth-username').value = session.user?.username || '';
+    // Only a rejected token ends the saved account; no network or a server error keeps it so the user can try again.
+    if (error.status === 401 || error.status === 403) { writeSavedSessions(savedSessions().filter(item => item?.key !== session.key)); showSystemDialog(t('sessionExpired'), 'warning', t('sessionEnded')); }
+    else showSystemDialog(error.message, 'error', t('loadMessages'));
+  }
 }
 const avatarColour = user => /^#[0-9a-f]{6}$/i.test(user?.profile_color || '') ? user.profile_color : '';
 const avatar = user => user?.avatar ? `<img src="${API}/avatars/${encodeURIComponent(user.avatar)}" alt="">` : `<span class="avatar-fallback">${esc((user?.display_name || user?.username || '?')[0].toUpperCase())}</span>`;
@@ -844,6 +849,7 @@ async function refreshCurrentHistory() {
     if (!history.length) $('#messages').innerHTML = `<p class="messages-empty">${esc(t('noMessagesYet'))}</p>`;
     const last = history[history.length - 1]; if (last) markRead(chatKey(selected.kind, selected.data.id), last.id);
   } catch (error) {
+    if (current !== selected) return;
     $('#messages').innerHTML = '';
     const warning = /not a member|forbidden|access denied/i.test(String(error.message));
     showSystemDialog(error.message, error.status >= 500 ? 'critical' : warning ? 'warning' : 'error', t('loadMessages'), warning && selected.kind === 'room' ? { action: { type: 'join-room', roomId: selected.data.id }, actionLabel: t('join') } : {});
@@ -1617,8 +1623,11 @@ async function boot() {
   clearTimeout(bootRetry);
   const session = token;
   try {
-    setLoggedIn(await api('/api/me'));
+    const user = await api('/api/me');
+    if (token !== session) return;   // the session was switched while this request was in flight
+    setLoggedIn(user);
     await refresh();
+    if (token !== session) return;
     if (detachedChat) await openChat(detachedChat.kind, detachedChat.id);
   } catch (error) {
     disconnectSocket(); disconnectEventStream(); me = null;
