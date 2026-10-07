@@ -694,7 +694,7 @@
       return { id, type, kind: 'pack', directory, files, displayName: entry.DisplayName || entry.displayName || id, includes, contains: includes ? Object.keys(includes) : entry.Contains || entry.contains || [type],
         platforms: Array.isArray(entry.Platforms || entry.platforms) ? (entry.Platforms || entry.platforms).map(String) : null,
         author: details.Author || entry.Author || 'Unknown', added: String(details.Added || entry.Added || ''), version: details.Version || '',
-        previewUrl: entry.Preview || (type === 'wallpapers' && files[0] ? `${CATALOG_ROOT}/${directory}/${encodeURIComponent(files[0])}` : `${CATALOG_ROOT}/${directory}/Preview.png`), zipUrl: entry.PackZIP || `${CATALOG_ROOT}/${directory}/Pack.ZIP` };
+        previewUrl: entry.Preview || (type === 'wallpapers' && files[0] ? `${CATALOG_ROOT}/${directory}/${encodeURIComponent(files[0])}` : `${CATALOG_ROOT}/${directory}/Preview.png`), descriptionUrl: entry.Description || `${CATALOG_ROOT}/${directory}/Description.md`, zipUrl: entry.PackZIP || `${CATALOG_ROOT}/${directory}/Pack.ZIP` };
     });
   }
   async function installCatalogPack(id) {
