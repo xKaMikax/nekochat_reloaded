@@ -115,8 +115,8 @@ Object.assign(translations.ru, { dns: 'DNS', dns_system: 'Системный', d
 Object.assign(translations.en, { dns: 'DNS', dns_system: 'System default', dns_cloudflare: 'Cloudflare (1.1.1.1)', dns_google: 'Google (8.8.8.8)', dns_quad9: 'Quad9 (9.9.9.9)', dns_adguard: 'AdGuard DNS', dns_custom: 'Custom DNS-over-HTTPS…' });
 Object.assign(translations.ru, { refreshList: 'Обновить список', searchChats: 'Поиск чатов', createRoom: 'Создать комнату', close: 'Закрыть', closeButton: 'Закрыть', userAccounts: 'Учётные записи пользователей', back: '← Назад', home: 'Домой', relatedTasks: 'Связанные задачи', help: 'Справка', profileHelp: 'Настройте профиль Nekochat.', pickTask: 'Выберите задачу…', taskDetailsLong: 'Изменить статус и описание', status: 'Статус', about: 'О себе', profileColour: 'Цвет профиля', changeAvatar: 'Сменить аватар', save: 'Сохранить', xpAppearance: 'Оформление Windows XP', themeDialogHint: 'Выберите установленную тему рамки или добавьте файл', installedThemes: 'Установленные темы', apply: 'Применить', addTheme: 'Добавить тему…', roomMembers: 'Участники комнаты' });
 Object.assign(translations.en, { refreshList: 'Refresh list', searchChats: 'Search chats', createRoom: 'Create room', close: 'Close', closeButton: 'Close', userAccounts: 'User Accounts', back: '← Back', home: 'Home', relatedTasks: 'Related Tasks', help: 'Help', profileHelp: 'Set up your Nekochat profile.', pickTask: 'Pick a task…', taskDetailsLong: 'Change status and description', status: 'Status', about: 'About me', profileColour: 'Profile colour', changeAvatar: 'Change avatar', save: 'Save', xpAppearance: 'Windows XP appearance', themeDialogHint: 'Choose an installed frame theme or add a file', installedThemes: 'Installed themes', apply: 'Apply', addTheme: 'Add theme…', roomMembers: 'Room members' });
-Object.assign(translations.ru, { unknownError: 'Неизвестная ошибка.', unknown: 'Неизвестно', messagePlaceholder: 'Сообщение...', members: 'Участники', membersTitle: 'Участники: # {name}', membersUnavailable: 'Список участников пока недоступен.', memberCount: '{count} участник(ов)', startCall: 'Позвонить', room: 'Комната', callRinging: 'Вам звонят', serverUrlInvalid: 'URL сервера должен начинаться с http:// или https://', enterAccountDetails: 'Введите данные учётной записи', taskDetails: 'Изменить сведения', taskAvatar: 'Сменить рисунок', taskBanner: 'Сменить баннер', taskColour: 'Изменить цвет профиля', themeElectronOnly: 'Настройки темы доступны только в приложении Nekochat Reloaded.', notDelivered: 'Не доставлено. Нажмите, чтобы отправить снова.' });
-Object.assign(translations.en, { unknownError: 'Unknown error.', unknown: 'Unknown', messagePlaceholder: 'Message...', members: 'Members', membersTitle: 'Members: # {name}', membersUnavailable: 'The member list is not available yet.', memberCount: '{count} member(s)', startCall: 'Call', room: 'Room', callRinging: 'Incoming call…', serverUrlInvalid: 'Server URL must start with http:// or https://', enterAccountDetails: 'Enter your account details', taskDetails: 'Change details', taskAvatar: 'Change picture', taskBanner: 'Change banner', taskColour: 'Change profile colour', themeElectronOnly: 'Theme settings are only available in the Nekochat Reloaded app.', notDelivered: 'Not delivered. Click to send again.' });
+Object.assign(translations.ru, { botTag: 'БОТ', aiTag: 'ИИ', askHint: 'Вопрос для ИИ @neko: ответ придёт обычным сообщением от него.', askWaiting: '@neko думает… ответ придёт через 15–40 секунд.', unknownError: 'Неизвестная ошибка.', unknown: 'Неизвестно', messagePlaceholder: 'Сообщение...', members: 'Участники', membersTitle: 'Участники: # {name}', membersUnavailable: 'Список участников пока недоступен.', memberCount: '{count} участник(ов)', startCall: 'Позвонить', room: 'Комната', callRinging: 'Вам звонят', serverUrlInvalid: 'URL сервера должен начинаться с http:// или https://', enterAccountDetails: 'Введите данные учётной записи', taskDetails: 'Изменить сведения', taskAvatar: 'Сменить рисунок', taskBanner: 'Сменить баннер', taskColour: 'Изменить цвет профиля', themeElectronOnly: 'Настройки темы доступны только в приложении Nekochat Reloaded.', notDelivered: 'Не доставлено. Нажмите, чтобы отправить снова.' });
+Object.assign(translations.en, { botTag: 'BOT', aiTag: 'AI', askHint: 'A question for the AI @neko: the answer comes as a normal message from it.', askWaiting: '@neko is thinking… the answer comes in 15–40 seconds.', unknownError: 'Unknown error.', unknown: 'Unknown', messagePlaceholder: 'Message...', members: 'Members', membersTitle: 'Members: # {name}', membersUnavailable: 'The member list is not available yet.', memberCount: '{count} member(s)', startCall: 'Call', room: 'Room', callRinging: 'Incoming call…', serverUrlInvalid: 'Server URL must start with http:// or https://', enterAccountDetails: 'Enter your account details', taskDetails: 'Change details', taskAvatar: 'Change picture', taskBanner: 'Change banner', taskColour: 'Change profile colour', themeElectronOnly: 'Theme settings are only available in the Nekochat Reloaded app.', notDelivered: 'Not delivered. Click to send again.' });
 function applyDisplaySettings(settings) {
   displaySettings = { ...displaySettings, ...settings };
   const language = displaySettings.language === 'en' ? 'en' : 'ru';
@@ -471,6 +471,10 @@ function clearUnread(key) { if (!unread.delete(key)) return; renderList(); updat
 const parseTime = value => new Date(typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?$/.test(value) ? `${value}Z` : value);
 const formatTime = value => parseTime(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const displayName = user => user?.display_name || user?.username || t('user');
+// Bots (is_bot) and the server's AI user @neko carry a small tag next to the name.
+const AI_USERNAME = 'neko';
+const isAi = user => user?.username === AI_USERNAME;
+const botTag = user => (isAi(user) ? `<span class="bot-tag">${esc(t('aiTag'))}</span>` : user?.is_bot === true ? `<span class="bot-tag">${esc(t('botTag'))}</span>` : '');
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
 function fitXpLogonBackground() {
   const ratio = window.innerWidth / window.innerHeight;
@@ -554,7 +558,7 @@ function showUserProfile(user) {
   const online = userOnline(user);
   $('#user-profile-avatar').innerHTML = avatar(user);
   setUserAvatarFrame($('#user-profile-avatar'), user);
-  $('#user-profile-name').textContent = displayName(user);
+  $('#user-profile-name').innerHTML = `${esc(displayName(user))}${botTag(user)}`;
   $('#user-profile-handle').textContent = `@${user.username}`;
   const shown = !userOnline(user) ? 'offline' : ['away', 'dnd'].includes(userStatus(user.id)) ? userStatus(user.id) : 'online';
   const seen = shown === 'offline' ? lastSeenText(user.id) : '';
@@ -783,6 +787,7 @@ function dayLabel(date) {
 function appendMessage(message, mine, key = messageKey(message), pending = false, { incoming = false } = {}) {
   const sender = message.user || message.sender || userFor(message.user_id || message.sender_id) || { display_name: t('unknown') };
   const profileId = sender.id ? ` data-profile-id="${sender.id}"` : '';
+  if (isAi(sender) && askWaitingTimer) stopAskWaiting();
   const list = $('#messages'); list.querySelector('.messages-empty')?.remove();
   // Only follow the conversation when the reader is already at the bottom.
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
@@ -790,7 +795,7 @@ function appendMessage(message, mine, key = messageKey(message), pending = false
   const day = Number.isNaN(created.getTime()) ? '' : created.toDateString();
   const lastArticle = [...list.querySelectorAll('article')].pop();
   if (day && lastArticle?.dataset.day !== day) list.insertAdjacentHTML('beforeend', `<div class="day-separator"><span>${esc(dayLabel(created))}</span></div>`);
-  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}<time>${formatTime(message.created_at)}</time>${mine && current?.kind === 'dm' ? '<span class="receipt"></span>' : ''}</div>${renderMessageContent(message.content)}<div class="reactions"></div></div></article>`);
+  list.insertAdjacentHTML('beforeend', `<article class="message ${mine ? 'mine' : ''}" data-key="${esc(key)}" data-day="${esc(day)}" data-content="${esc(message.content)}"${pending ? ' data-pending="true"' : ''}><span class="avatar profile-trigger"${profileId}>${avatar(sender)}</span><div class="message-body"><div class="message-meta profile-trigger"${profileId}>${esc(displayName(sender))}${botTag(sender)}<time>${formatTime(message.created_at)}</time>${mine && current?.kind === 'dm' ? '<span class="receipt"></span>' : ''}</div>${renderMessageContent(message.content)}<div class="reactions"></div></div></article>`);
   const added = list.lastElementChild; if (/^\d+$/.test(String(message.id ?? ''))) added.dataset.id = String(message.id); added.dataset.author = displayName(sender);
   window.chatExtras?.decorate(added);
   if (!incoming || atBottom || mine) { list.scrollTop = list.scrollHeight; hideNewMessages(); }
@@ -812,7 +817,7 @@ function renderConversationHeader() {
   const { kind, data } = current;
   const title = kind === 'room' ? `# ${data.name ?? ''}` : displayName(data); const seen = kind === 'dm' && !userOnline(data) ? lastSeenText(data.id) : ''; const subtitle = kind === 'room' ? t('memberCount', { count: data.member_count ?? 0 }) : seen || `@${data.username}`; const frame = kind === 'dm' ? avatarFrameAttributes(data) : '';
   const profileId = kind === 'dm' ? ` data-profile-id="${data.id}"` : '';
-  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
+  $('#conversation-header').innerHTML = `<span class="avatar${frame} ${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}>${kind === 'room' ? '#' : avatar(data)}</span><span class="${kind === 'dm' ? 'profile-trigger' : ''}"${profileId}><h1>${esc(title)}${kind === 'dm' ? botTag(data) : ''}</h1><small>${esc(subtitle)}</small></span><span class="header-actions">${kind === 'room' ? `<button class="call-button member-button" id="room-members" type="button" aria-label="${esc(t('members'))}" title="${esc(t('members'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></button>` : ''}<button class="call-button" id="start-call" type="button" aria-label="${esc(t('startCall'))}" title="${esc(t('startCall'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02z"/></svg></button></span>`;
 }
 async function openChat(kind, id, { force = false } = {}) {
   const data = kind === 'room' ? rooms.find(room => room.id === id) : users.find(user => user.id === id); if (!data) return;
@@ -1731,12 +1736,23 @@ document.querySelectorAll('.tab').forEach(button => button.onclick = () => { act
 $('#system-ok').onclick = () => $('#system-dialog').close(); $('#system-close').onclick = () => $('#system-dialog').close();
 $('#search').oninput = renderList;
 $('#refresh-chats').onclick = async () => { const button = $('#refresh-chats'); button.disabled = true; try { await refresh(); if (current?.kind === 'room') current.data = rooms.find(room => room.id === current.data.id) || current.data; } catch (error) { showSystemDialog(error.message, 'error', t('loadMessages')); } finally { button.disabled = false; } };
+// /ask <question> sends a question to the server's AI (@neko); it answers in 15-40 s as a normal message.
+let askWaitingTimer = 0;
+const askHint = (() => { const node = document.createElement('div'); node.id = 'ask-hint'; node.className = 'ask-hint'; node.hidden = true; $('#composer').before(node); return node; })();
+function updateAskHint(waiting = false) {
+  const value = $('#message-input').value;
+  const asking = /^\/ask(\s|$)/i.test(value) || (current?.kind === 'dm' && isAi(current.data) && value.trim());
+  askHint.textContent = waiting ? t('askWaiting') : asking ? t('askHint') : '';
+  askHint.hidden = !askHint.textContent;
+}
+function stopAskWaiting() { clearTimeout(askWaitingTimer); askWaitingTimer = 0; updateAskHint(); }
+$('#message-input').addEventListener('input', () => { if (!askWaitingTimer) updateAskHint(); });
 $('#composer').addEventListener('submit', async event => {
   event.preventDefault();
   const content = $('#message-input').value.trim();
   if (!content || !current) return;
   const submit = $('#send-message'); submit.disabled = true;
-  try { sendChatMessage(content); $('#message-input').value = ''; }
+  try { sendChatMessage(content); $('#message-input').value = ''; if (/^\/ask\s+\S/i.test(content) || (current.kind === 'dm' && isAi(current.data))) { clearTimeout(askWaitingTimer); askWaitingTimer = setTimeout(stopAskWaiting, 60000); updateAskHint(true); } else updateAskHint(); }
   catch (error) { showSystemDialog(error.message, 'error', t('sendMessage')); }
   finally { submit.disabled = false; }
 });
