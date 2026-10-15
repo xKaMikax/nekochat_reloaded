@@ -1,6 +1,6 @@
 /* Real msstyles BUTTON_BMP rendered as a 9-slice: no tiling or distorted text. */
 .theme-button,
-.settings-window .inline-actions button, .settings-window footer button, .admin-window .admin button:not(.property-tab),
+.settings-window .inline-actions button, .settings-window footer button, .admin-window .admin button:not(.property-tab), .bots-window .bots button, .bots-dialog button,
 .settings-window .appearance-actions button, .settings-window .preview-window button,
 .chat-app .tab, .chat-app .add-button, .chat-app .settings-button, .chat-app .refresh-list,
 .chat-app .composer button, .chat-app .xp-button, .xp-dialog .xp-button:not(.icon-only), .call-window .call-actions button, .call-window .screen-switch, .room-create-window .actions button, .room-members-actions .xp-button {
@@ -14,7 +14,7 @@
 /* Touch screens keep :hover after a tap, which left the Luna 'hot' frame on the last tapped
    button: the hover look applies only to devices that can really hover (mouse, touchpad). */
 @media (hover: hover) {
-.settings-window .inline-actions button:hover, .settings-window footer button:hover, .admin-window .admin button:not(.property-tab):hover,
+.settings-window .inline-actions button:hover, .settings-window footer button:hover, .admin-window .admin button:not(.property-tab):hover, .bots-window .bots button:hover, .bots-dialog button:hover,
 .settings-window .appearance-actions button:hover, .settings-window .preview-window button:hover,
 .chat-app .tab:hover, .chat-app .add-button:hover, .chat-app .settings-button:hover, .chat-app .refresh-list:hover,
 .chat-app .composer button:hover, .chat-app .xp-button:hover, .xp-dialog .xp-button:not(.icon-only):hover, .call-window .call-actions button:hover, .call-window .screen-switch:hover, .room-create-window .actions button:hover, .room-members-actions .xp-button:hover {
@@ -23,7 +23,7 @@
   box-shadow: var(--xp-button-shadow-hover, var(--xp-button-shadow, none)) !important;
 }
 }
-.settings-window .inline-actions button:active, .settings-window footer button:active, .admin-window .admin button:not(.property-tab):active,
+.settings-window .inline-actions button:active, .settings-window footer button:active, .admin-window .admin button:not(.property-tab):active, .bots-window .bots button:active, .bots-dialog button:active,
 .settings-window .appearance-actions button:active, .settings-window .preview-window button:active,
 .chat-app .tab:active, .chat-app .tab.active, .chat-app .add-button:active, .chat-app .settings-button:active, .chat-app .refresh-list:active,
 .chat-app .composer button:active, .chat-app .xp-button:active, .xp-dialog .xp-button:not(.icon-only):active, .call-window .call-actions button:active, .call-window .screen-switch:active, .call-window .screen-switch[aria-pressed="true"], .room-create-window .actions button:active, .room-members-actions .xp-button:active {
