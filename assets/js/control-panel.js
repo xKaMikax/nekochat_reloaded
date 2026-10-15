@@ -21,7 +21,7 @@ const words = {
     },
     icons: {
       display: 'Экран', mouse: 'Мышь', catalog: 'Каталог', editor: 'Редактор тем', sounds: 'Звуки и аудиоустройства', network: 'Сетевые подключения', backups: 'Архивация',
-      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', regional: 'Язык и региональные стандарты', assistant: 'Помощник',
+      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', bots: 'Боты', regional: 'Язык и региональные стандарты', assistant: 'Помощник',
     },
     troubles: { display: 'Экран', sound: 'Звук', network: 'Сеть', updates: 'Обновления' },
   },
@@ -41,7 +41,7 @@ const words = {
     },
     icons: {
       display: 'Display', mouse: 'Mouse', catalog: 'Catalog', editor: 'Theme Editor', sounds: 'Sounds and Audio Devices', network: 'Network Connections', backups: 'Backup',
-      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', regional: 'Regional and Language Options', assistant: 'Assistant',
+      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', bots: 'Bots', regional: 'Regional and Language Options', assistant: 'Assistant',
     },
     troubles: { display: 'Display', sound: 'Sound', network: 'Networking', updates: 'Updates' },
   },
@@ -57,6 +57,7 @@ const ACTIONS = {
   sounds: () => applet('sounds', 'sounds'), audio: () => applet('sounds', 'audio'), mouse: () => applet('mouse'), regional: () => applet('regional'),
   network: () => applet('network'), assistant: () => applet('assistant'), backups: () => applet('backups'), updates: () => applet('updates'), privacy: () => applet('privacy'),
   catalog: () => controls.openThemeBrowser(), editor: () => controls.openThemeEditor(), profile: () => controls.openProfileSettings(),
+  bots: () => controls.openAddon('bots', { server: stored('nk_server_url') || 'https://nekochat.komdu.is-cool.dev' }),
   admin: () => controls.openAdminPanel(stored('nk_server_url') || 'https://nekochat.komdu.is-cool.dev'),
   // Windows Update opens the Update window: the app's own updates, themes, games and more.
   update: () => controls.openThemeBrowser(),
@@ -76,6 +77,7 @@ const ICONS = [
   { id: 'updates', icon: 'updates', action: 'updates' },
   { id: 'users', icon: 'users', action: 'profile' },
   { id: 'admin', icon: 'admin', action: 'admin', available: () => Boolean(controls.openAdminPanel) && stored('nk_show_admin_button') === '1' && Boolean(window.nkAddonInstalled?.('admin')) },
+  { id: 'bots', icon: 'bots', action: 'bots', available: () => Boolean(controls.openAddon) && Boolean(window.nkAddonInstalled?.('bots')) },
   { id: 'regional', icon: 'regional', action: 'regional' },
   { id: 'assistant', icon: 'assistant', action: 'assistant', available: () => Boolean(window.nkHasAssistants?.()) },
 ];
@@ -83,7 +85,7 @@ const ICONS = [
 const CATEGORIES = [
   { id: 'appearance', icon: 'appearance', tasks: [['theme', 'themes'], ['colours', 'appearance'], ['wallpaper', 'desktop'], ['cursors', 'mouse'], ['assistant', 'assistant']], icons: ['display', 'mouse', 'assistant', 'editor'], seeAlso: [['mouse', 'mouse', 'mouse']], troubles: ['display', 'sound'] },
   { id: 'network', icon: 'network', tasks: [['server', 'network']], icons: ['network'], seeAlso: [['users', 'users', 'profile']], troubles: ['network'] },
-  { id: 'users', icon: 'users', tasks: [['profile', 'profile'], ['privacy', 'privacy']], icons: ['users', 'admin'], seeAlso: [['network-connections', 'network', 'network']], troubles: [] },
+  { id: 'users', icon: 'users', tasks: [['profile', 'profile'], ['privacy', 'privacy']], icons: ['users', 'admin', 'bots'], seeAlso: [['network-connections', 'network', 'network']], troubles: [] },
   { id: 'sounds', icon: 'sounds', tasks: [['soundScheme', 'sounds'], ['microphone', 'audio']], icons: ['sounds'], seeAlso: [['display', 'display', 'themes']], troubles: ['sound'] },
   { id: 'regional', icon: 'regional', tasks: [['language', 'regional']], icons: ['regional'], seeAlso: [], troubles: [] },
   { id: 'performance', icon: 'performance', tasks: [['backup', 'backups'], ['updates', 'update']], icons: ['backups', 'updates'], seeAlso: [['updates', 'updates', 'update']], troubles: ['updates'] },
