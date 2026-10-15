@@ -21,7 +21,7 @@ const words = {
     },
     icons: {
       display: 'Экран', mouse: 'Мышь', catalog: 'Каталог', editor: 'Редактор тем', sounds: 'Звуки и аудиоустройства', network: 'Сетевые подключения', backups: 'Архивация',
-      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', bots: 'Консоль разработчика', regional: 'Язык и региональные стандарты', assistant: 'Помощник',
+      updates: 'Автоматическое обновление', users: 'Учётные записи пользователей', admin: 'Администрирование', bots: 'Nekochat Developer Console', regional: 'Язык и региональные стандарты', assistant: 'Помощник',
     },
     troubles: { display: 'Экран', sound: 'Звук', network: 'Сеть', updates: 'Обновления' },
   },
@@ -41,7 +41,7 @@ const words = {
     },
     icons: {
       display: 'Display', mouse: 'Mouse', catalog: 'Catalog', editor: 'Theme Editor', sounds: 'Sounds and Audio Devices', network: 'Network Connections', backups: 'Backup',
-      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', bots: 'Developer Console', regional: 'Regional and Language Options', assistant: 'Assistant',
+      updates: 'Automatic Updates', users: 'User Accounts', admin: 'Administrative Tools', bots: 'Nekochat Developer Console', regional: 'Regional and Language Options', assistant: 'Assistant',
     },
     troubles: { display: 'Display', sound: 'Sound', network: 'Networking', updates: 'Updates' },
   },
