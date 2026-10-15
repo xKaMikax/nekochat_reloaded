@@ -475,9 +475,10 @@ const displayName = user => user?.display_name || user?.username || t('user');
 const AI_USERNAME = 'neko';
 const isAi = user => user?.username === AI_USERNAME;
 const botTag = user => {
-  const label = isAi(user) ? t('aiTag') : user?.is_bot === true ? t('botTag') : '';
-  // A name that already says it ("neko · AI") needs no second tag.
-  return label && !new RegExp(`(^|[^\\p{L}])${label}($|[^\\p{L}])`, 'iu').test(displayName(user)) ? `<span class="bot-tag">${esc(label)}</span>` : '';
+  // The AI user @neko is tagged AI; any bot (the AI is one too) BOT. A word the name already has ("neko · AI") is not repeated.
+  const labels = [...(isAi(user) ? [t('aiTag')] : []), ...(isAi(user) || user?.is_bot === true ? [t('botTag')] : [])];
+  const label = labels.find(word => !new RegExp(`(^|[^\\p{L}])${word}($|[^\\p{L}])`, 'iu').test(displayName(user)));
+  return label ? `<span class="bot-tag">${esc(label)}</span>` : '';
 };
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
 function fitXpLogonBackground() {
