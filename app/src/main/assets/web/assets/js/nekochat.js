@@ -474,7 +474,11 @@ const displayName = user => user?.display_name || user?.username || t('user');
 // Bots (is_bot) and the server's AI user @neko carry a small tag next to the name.
 const AI_USERNAME = 'neko';
 const isAi = user => user?.username === AI_USERNAME;
-const botTag = user => (isAi(user) ? `<span class="bot-tag">${esc(t('aiTag'))}</span>` : user?.is_bot === true ? `<span class="bot-tag">${esc(t('botTag'))}</span>` : '');
+const botTag = user => {
+  const label = isAi(user) ? t('aiTag') : user?.is_bot === true ? t('botTag') : '';
+  // A name that already says it ("neko · AI") needs no second tag.
+  return label && !new RegExp(`(^|[^\\p{L}])${label}($|[^\\p{L}])`, 'iu').test(displayName(user)) ? `<span class="bot-tag">${esc(label)}</span>` : '';
+};
 const userFor = id => users.find(user => user.id === id) || (me?.id === id ? me : null);
 function fitXpLogonBackground() {
   const ratio = window.innerWidth / window.innerHeight;

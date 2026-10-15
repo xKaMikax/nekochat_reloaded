@@ -444,6 +444,6 @@ mark.search-hit { background: #ffe680; color: inherit; }mark.search-hit.current 
 .my-files-buttons .xp-button, .my-files-delete { min-width: 72px; height: 24px; padding: 0 10px; font-size: 11px; }
 .my-files-dialog .dialog-title { padding-left: 14px; margin: 0; }
 .my-files-buttons .xp-button, .my-files-delete { width: auto !important; flex: none; }
-.bot-tag { margin-left: 6px; padding: 0 4px; border: 1px solid var(--xp-theme-buttonshadow, #7f9db9); border-radius: 3px; background: var(--xp-theme-buttonface, #ece9d8); color: var(--xp-theme-windowtext, #000); font-size: 9px; font-weight: bold; line-height: 13px; vertical-align: middle; }
+.bot-tag { display: inline-block; margin-left: 6px; padding: 0 2px; border: 3px solid transparent; border-image: var(--xp-button-normal, linear-gradient(#fff, #d4d0c8)) 4 fill; background: transparent; color: var(--xp-theme-windowtext, #000); font: bold 9px/11px Tahoma, Arial, sans-serif; text-shadow: none; vertical-align: middle; }
 .ask-hint { padding: 3px 10px; border-top: 1px solid var(--xp-theme-buttonshadow, #aca899); background: var(--xp-theme-window, #ece9d8); color: var(--xp-theme-windowtext, #000); font-size: 11px; }
 .ask-hint[hidden] { display: none; }
